@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "664151437252",
+    "project_id": "kotlin-app-firebas-woodmatch",
+    "storage_bucket": "kotlin-app-firebas-woodmatch.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664151437252:android:64a7f80d89ae32cc04be91",
+        "android_client_info": {
+          "package_name": "com.example.kotlinapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3mndtM03B7KRp2wz95v_e6_O6QLCXitY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

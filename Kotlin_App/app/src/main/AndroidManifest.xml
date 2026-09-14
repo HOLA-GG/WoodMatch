@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.kotlinapp">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    
+    <!-- Camera/Storage Permissions for reporting -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/iconoapp"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/iconoapp"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.KotlinApp">
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.KotlinApp">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:banner="@drawable/iconoapp"
+            android:exported="true"
+            android:icon="@drawable/iconoapp"
+            android:label="@string/title_activity_main"
+            android:logo="@drawable/iconoapp"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.KotlinApp">
+        </activity>
+
+        <activity android:name=".SecondActivity" />
+        <activity android:name=".AdminManageUsersActivity" />
+        <activity android:name=".ProfileActivity" />
+        <activity android:name=".SettingsActivity" />
+        <activity android:name=".ReportActivity" />
+        <activity android:name=".ViewReportsActivity" />
+        
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.kotlinapp.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+        
+    </application>
+
+
+</manifest>

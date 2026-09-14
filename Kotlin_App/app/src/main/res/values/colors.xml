@@ -1,0 +1,52 @@
+<resources>
+    <!-- Basic Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <!-- Base / Spring Palette (Primavera) -->
+    <color name="colorPrimarySpring">#2E7D32</color> <!-- Forest Green 800 -->
+    <color name="colorPrimaryVariantSpring">#1B5E20</color> <!-- Forest Green 900 -->
+    <color name="colorOnPrimarySpring">#FFFFFF</color>
+    
+    <color name="colorSecondarySpring">#81C784</color> <!-- Light Green 300 -->
+    <color name="colorSecondaryVariantSpring">#66BB6A</color> <!-- Light Green 400 -->
+    <color name="colorOnSecondarySpring">#000000</color>
+    
+    <color name="backgroundSpringStart">#F1F8E9</color> <!-- Very Light Green -->
+    <color name="backgroundSpringEnd">#FFFFFF</color>
+
+    <!-- Autumn Palette (Otoño) -->
+    <color name="colorPrimaryAutumn">#D84315</color> <!-- Deep Orange 800 (Rich hue) -->
+    <color name="colorPrimaryVariantAutumn">#870000</color> <!-- Deep Reddish Brown 900+ for stark contrast -->
+    <color name="colorOnPrimaryAutumn">#FFFFFF</color>
+    
+    <color name="colorSecondaryAutumn">#FFB74D</color> <!-- Orange 300 (Softer for accents) -->
+    <color name="colorSecondaryVariantAutumn">#F57C00</color> <!-- Orange 700 (Vibrant pop) -->
+    <color name="colorOnSecondaryAutumn">#000000</color>
+    
+    <color name="backgroundAutumnStart">#FFF3E0</color> <!-- Light Orange -->
+    <color name="backgroundAutumnEnd">#FFFFFF</color>
+
+    <!-- Snow Palette (Nieve) -->
+    <color name="colorPrimarySnow">#0288D1</color> <!-- Light Blue 700 -->
+    <color name="colorPrimaryVariantSnow">#003366</color> <!-- Very Dark Navy Blue for deep contrast -->
+    <color name="colorOnPrimarySnow">#FFFFFF</color>
+    
+    <color name="colorSecondarySnow">#81D4FA</color> <!-- Light Blue 200 (Icy Accent) -->
+    <color name="colorSecondaryVariantSnow">#039BE5</color> <!-- Light Blue 600 -->
+    <color name="colorOnSecondarySnow">#000000</color>
+    
+    <color name="backgroundSnowStart">#E1F5FE</color> <!-- Very Light Blue -->
+    <color name="backgroundSnowEnd">#FFFFFF</color>
+
+    <!-- Common Error/Surface colors -->
+    <color name="colorError">#B00020</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#000000</color>
+
+    <!-- Legacy compatibility (can be pruned later) -->
+    <color name="fastlane_background">#2E7D32</color>
+    <color name="search_opaque">#81C784</color>
+    <color name="selected_background">#81C784</color>
+    <color name="default_background">#F5F5F5</color>
+</resources>

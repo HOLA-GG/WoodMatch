@@ -1,0 +1,49 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- Base application theme (Spring/Primavera by default). -->
+    <style name="Theme.KotlinApp" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Force light mode always to disable night mode matching -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+        
+        <item name="colorPrimary">@color/colorPrimarySpring</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryVariantSpring</item>
+        <item name="colorOnPrimary">@color/colorOnPrimarySpring</item>
+        <item name="colorSecondary">@color/colorSecondarySpring</item>
+        <item name="colorSecondaryVariant">@color/colorSecondaryVariantSpring</item>
+        <item name="colorOnSecondary">@color/colorOnSecondarySpring</item>
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+        <item name="colorError">@color/colorError</item>
+        <item name="android:windowBackground">@color/backgroundSpringEnd</item>
+    </style>
+
+    <!-- Autumn Theme (Otoño) -->
+    <style name="Theme.KotlinApp.Autumn" parent="Theme.KotlinApp">
+        <item name="colorPrimary">@color/colorPrimaryAutumn</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryVariantAutumn</item>
+        <item name="colorOnPrimary">@color/colorOnPrimaryAutumn</item>
+        <item name="colorSecondary">@color/colorSecondaryAutumn</item>
+        <item name="colorSecondaryVariant">@color/colorSecondaryVariantAutumn</item>
+        <item name="colorOnSecondary">@color/colorOnSecondaryAutumn</item>
+        <item name="android:windowBackground">@color/backgroundAutumnEnd</item>
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+    </style>
+
+    <!-- Snow Theme (Nieve) -->
+    <style name="Theme.KotlinApp.Snow" parent="Theme.KotlinApp">
+        <item name="colorPrimary">@color/colorPrimarySnow</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryVariantSnow</item>
+        <item name="colorOnPrimary">@color/colorOnPrimarySnow</item>
+        <item name="colorSecondary">@color/colorSecondarySnow</item>
+        <item name="colorSecondaryVariant">@color/colorSecondaryVariantSnow</item>
+        <item name="colorOnSecondary">@color/colorOnSecondarySnow</item>
+        <item name="android:windowBackground">@color/backgroundSnowEnd</item>
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+    </style>
+
+    <style name="Widget.App.Button" parent="Widget.MaterialComponents.Button">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+</resources>
