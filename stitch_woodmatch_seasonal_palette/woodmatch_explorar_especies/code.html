@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Species Exploration - WoodMatch</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Newsreader:opsz,wght@6..72,400;6..72,600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-low": "#faf2ec",
+                      "on-tertiary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed": "#002114",
+                      "primary-fixed-dim": "#a5d0b9",
+                      "on-secondary-fixed": "#092012",
+                      "on-surface-variant": "#414844",
+                      "on-error": "#ffffff",
+                      "secondary-fixed-dim": "#b3cdb7",
+                      "tertiary-container": "#632c00",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed-variant": "#274e3d",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed": "#cee9d3",
+                      "surface": "#fff8f3",
+                      "secondary": "#4c6452",
+                      "surface-container": "#f4ede6",
+                      "background": "#fff8f3",
+                      "surface-variant": "#e8e1db",
+                      "on-background": "#1e1b17",
+                      "error": "#ba1a1a",
+                      "inverse-surface": "#33302c",
+                      "surface-dim": "#e0d9d3",
+                      "on-secondary-container": "#506856",
+                      "primary-container": "#1b4332",
+                      "outline": "#717973",
+                      "tertiary": "#421b00",
+                      "surface-bright": "#fff8f3",
+                      "surface-container-highest": "#e8e1db",
+                      "inverse-on-surface": "#f7efe9",
+                      "on-tertiary-fixed": "#321300",
+                      "on-tertiary-fixed-variant": "#743500",
+                      "surface-container-high": "#eee7e1",
+                      "surface-tint": "#3f6653",
+                      "on-tertiary-container": "#ff8529",
+                      "tertiary-fixed-dim": "#ffb68a",
+                      "inverse-primary": "#a5d0b9",
+                      "secondary-container": "#cce6d0",
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed": "#ffdbc8",
+                      "on-primary": "#ffffff",
+                      "on-primary-container": "#86af99",
+                      "on-secondary-fixed-variant": "#354c3b",
+                      "primary-fixed": "#c1ecd4",
+                      "outline-variant": "#c1c8c2",
+                      "primary": "#012d1d",
+                      "on-surface": "#1e1b17"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "container-max": "1280px",
+                      "margin-desktop": "64px",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Newsreader"],
+                      "label-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-lg-mobile": ["Newsreader"],
+                      "headline-lg": ["Newsreader"]
+              },
+              "fontSize": {
+                      "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "600"}]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for organic feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #c1c8c2;
+            border-radius: 9999px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="bg-surface/70 dark:bg-surface-dim/70 backdrop-blur-xl flex justify-between items-center w-full px-margin-mobile h-16 fixed top-0 z-50 border-b-0 shadow-none transition-colors duration-300">
+<button class="text-on-surface-variant dark:text-outline hover:opacity-80 transition-opacity active:scale-95 duration-200 w-10 h-10 flex items-center justify-center rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-display-lg text-headline-lg-mobile text-primary dark:text-primary-fixed-dim tracking-tight">WoodMatch</h1>
+<button class="text-on-surface-variant dark:text-outline hover:opacity-80 transition-opacity active:scale-95 duration-200 w-10 h-10 flex items-center justify-center rounded-full overflow-hidden">
+<img alt="User Profile" class="w-8 h-8 object-cover rounded-full" data-alt="A small circular avatar portrait of a person outdoors, softly lit by dappled sunlight. The style is natural, earthy, and fits a minimalist light-mode interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKM2B1e1hiS5c5nJHPT4YQwB4P6cPXG6EsOMGAxu-IFKQJYcipGA_ma6PTnIZvg_p7NDPzO7KNPDJcfRLR26TQYcUcaAzYmehceZhKGTBOlu3sLxWwAC0bfAFT094Upy5Kv_gOBn2APq01qU-662eEd50rr31HMQJw95_p5BaTK2umv8dBybaXZstbKJy00x47Bcy8A1VuIy2H4GX5DbJT2eKKcwUaSm8QVLfot1Hj1rHn8MbN62ZtIISNY64rBl0MU-HiNqXDFyo"/>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow pt-[88px] pb-[100px] px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full">
+<!-- Header -->
+<section class="mb-8 md:mb-12 text-center md:text-left mt-4">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-primary mb-2">Explorar Especies</h2>
+<p class="font-body-md text-on-surface-variant max-w-2xl">Descubre la diversidad del dosel arbóreo. Filtra por estaciones y características biológicas.</p>
+</section>
+<!-- Search Bar -->
+<section class="mb-8 max-w-2xl mx-auto md:mx-0 relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+</div>
+<input class="w-full bg-surface-container-lowest border-0 rounded-full py-4 pl-12 pr-4 text-on-surface shadow-[0_4px_30px_rgba(63,102,83,0.05)] ring-1 ring-tertiary/10 focus:ring-2 focus:ring-[#86af99] focus:outline-none transition-all font-body-md placeholder:text-outline-variant" placeholder="Busca un árbol o especie..." type="text"/>
+</section>
+<!-- Filter Chips -->
+<section class="mb-10 overflow-x-auto pb-4 -mx-margin-mobile px-margin-mobile md:mx-0 md:px-0 flex gap-3 snap-x">
+<button class="snap-start flex-shrink-0 px-6 py-2 rounded-full font-label-sm text-label-sm border border-tertiary/10 bg-primary-container text-on-primary-container transition-all hover:opacity-90 active:scale-95 duration-200">
+                Todos
+            </button>
+<button class="snap-start flex-shrink-0 px-6 py-2 rounded-full font-label-sm text-label-sm border border-tertiary/10 bg-surface-container-lowest text-on-surface hover:bg-surface-variant/50 transition-all active:scale-95 duration-200 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="local_florist">local_florist</span> Primavera
+            </button>
+<button class="snap-start flex-shrink-0 px-6 py-2 rounded-full font-label-sm text-label-sm border border-tertiary/10 bg-surface-container-lowest text-on-surface hover:bg-surface-variant/50 transition-all active:scale-95 duration-200 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="wb_sunny">wb_sunny</span> Verano
+            </button>
+<button class="snap-start flex-shrink-0 px-6 py-2 rounded-full font-label-sm text-label-sm border border-tertiary/10 bg-surface-container-lowest text-on-surface hover:bg-surface-variant/50 transition-all active:scale-95 duration-200 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="energy_savings_leaf">energy_savings_leaf</span> Otoño
+            </button>
+<button class="snap-start flex-shrink-0 px-6 py-2 rounded-full font-label-sm text-label-sm border border-tertiary/10 bg-surface-container-lowest text-on-surface hover:bg-surface-variant/50 transition-all active:scale-95 duration-200 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="ac_unit">ac_unit</span> Invierno
+            </button>
+</section>
+<!-- Grid of Cards -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Card 1 -->
+<article class="bg-surface-container-lowest/80 backdrop-blur-[20px] rounded-DEFAULT p-6 shadow-[0_4px_30px_rgba(63,102,83,0.05)] border border-tertiary/10 flex flex-col group hover:-translate-y-1 transition-transform duration-300">
+<div class="relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-surface-variant">
+<img alt="Arce Japonés" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A close-up photograph of vibrant red Japanese Maple leaves in autumn. The background is softly blurred in an organic, earthy style. The lighting is bright and crisp, suitable for a clean, light-mode user interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgrcLwziTKHSLEErEfUuY8I_lMsCuLS_6eBEPp0pOcQPgux82tbZOp-VcgE_jq-qD_BDmXEMiaWfU8KMtQ3Y3oZSwUn6RiM1sY_IzkODB3sdjYDLUW8iYEhfUgTLIz8490ZnDuv9JvNiLFLLqhaRGiMKDj1uo2Qw5mQ9Whu-Ex4qpf8M9dLuoPUXz41GvHnkw-ySr8ykErU9M6b-ceXLfCs05zG2lrwy7zdPQOgPOU3mojncOx1NBsdnIb6ZOpnNnEj_h7VGRsWF0"/>
+<div class="absolute top-3 right-3 bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-tertiary-container" data-icon="energy_savings_leaf">energy_savings_leaf</span>
+<span class="font-label-sm text-label-sm text-on-surface">Otoño</span>
+</div>
+</div>
+<div class="flex-grow">
+<h3 class="font-headline-lg-mobile text-primary mb-1">Arce Japonés</h3>
+<p class="font-label-sm text-label-sm text-outline mb-3 italic">Acer palmatum</p>
+<p class="font-body-md text-on-surface-variant line-clamp-2">Conocido por sus hojas palmeadas y su espectacular coloración otoñal en tonos rojos, naranjas y púrpuras.</p>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="bg-surface-container-lowest/80 backdrop-blur-[20px] rounded-DEFAULT p-6 shadow-[0_4px_30px_rgba(63,102,83,0.05)] border border-tertiary/10 flex flex-col group hover:-translate-y-1 transition-transform duration-300">
+<div class="relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-surface-variant">
+<img alt="Pino Silvestre" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A tall Scots Pine tree standing resilient against a cold winter sky, its needles a deep forest green. The scene has a soft, misty quality, evoking calm reliability. Lighting is cool and bright, perfectly fitting an organic minimalist UI design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-aX2GXYHE-i_0LNJUcyxRjzCoohqMT3VZfBQ_xuVBwG-eYfEZUJa_JbiNNea0S-B92R2mpNp3VErogF640e79lDo2ax4PPqpSbk8uA_9PrNNqHUApR8x_dKpJ5y0xW2w7p7ojSPA-qZIsikkLxdpZtaufRcoGZBQfWsOqifP0r57tY-wf8LoDonlb8UaHh7NFO0ZvvfAbsU9AcTi45hJzzoYsFPHpfS5b7JiznlsoO5PJidENH5ACLMmBHd0piUBitQfNjwpQsR4"/>
+<div class="absolute top-3 right-3 bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="ac_unit">ac_unit</span>
+<span class="font-label-sm text-label-sm text-on-surface">Invierno</span>
+</div>
+</div>
+<div class="flex-grow">
+<h3 class="font-headline-lg-mobile text-primary mb-1">Pino Silvestre</h3>
+<p class="font-label-sm text-label-sm text-outline mb-3 italic">Pinus sylvestris</p>
+<p class="font-body-md text-on-surface-variant line-clamp-2">Conífera resistente de hoja perenne, vital para los ecosistemas boreales y reconocible por su corteza rojiza.</p>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="bg-surface-container-lowest/80 backdrop-blur-[20px] rounded-DEFAULT p-6 shadow-[0_4px_30px_rgba(63,102,83,0.05)] border border-tertiary/10 flex flex-col group hover:-translate-y-1 transition-transform duration-300">
+<div class="relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-surface-variant">
+<img alt="Cerezo en Flor" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Delicate pink cherry blossoms blooming against a pale blue sky in spring. The lighting is soft and ethereal, mimicking dappled canopy light. The aesthetic is extremely gentle, organic, and suitable for a high-end natural application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAecVAGbPmiJlUsvJwetltAlf7IQzQuTon1RoCHJwO1g_hAS-Z47GSgsqsu_uQacle_vOT4T3N_u-JB7doSorqFMS7bovgLBQ4EhlapMWFCOQPeN649c9oTPevgs4quVqsrZRwBVeUHWpQaxlyARdp8_mmOfoAdPefHw7MLGZm9GQD_4ufFIEekd0CvL3IyQWvM2MFmy5q8sdHfzZxGK_DpN5PHp5bvx6tW7ppLLe5PgJ1HYzT6dGQFHaqgH84qQOPVdYoZdbhYhPM"/>
+<div class="absolute top-3 right-3 bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-[#ff8529]" data-icon="local_florist">local_florist</span>
+<span class="font-label-sm text-label-sm text-on-surface">Primavera</span>
+</div>
+</div>
+<div class="flex-grow">
+<h3 class="font-headline-lg-mobile text-primary mb-1">Cerezo en Flor</h3>
+<p class="font-label-sm text-label-sm text-outline mb-3 italic">Prunus serrulata</p>
+<p class="font-body-md text-on-surface-variant line-clamp-2">Símbolo del renacimiento primaveral, produce nubes de flores rosadas o blancas efímeras y delicadas.</p>
+</div>
+</article>
+<!-- Card 4 -->
+<article class="bg-surface-container-lowest/80 backdrop-blur-[20px] rounded-DEFAULT p-6 shadow-[0_4px_30px_rgba(63,102,83,0.05)] border border-tertiary/10 flex flex-col group hover:-translate-y-1 transition-transform duration-300">
+<div class="relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-surface-variant">
+<img alt="Roble Blanco" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A massive, mature White Oak tree in full summer foliage, casting deep, cool shadows on a bright green meadow. The style emphasizes breathable whitespace and a deep biological connection. Lighting is warm and sunny." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDetA0WGIFwcfKJZOcxcY0p-bgFP0RlyanGmSDGJBTXDxwJLcPCaOucDcIXzbOunHyVFKXyXBH8_tvpuP25PZ5DMaYvlNB8JTDOmcj9jNPpAIxOAlnOxt2-lCiE1pX7CIaHv713NugHHvjrseVfZresmVkoOAFyzftMu-JRyeXgVv8-S2ljMzySjuiKSWObS1t3KV5Kz-X5M0EgShsIYmHtxMFnPRwaD6a9Na5wxqvPsEjUfM3qqzYEm-i4QswkpWfD_CFp9F20pDM"/>
+<div class="absolute top-3 right-3 bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-[#ff8529]" data-icon="wb_sunny">wb_sunny</span>
+<span class="font-label-sm text-label-sm text-on-surface">Verano</span>
+</div>
+</div>
+<div class="flex-grow">
+<h3 class="font-headline-lg-mobile text-primary mb-1">Roble Blanco</h3>
+<p class="font-label-sm text-label-sm text-outline mb-3 italic">Quercus alba</p>
+<p class="font-body-md text-on-surface-variant line-clamp-2">Un pilar majestuoso de los bosques templados, proporcionando sombra densa y hábitat durante los cálidos meses de verano.</p>
+</div>
+</article>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden bg-surface/70 dark:bg-surface-dim/70 backdrop-blur-xl fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-20 pb-safe rounded-t-lg shadow-sm border-t-0 font-label-sm text-label-sm">
+<!-- Home: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-4 py-1 hover:bg-surface-variant/50 dark:hover:bg-surface-container-highest/50 transition-colors" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span>Home</span>
+</a>
+<!-- Species: Active State based on JSON rules and page intent -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-primary-container text-on-secondary-container dark:text-on-primary-container rounded-xl px-4 py-1 active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined fill mb-1" data-icon="nature_people" data-weight="fill">nature_people</span>
+<span>Species</span>
+</a>
+<!-- Footprint: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-4 py-1 hover:bg-surface-variant/50 dark:hover:bg-surface-container-highest/50 transition-colors" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="eco">eco</span>
+<span>Footprint</span>
+</a>
+<!-- Profile: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-4 py-1 hover:bg-surface-variant/50 dark:hover:bg-surface-container-highest/50 transition-colors" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span>Profile</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WoodMatch - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Newsreader:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#faf2ec",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#002114",
+                        "primary-fixed-dim": "#a5d0b9",
+                        "on-secondary-fixed": "#092012",
+                        "on-surface-variant": "#414844",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#b3cdb7",
+                        "tertiary-container": "#632c00",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#274e3d",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#cee9d3",
+                        "surface": "#fff8f3",
+                        "secondary": "#4c6452",
+                        "surface-container": "#f4ede6",
+                        "background": "#fff8f3",
+                        "surface-variant": "#e8e1db",
+                        "on-background": "#1e1b17",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#33302c",
+                        "surface-dim": "#e0d9d3",
+                        "on-secondary-container": "#506856",
+                        "primary-container": "#1b4332",
+                        "outline": "#717973",
+                        "tertiary": "#421b00",
+                        "surface-bright": "#fff8f3",
+                        "surface-container-highest": "#e8e1db",
+                        "inverse-on-surface": "#f7efe9",
+                        "on-tertiary-fixed": "#321300",
+                        "on-tertiary-fixed-variant": "#743500",
+                        "surface-container-high": "#eee7e1",
+                        "surface-tint": "#3f6653",
+                        "on-tertiary-container": "#ff8529",
+                        "tertiary-fixed-dim": "#ffb68a",
+                        "inverse-primary": "#a5d0b9",
+                        "secondary-container": "#cce6d0",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#ffdbc8",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#86af99",
+                        "on-secondary-fixed-variant": "#354c3b",
+                        "primary-fixed": "#c1ecd4",
+                        "outline-variant": "#c1c8c2",
+                        "primary": "#012d1d",
+                        "on-surface": "#1e1b17"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "container-max": "1280px",
+                        "margin-desktop": "64px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "display-lg": [
+                            "Newsreader"
+                        ],
+                        "label-sm": [
+                            "Inter"
+                        ],
+                        "body-md": [
+                            "Inter"
+                        ],
+                        "body-lg": [
+                            "Inter"
+                        ],
+                        "headline-lg-mobile": [
+                            "Newsreader"
+                        ],
+                        "headline-lg": [
+                            "Newsreader"
+                        ]
+                    },
+                    "fontSize": {
+                        "display-lg": [
+                            "48px",
+                            {
+                                "lineHeight": "1.1",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "600"
+                            }
+                        ],
+                        "label-sm": [
+                            "12px",
+                            {
+                                "lineHeight": "1.2",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                            }
+                        ],
+                        "body-md": [
+                            "16px",
+                            {
+                                "lineHeight": "1.5",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "body-lg": [
+                            "18px",
+                            {
+                                "lineHeight": "1.6",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "headline-lg-mobile": [
+                            "28px",
+                            {
+                                "lineHeight": "1.2",
+                                "fontWeight": "600"
+                            }
+                        ],
+                        "headline-lg": [
+                            "32px",
+                            {
+                                "lineHeight": "1.2",
+                                "fontWeight": "600"
+                            }
+                        ]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen relative overflow-hidden flex items-center justify-center">
+<!-- Background Image -->
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1506456093551-7ecf8b5a0349?ixlib=rb-4.0.3&amp;auto=format&amp;fit=crop&amp;w=2000&amp;q=80')] bg-cover bg-center" data-alt="A breathtaking view of a dense forest transitioning between seasons, featuring a stunning mix of vibrant autumn oranges and deep summer greens. The dappled sunlight filters through the canopy, creating a warm, organic, and serene atmosphere. The overall aesthetic aligns with an Arboreal Organic visual style, utilizing soft-focus depth and high-contrast natural lighting to evoke a sense of calm and biological connection within a light-mode UI context.">
+</div>
+<!-- Soft overlay to ensure readability -->
+<div class="absolute inset-0 bg-surface/30 backdrop-blur-sm mix-blend-overlay"></div>
+</div>
+<!-- Login Container -->
+<main class="relative z-10 w-full max-w-md px-margin-mobile md:px-0">
+<div class="glass-panel rounded-xl shadow-[0_10px_30px_rgba(27,67,50,0.1)] p-8 md:p-10 border border-surface-container-high/50 flex flex-col items-center">
+<!-- Logo -->
+<img alt="WoodMatch Logo" class="w-24 h-24 mb-6 rounded-full object-cover" src="data:image/png;base64,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"/>
+<!-- Headline -->
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary text-center mb-8 tracking-tight">
+                Conecta con la Raíz
+            </h1>
+<!-- Form -->
+<form class="w-full space-y-6">
+<!-- Email Input -->
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant block ml-1" for="email">Correo Electrónico</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-variation-settings: 'FILL' 0;">mail</span>
+<input class="w-full pl-12 pr-4 py-3 bg-surface-container-lowest/80 border border-outline-variant/30 rounded-full focus:ring-2 focus:ring-primary-fixed focus:border-transparent font-body-md text-body-md text-on-surface transition-all outline-none" id="email" placeholder="tu@email.com" type="email"/>
+</div>
+</div>
+<!-- Password Input -->
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant block ml-1" for="password">Contraseña</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-variation-settings: 'FILL' 0;">lock</span>
+<input class="w-full pl-12 pr-4 py-3 bg-surface-container-lowest/80 border border-outline-variant/30 rounded-full focus:ring-2 focus:ring-primary-fixed focus:border-transparent font-body-md text-body-md text-on-surface transition-all outline-none" id="password" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full py-4 bg-primary text-on-primary rounded-full font-body-md text-body-md font-medium shadow-md hover:bg-primary/90 hover:shadow-lg transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-2" type="button">
+                    Iniciar Sesión
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+</form>
+<!-- Secondary Actions -->
+<div class="mt-8 flex flex-col items-center gap-4 w-full border-t border-outline-variant/20 pt-6">
+<button class="font-label-sm text-label-sm text-primary hover:text-primary/80 transition-colors" type="button">
+                    Crear Cuenta
+                </button>
+<button class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+                    Explorar como Invitado
+                </button>
+</div>
+</div>
+</main>
+</body></html>
