@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NaturePeople
 import androidx.compose.material.icons.filled.Park
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,6 +38,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,7 +78,8 @@ fun DashboardScreen(
     onNavigateToViewReports: () -> Unit,
     onNavigateToSpecies: () -> Unit,
     onNavigateToMap: () -> Unit,
-    onNavigateToAdminUsers: () -> Unit
+    onNavigateToAdminUsers: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val currentUser by AuthRepository.currentUser.collectAsState()
 
@@ -103,7 +106,7 @@ fun DashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "¡Hola, ${currentUser?.name?.ifBlank { "Guardián" } ?: "Guardián"}!",
                         style = MaterialTheme.typography.headlineMedium,
@@ -117,19 +120,31 @@ fun DashboardScreen(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (currentUser?.isAdmin == true) Icons.Filled.AdminPanelSettings else Icons.Filled.Forest,
-                        contentDescription = "Rol",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(24.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (currentUser?.isAdmin == true) Icons.Filled.AdminPanelSettings else Icons.Filled.Forest,
+                            contentDescription = "Rol",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Configuración",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }

@@ -61,6 +61,28 @@ object AuthRepository {
     private val _currentUser = MutableStateFlow<User?>(demoUsers.first())
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
+    init {
+        ensureFirebaseSession()
+    }
+
+    fun ensureFirebaseSession() {
+        auth?.let { firebaseAuth ->
+            if (firebaseAuth.currentUser == null) {
+                try {
+                    firebaseAuth.signInAnonymously()
+                        .addOnSuccessListener {
+                            android.util.Log.d("AuthRepository", "Sesión anónima de Firebase establecida correctamente")
+                        }
+                        .addOnFailureListener { e ->
+                            android.util.Log.d("AuthRepository", "Sesión anónima Firebase omitida/no configurada: ${e.message}")
+                        }
+                } catch (e: Exception) {
+                    android.util.Log.d("AuthRepository", "Firebase auth fallback: ${e.message}")
+                }
+            }
+        }
+    }
+
     fun validateEmail(email: String): Boolean {
         val emailRegex = Regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
         return email.isNotBlank() && emailRegex.matches(email)
@@ -252,15 +274,17 @@ object AuthRepository {
                 val snapshot = db.collection("users").get().await()
                 if (!snapshot.isEmpty) {
                     val remote = snapshot.documents.mapNotNull { doc ->
+                        val email = doc.getString("email") ?: ""
+                        val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Guardián" }
                         User(
                             uid = doc.getString("uid") ?: doc.id,
-                            name = doc.getString("name") ?: "Usuario",
-                            email = doc.getString("email") ?: "",
+                            name = doc.getString("name")?.takeIf { it.isNotBlank() } ?: fallbackName,
+                            email = email,
                             phone = doc.getString("phone") ?: "",
                             dob = doc.getString("dob") ?: "",
                             city = doc.getString("city") ?: "",
                             gender = doc.getString("gender") ?: "",
-                            role = doc.getString("role") ?: "user"
+                            role = doc.getString("role") ?: if (email.contains("admin", ignoreCase = true)) "admin" else "user"
                         )
                     }
                     if (remote.isNotEmpty()) return remote
@@ -290,15 +314,17 @@ object AuthRepository {
         return try {
             firestore?.collection("users")?.document(uid)?.get()?.await()?.let { doc ->
                 if (doc.exists()) {
+                    val email = doc.getString("email") ?: ""
+                    val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Guardián" }
                     User(
                         uid = uid,
-                        name = doc.getString("name") ?: "",
-                        email = doc.getString("email") ?: "",
+                        name = doc.getString("name")?.takeIf { it.isNotBlank() } ?: fallbackName,
+                        email = email,
                         phone = doc.getString("phone") ?: "",
                         dob = doc.getString("dob") ?: "",
                         city = doc.getString("city") ?: "",
                         gender = doc.getString("gender") ?: "",
-                        role = doc.getString("role") ?: "user"
+                        role = doc.getString("role") ?: if (email.contains("admin", ignoreCase = true)) "admin" else "user"
                     )
                 } else null
             }

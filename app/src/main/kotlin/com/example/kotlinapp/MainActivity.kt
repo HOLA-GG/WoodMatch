@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.kotlinapp.data.model.SeasonalTheme
 import com.example.kotlinapp.data.repository.AuthRepository
+import com.example.kotlinapp.data.repository.ReportRepository
 import com.example.kotlinapp.ui.components.WoodMatchBottomNav
 import com.example.kotlinapp.ui.navigation.Screen
 import com.example.kotlinapp.ui.screens.AdminUsersScreen
@@ -28,6 +29,7 @@ import com.example.kotlinapp.ui.screens.LoginScreen
 import com.example.kotlinapp.ui.screens.ProfileScreen
 import com.example.kotlinapp.ui.screens.RegisterScreen
 import com.example.kotlinapp.ui.screens.ReportTreeScreen
+import com.example.kotlinapp.ui.screens.SettingsScreen
 import com.example.kotlinapp.ui.screens.SpeciesScreen
 import com.example.kotlinapp.ui.screens.SplashScreen
 import com.example.kotlinapp.ui.screens.TreeMapScreen
@@ -38,6 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        ReportRepository.init(applicationContext)
 
         setContent {
             var currentSeason by remember { mutableStateOf(SeasonalTheme.SUMMER) }
@@ -157,7 +160,8 @@ fun WoodMatchApp(
                     onNavigateToViewReports = { navController.navigate(Screen.ViewReports.route) },
                     onNavigateToSpecies = { navController.navigate(Screen.Species.route) },
                     onNavigateToMap = { navController.navigate(Screen.TreeMap.route) },
-                    onNavigateToAdminUsers = { navController.navigate(Screen.AdminUsers.route) }
+                    onNavigateToAdminUsers = { navController.navigate(Screen.AdminUsers.route) },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
                 )
             }
 
@@ -182,8 +186,22 @@ fun WoodMatchApp(
 
             composable(Screen.Profile.route) {
                 ProfileScreen(
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    onLogout = {
+                        AuthRepository.logout()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            // Settings Screen
+            composable(Screen.Settings.route) {
+                SettingsScreen(
                     currentSeason = currentSeason,
                     onSeasonChange = onSeasonChange,
+                    onNavigateBack = { navController.popBackStack() },
                     onLogout = {
                         AuthRepository.logout()
                         navController.navigate(Screen.Login.route) {

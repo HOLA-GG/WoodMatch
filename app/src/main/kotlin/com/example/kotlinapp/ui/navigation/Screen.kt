@@ -12,4 +12,5 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object AdminUsers : Screen("admin_users")
     object TreeMap : Screen("tree_map")
+    object Settings : Screen("settings")
 }

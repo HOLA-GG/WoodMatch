@@ -10,9 +10,11 @@ materialIconsExtended = "1.7.8"
 navigationCompose = "2.8.8"
 playServicesLocation = "21.3.0"
 firebaseBom = "33.10.0"
+coil = "2.7.0"
 junit = "4.13.2"
 
 [libraries]
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }

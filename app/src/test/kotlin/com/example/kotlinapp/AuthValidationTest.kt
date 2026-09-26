@@ -45,5 +45,44 @@ class AuthValidationTest {
         val autumnResults = SpeciesRepository.searchSpecies("", "Otoño")
         assertTrue(autumnResults.isNotEmpty())
         assertTrue(autumnResults.all { it.season == "Otoño" })
+
+        val shrubResults = SpeciesRepository.searchSpecies("", "Todos", "Arbusto")
+        assertTrue(shrubResults.isNotEmpty())
+        assertTrue(shrubResults.all { it.category == "Arbusto" })
+
+        val andinaResults = SpeciesRepository.searchSpecies("", "Todos", "Todos", "Andina")
+        assertTrue(andinaResults.isNotEmpty())
+        assertTrue(andinaResults.all { it.regionGroup == "Andina" || it.nativeRegion.contains("Andina", ignoreCase = true) })
+    }
+
+    @Test
+    fun testPlantNetCandidateToSpecies() {
+        val candidate = com.example.kotlinapp.data.network.PlantNetCandidate(
+            scientificName = "Handroanthus chrysanthus",
+            authorship = "(Jacq.) S.O.Grose",
+            family = "Bignoniaceae",
+            commonNames = listOf("guayacán amarillo", "araguaney"),
+            score = 0.942,
+            imageUrl = "https://example.com/flower.jpg",
+            organ = "flower"
+        )
+
+        org.junit.Assert.assertEquals(94, candidate.scorePercentage)
+        org.junit.Assert.assertEquals("Guayacán amarillo", candidate.primaryCommonName)
+
+        val species = candidate.toTreeSpecies("Caribe")
+        org.junit.Assert.assertEquals("Guayacán amarillo", species.commonName)
+        org.junit.Assert.assertEquals("Bignoniaceae", species.family)
+        org.junit.Assert.assertEquals("Caribe", species.regionGroup)
+        assertTrue(species.description.contains("94%"))
+    }
+
+    @Test
+    fun testForestAiConsultantResponse() = kotlinx.coroutines.runBlocking {
+        val response = com.example.kotlinapp.data.network.ForestAiService.askBotanicalConsultant("¿Qué árboles absorben más CO2?")
+        assertTrue(response.isSuccess)
+        val text = response.getOrNull() ?: ""
+        assertTrue(text.isNotBlank())
+        assertTrue(text.contains("CO₂") || text.contains("Carbono") || text.contains("Roble") || text.contains("Ceiba"))
     }
 }
