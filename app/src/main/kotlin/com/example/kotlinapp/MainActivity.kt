@@ -1,9 +1,9 @@
 package com.example.kotlinapp
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -27,6 +27,7 @@ import com.example.kotlinapp.ui.screens.DashboardScreen
 import com.example.kotlinapp.ui.screens.ForgotPasswordScreen
 import com.example.kotlinapp.ui.screens.LoginScreen
 import com.example.kotlinapp.ui.screens.ProfileScreen
+import com.example.kotlinapp.ui.screens.PublishWoodWasteScreen
 import com.example.kotlinapp.ui.screens.RegisterScreen
 import com.example.kotlinapp.ui.screens.ReportTreeScreen
 import com.example.kotlinapp.ui.screens.SettingsScreen
@@ -34,9 +35,10 @@ import com.example.kotlinapp.ui.screens.SpeciesScreen
 import com.example.kotlinapp.ui.screens.SplashScreen
 import com.example.kotlinapp.ui.screens.TreeMapScreen
 import com.example.kotlinapp.ui.screens.ViewReportsScreen
+import com.example.kotlinapp.ui.screens.WoodWasteCatalogScreen
 import com.example.kotlinapp.ui.theme.WoodMatchTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -167,7 +169,8 @@ fun WoodMatchApp(
 
             composable(Screen.Species.route) {
                 SpeciesScreen(
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToCreateReport = { navController.navigate(Screen.ReportTree.route) }
                 )
             }
 
@@ -178,7 +181,7 @@ fun WoodMatchApp(
             }
 
             composable(Screen.ViewReports.route) {
-                ViewReportsScreen(
+                WoodWasteCatalogScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToCreateReport = { navController.navigate(Screen.ReportTree.route) }
                 )
@@ -211,11 +214,11 @@ fun WoodMatchApp(
                 )
             }
 
-            // Report Tree Screen
+            // Report / Publish Wood Waste Screen
             composable(Screen.ReportTree.route) {
-                ReportTreeScreen(
+                PublishWoodWasteScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToReports = {
+                    onPublishSuccess = {
                         navController.navigate(Screen.ViewReports.route) {
                             popUpTo(Screen.Dashboard.route)
                         }

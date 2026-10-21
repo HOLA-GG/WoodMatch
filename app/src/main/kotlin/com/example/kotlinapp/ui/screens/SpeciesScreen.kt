@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,6 +49,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,7 +97,8 @@ import java.util.UUID
 
 @Composable
 fun SpeciesScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToCreateReport: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -476,17 +479,30 @@ fun SpeciesScreen(
         )
     }
 
-    // 2. MODAL CONSULTOR FORESTAL INTELIGENTE (ASISTENTE IA)
+    // 2. MODAL: GUÍA INTERACTIVA DE REPORTE BOTÁNICO PARA NUEVOS USUARIOS
     if (showAiConsultantDialog) {
-        var userQuestion by remember { mutableStateOf("") }
+        var selectedWasteType by remember { mutableStateOf("Poda / Ramas") }
+        var customSpeciesInput by remember { mutableStateOf("") }
+        var selectedSector by remember { mutableStateOf("Suba Centro") }
         var isAskingAi by remember { mutableStateOf(false) }
         var aiAnswer by remember { mutableStateOf<String?>(null) }
 
-        val suggestions = listOf(
-            "¿Qué árboles absorben más CO₂?",
-            "Recomendación para reforestar en clima frío",
-            "¿Cómo cuidar un árbol recién plantado?",
-            "¿Cómo tratar hojas amarillas o plagas?"
+        val wasteTypes = listOf(
+            "🪵 Poda / Ramas",
+            "🌲 Tronco macizo",
+            "📦 Estibas / Tablas",
+            "🌾 Aserrín / Viruta",
+            "🌱 Árbol urbano"
+        )
+
+        val subaSectorsList = listOf(
+            "Suba Centro",
+            "Niza / La Colina",
+            "El Rincón",
+            "Tibabuyes",
+            "San José de Bavaria",
+            "Britalia",
+            "Lombardía"
         )
 
         AlertDialog(
@@ -500,7 +516,10 @@ fun SpeciesScreen(
                         modifier = Modifier.size(26.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Consultor Forestal", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        text = "Guía Asistida de Reporte",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
                 }
             },
             text = {
@@ -511,16 +530,15 @@ fun SpeciesScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Consulta recomendaciones sobre especies, siembra, cuidados y captura de carbono.",
+                        text = "El Asistente Botánico orienta a nuevos usuarios para clasificar su residuo y publicarlo paso a paso en Suba.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // Sugerencias rápidas
+                    // Paso 1: Tipo de material
                     Text(
-                        text = "Consultas frecuentes:",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
+                        text = "1. Selecciona o escribe el tipo de madera:",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary
                     )
                     Row(
@@ -529,79 +547,101 @@ fun SpeciesScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        suggestions.forEach { promptText ->
+                        wasteTypes.forEach { typeLabel ->
                             FilterChip(
-                                selected = false,
+                                selected = selectedWasteType == typeLabel,
                                 onClick = {
-                                    userQuestion = promptText
-                                    isAskingAi = true
+                                    selectedWasteType = typeLabel
                                     aiAnswer = null
-                                    coroutineScope.launch {
-                                        val res = ForestAiService.askBotanicalConsultant(promptText)
-                                        aiAnswer = res.getOrNull() ?: "No se pudo obtener la respuesta en este momento."
-                                        isAskingAi = false
-                                    }
                                 },
-                                label = { Text(promptText, style = MaterialTheme.typography.labelSmall) },
-                                shape = RoundedCornerShape(16.dp)
+                                label = { Text(typeLabel, style = MaterialTheme.typography.labelSmall) },
+                                shape = RoundedCornerShape(12.dp)
                             )
                         }
                     }
 
-                    // Campo de pregunta personalizada
-                    Row(
+                    OutlinedTextField(
+                        value = customSpeciesInput,
+                        onValueChange = { customSpeciesInput = it },
+                        placeholder = { Text("Opcional: Especie (ej. Eucalipto, Pino, Sauce)") },
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        singleLine = true
+                    )
+
+                    // Paso 2: Sector de Suba
+                    Text(
+                        text = "2. Sector de ubicación en Suba:",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        OutlinedTextField(
-                            value = userQuestion,
-                            onValueChange = { userQuestion = it },
-                            placeholder = { Text("Escribe tu pregunta forestal...") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                if (userQuestion.isNotBlank() && !isAskingAi) {
-                                    isAskingAi = true
+                        subaSectorsList.forEach { sec ->
+                            FilterChip(
+                                selected = selectedSector == sec,
+                                onClick = {
+                                    selectedSector = sec
                                     aiAnswer = null
-                                    coroutineScope.launch {
-                                        val res = ForestAiService.askBotanicalConsultant(userQuestion)
-                                        aiAnswer = res.getOrNull() ?: "No se pudo obtener la respuesta en este momento."
-                                        isAskingAi = false
-                                    }
+                                },
+                                label = { Text(sec, style = MaterialTheme.typography.labelSmall) },
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+                    }
+
+                    // Botón para consultar a Gemini (síntesis en 3 puntos)
+                    Button(
+                        onClick = {
+                            if (!isAskingAi) {
+                                isAskingAi = true
+                                aiAnswer = null
+                                coroutineScope.launch {
+                                    val materialDesc = if (customSpeciesInput.isNotBlank()) {
+                                        "$selectedWasteType ($customSpeciesInput)"
+                                    } else selectedWasteType
+
+                                    val res = ForestAiService.guideNewUserReport(
+                                        wasteType = materialDesc,
+                                        sector = selectedSector,
+                                        details = "Usuario nuevo registrando en Suba"
+                                    )
+                                    aiAnswer = res.getOrNull() ?: "1. Diagnóstico: Material leñoso registrado.\n2. Aprovechamiento: Se evalúa para compostaje o bioconstrucción.\n3. Reporte: Presiona 'Completar Reporte' a continuación."
+                                    isAskingAi = false
                                 }
-                            },
-                            enabled = userQuestion.isNotBlank() && !isAskingAi
-                        ) {
-                            Icon(Icons.Filled.Send, contentDescription = "Consultar", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        },
+                        enabled = !isAskingAi,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isAskingAi) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Analizando con Asistente Botánico...", style = MaterialTheme.typography.labelMedium)
+                        } else {
+                            Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Generar Guía de Reporte (3 Puntos)", style = MaterialTheme.typography.labelMedium)
                         }
                     }
 
-                    if (isAskingAi) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text("Analizando consulta botánica...", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-
+                    // Resultado en 3 Puntos Clave
                     if (aiAnswer != null) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                             ),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         imageVector = Icons.Filled.Spa,
@@ -611,19 +651,31 @@ fun SpeciesScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Orientación Forestal",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        text = "3 Puntos Clave del Asistente:",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = aiAnswer!!,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
+                        }
+
+                        // Botón de Acción Directo para Usuarios Nuevos
+                        Button(
+                            onClick = {
+                                showAiConsultantDialog = false
+                                onNavigateToCreateReport()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
+                        ) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Completar Reporte de Madera", maxLines = 1)
                         }
                     }
                 }

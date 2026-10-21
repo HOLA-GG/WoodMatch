@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -27,6 +28,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -46,8 +48,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.kotlinapp.data.model.User
+import com.example.kotlinapp.data.model.UserRole
 import com.example.kotlinapp.data.repository.AuthRepository
-import com.example.kotlinapp.ui.components.WoodMatchTopAppBar
 import kotlinx.coroutines.launch
 
 @Composable
@@ -73,50 +75,74 @@ fun AdminUsersScreen(
         loadUsers()
     }
 
-    fun toggleRole(user: User) {
-        val newRole = if (user.role.equals("admin", ignoreCase = true)) "user" else "admin"
+    fun cycleRole(targetUser: User) {
+        val nextRole = when (targetUser.typedRole) {
+            UserRole.GENERADOR -> UserRole.RECEPTOR.name
+            UserRole.RECEPTOR -> UserRole.MIXTO.name
+            UserRole.MIXTO -> UserRole.ADMIN.name
+            UserRole.ADMIN -> UserRole.GENERADOR.name
+        }
         coroutineScope.launch {
-            AuthRepository.updateUserRole(user.uid, newRole)
+            AuthRepository.updateUserRole(targetUser.uid, nextRole)
             loadUsers()
         }
     }
 
-    val filteredUsers = remember(users, searchQuery) {
-        if (searchQuery.isBlank()) users
-        else users.filter {
-            it.name.contains(searchQuery, ignoreCase = true) ||
-            it.email.contains(searchQuery, ignoreCase = true) ||
-            it.city.contains(searchQuery, ignoreCase = true)
-        }
+    val filteredUsers = users.filter { u ->
+        searchQuery.isBlank() ||
+                u.name.contains(searchQuery, ignoreCase = true) ||
+                u.email.contains(searchQuery, ignoreCase = true) ||
+                u.role.contains(searchQuery, ignoreCase = true) ||
+                u.sectorSuba.contains(searchQuery, ignoreCase = true)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .testTag("admin_users_screen")
     ) {
-        WoodMatchTopAppBar(
-            title = "Gestión de Usuarios",
-            showBackButton = true,
-            onBackClick = onNavigateBack
-        )
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onNavigateBack,
+                modifier = Modifier.testTag("admin_users_back_button")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = "Gestión Administrativa",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Control de roles y auditoría de la red en Suba",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         if (currentUser?.isAdmin != true) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         imageVector = Icons.Filled.Security,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(54.dp)
+                        modifier = Modifier.size(64.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Acceso Restringido",
                         style = MaterialTheme.typography.headlineSmall,
@@ -130,14 +156,14 @@ fun AdminUsersScreen(
                 }
             }
         } else {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Buscar usuario por nombre o correo...") },
+                    placeholder = { Text("Buscar por nombre, correo, rol o sector...") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     singleLine = true,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -156,7 +182,7 @@ fun AdminUsersScreen(
                     items(filteredUsers, key = { it.uid }) { user ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             )
@@ -167,7 +193,10 @@ fun AdminUsersScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
                                         Box(
                                             modifier = Modifier
                                                 .size(42.dp)
@@ -196,7 +225,7 @@ fun AdminUsersScreen(
                                             )
                                             Text(
                                                 text = user.email,
-                                                style = MaterialTheme.typography.bodyMedium,
+                                                style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
@@ -204,17 +233,17 @@ fun AdminUsersScreen(
 
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(8.dp))
                                             .background(
                                                 if (user.isAdmin) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                                else MaterialTheme.colorScheme.secondaryContainer
                                             )
-                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
                                     ) {
                                         Text(
-                                            text = if (user.isAdmin) "Admin" else "Usuario",
+                                            text = user.typedRole.displayName.substringBefore(" "),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = if (user.isAdmin) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                            color = if (user.isAdmin) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -228,28 +257,22 @@ fun AdminUsersScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "${user.city.ifBlank { "Ciudad no especificada" }} · ${user.phone.ifBlank { "Sin tel" }}",
+                                        text = "Sector: ${user.sectorSuba} • Tel: ${user.phone}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
                                     OutlinedButton(
-                                        onClick = { toggleRole(user) },
-                                        shape = RoundedCornerShape(16.dp)
+                                        onClick = { cycleRole(user) },
+                                        shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text(
-                                            text = if (user.isAdmin) "Degradar a Usuario" else "Promover a Admin",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                                        Text("Cambiar Rol", style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
                         }
                     }
-
-                    item {
-                        Spacer(modifier = Modifier.height(20.dp))
-                    }
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
                 }
             }
         }

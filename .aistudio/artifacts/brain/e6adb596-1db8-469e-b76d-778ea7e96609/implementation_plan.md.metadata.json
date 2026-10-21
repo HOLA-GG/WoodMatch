@@ -1,0 +1,6 @@
+{
+  "summary":  "Plan revisado incorporando Leaflet como motor principal ligero y optimizado para móviles (con aceleración por hardware para fluidez en gama media y alta), conmutación de servicios Catastro Bogotá 3857 y 4686, calibración estricta de Gemini en máximo 3 puntos clave y guía paso a paso para reportes.",
+  "updatedAt":  "2026-10-21T20:28:29.519668258Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

@@ -1,6 +1,6 @@
 {
   "name": "WoodMatch",
-  "description": "Reporte y conservación forestal, catálogo botánico y seguimiento ecológico",
+  "description": "Economía circular y aprovechamiento de residuos leñosos urbanos en Suba, Bogotá",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

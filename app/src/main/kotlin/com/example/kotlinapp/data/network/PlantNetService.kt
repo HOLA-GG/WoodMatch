@@ -241,9 +241,13 @@ object PlantNetService {
             val responseBody = responseStream?.bufferedReader()?.use { it.readText() } ?: ""
 
             if (responseCode !in 200..299) {
-                return@withContext Result.failure(
-                    Exception("No se pudo identificar la especie ($responseCode). Intenta con una foto con buena iluminación.")
-                )
+                val detailMsg = when (responseCode) {
+                    401, 403 -> "Clave de Pl@ntNet inválida o no autorizada ($responseCode). Configura tu PLANTNET_API_KEY en Secrets panel."
+                    404 -> "Pl@ntNet no encontró coincidencias para esta planta ($responseCode). Prueba con un enfoque más cercano a la hoja o corteza."
+                    429 -> "Cuota diaria de Pl@ntNet superada (429 - 500 solicitudes/día). Intenta más tarde o con otra clave."
+                    else -> "Error en Pl@ntNet ($responseCode). Intenta con una foto con mejor iluminación y enfoque."
+                }
+                return@withContext Result.failure(Exception(detailMsg))
             }
 
             val result = parseIdentificationJson(responseBody)

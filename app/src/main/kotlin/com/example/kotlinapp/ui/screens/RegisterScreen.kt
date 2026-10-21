@@ -1,7 +1,6 @@
 package com.example.kotlinapp.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,8 +22,10 @@ import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Recycling
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -32,6 +33,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -56,9 +61,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.kotlinapp.data.model.SubaSectors
+import com.example.kotlinapp.data.model.UserRole
 import com.example.kotlinapp.data.repository.AuthRepository
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
@@ -68,9 +76,11 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("+57") }
     var dob by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("Bogotá") }
+    var sectorSuba by remember { mutableStateOf("Suba Centro") }
+    var sectorExpanded by remember { mutableStateOf(false) }
     var gender by remember { mutableStateOf("Masculino") }
-    var role by remember { mutableStateOf("user") }
+    var role by remember { mutableStateOf(UserRole.GENERADOR.name) }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
@@ -94,14 +104,15 @@ fun RegisterScreen(
                 city = city,
                 gender = gender,
                 role = role,
+                sectorSuba = sectorSuba,
                 pass = password,
                 confirmPass = confirmPassword
             )
             isLoading = false
-            res.onSuccess {
+            if (res.isSuccess) {
                 onRegisterSuccess()
-            }.onFailure { err ->
-                errorMessage = err.message ?: "Error al registrar usuario"
+            } else {
+                errorMessage = res.exceptionOrNull()?.message ?: "Error al registrar la cuenta."
             }
         }
     }
@@ -110,17 +121,20 @@ fun RegisterScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .testTag("register_screen")
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Top Bar
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                     onClick = onNavigateBackToLogin,
@@ -128,60 +142,96 @@ fun RegisterScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Regresar al Login",
-                        tint = MaterialTheme.colorScheme.primary
+                        contentDescription = "Volver",
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Registro de Guardián",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 8.dp)
+                    text = "Crear Cuenta Circular",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
             Text(
-                text = "Únete a la comunidad de monitoreo y protección arbórea.",
+                text = "Únete a la red de economía circular y rescate de residuos leñosos en Suba, Bogotá.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp, bottom = 16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, bottom = 16.dp)
             )
-
-            if (errorMessage != null) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Text(
-                        text = errorMessage ?: "",
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            }
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    // Selector de Rol Operativo (Sin opción de ADMIN en registro)
+                    Text(
+                        text = "Rol en la Red de Economía Circular",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            Triple(UserRole.GENERADOR.name, "Generador de Residuos", "Poda de árboles, jardinería o descartes de madera"),
+                            Triple(UserRole.RECEPTOR.name, "Receptor / Aprovechador", "Carpinterías, artesanos, biomasa o compostaje"),
+                            Triple(UserRole.MIXTO.name, "Usuario Mixto", "Tanto genera como aprovecha material leñoso")
+                        ).forEach { (r, title, desc) ->
+                            val isSelected = role == r
+                            Card(
+                                onClick = { role = r },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("role_option_$r")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Recycling,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = desc,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Name
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Nombre Completo") },
+                        label = { Text("Nombre Completo / Razón Social") },
+                        placeholder = { Text("Ej. Taller Artesanal o Carlos M.") },
                         leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
@@ -195,9 +245,9 @@ fun RegisterScreen(
                         value = email,
                         onValueChange = { email = it },
                         label = { Text("Correo Electrónico") },
-                        placeholder = { Text("ejemplo@bosque.org") },
+                        placeholder = { Text("usuario@ejemplo.com") },
                         leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
@@ -212,13 +262,53 @@ fun RegisterScreen(
                         label = { Text("Teléfono (+57 y 10 dígitos)") },
                         placeholder = { Text("+573001234567") },
                         leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("register_phone_input")
                     )
+
+                    // Sector en Suba (Ubicación Geográfica Piloto)
+                    ExposedDropdownMenuBox(
+                        expanded = sectorExpanded,
+                        onExpandedChange = { sectorExpanded = it },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = sectorSuba,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Sector de Operación en Suba (Piloto)") },
+                            leadingIcon = { Icon(Icons.Filled.Map, contentDescription = null) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sectorExpanded) },
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                                .testTag("register_sector_suba_input")
+                        )
+                        ExposedDropdownMenu(
+                            expanded = sectorExpanded,
+                            onDismissRequest = { sectorExpanded = false }
+                        ) {
+                            SubaSectors.ALL.forEach { s ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(s.name, fontWeight = FontWeight.Bold)
+                                            Text(s.description, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    },
+                                    onClick = {
+                                        sectorSuba = s.name
+                                        sectorExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
 
                     // Date of Birth (DD-MM-YYYY)
                     OutlinedTextField(
@@ -239,7 +329,7 @@ fun RegisterScreen(
                         value = city,
                         onValueChange = { city = it },
                         label = { Text("Ciudad / Municipio") },
-                        placeholder = { Text("Bogotá, Medellín, etc.") },
+                        placeholder = { Text("Bogotá") },
                         leadingIcon = { Icon(Icons.Filled.LocationCity, contentDescription = null) },
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
@@ -251,7 +341,7 @@ fun RegisterScreen(
                     // Gender Selector
                     Text(
                         text = "Género",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Row(
@@ -272,46 +362,22 @@ fun RegisterScreen(
                         }
                     }
 
-                    // Role Selector
-                    Text(
-                        text = "Tipo de Cuenta",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        listOf("user" to "Guardián / Usuario", "admin" to "Administrador").forEach { (r, label) ->
-                            FilterChip(
-                                selected = role == r,
-                                onClick = { role = r },
-                                label = { Text(label) },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            )
-                        }
-                    }
-
                     // Password
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Contraseña (min. 8, Mayús, Minús, Núm)") },
+                        label = { Text("Contraseña (mínimo 8 caracteres)") },
                         leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                         trailingIcon = {
                             IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                                 Icon(
                                     imageVector = if (isPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = null
+                                    contentDescription = if (isPasswordVisible) "Ocultar" else "Mostrar"
                                 )
                             }
                         },
                         visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
@@ -329,12 +395,12 @@ fun RegisterScreen(
                             IconButton(onClick = { isConfirmVisible = !isConfirmVisible }) {
                                 Icon(
                                     imageVector = if (isConfirmVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = null
+                                    contentDescription = if (isConfirmVisible) "Ocultar" else "Mostrar"
                                 )
                             }
                         },
                         visualTransformation = if (isConfirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
@@ -342,32 +408,40 @@ fun RegisterScreen(
                             .testTag("register_confirm_password_input")
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    // Error Message
+                    errorMessage?.let { msg ->
+                        Text(
+                            text = msg,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("register_error_message")
+                        )
+                    }
 
-                    // Submit Register
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Submit Button
                     Button(
                         onClick = { performRegister() },
                         enabled = !isLoading,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
-                            .testTag("register_submit_button"),
-                        shape = RoundedCornerShape(26.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                            .testTag("register_submit_button")
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
                                 color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(22.dp),
-                                strokeWidth = 2.dp
+                                modifier = Modifier.size(24.dp)
                             )
                         } else {
                             Text(
                                 text = "Completar Registro",
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
                         }
                     }
@@ -376,16 +450,27 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextButton(
-                onClick = onNavigateBackToLogin,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+            // Back to Login
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "¿Ya tienes cuenta? Inicia sesión",
+                    text = "¿Ya tienes una cuenta?",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                TextButton(
+                    onClick = onNavigateBackToLogin,
+                    modifier = Modifier.testTag("register_to_login_button")
+                ) {
+                    Text(
+                        text = "Iniciar Sesión",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

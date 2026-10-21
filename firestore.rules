@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'ADMIN' ||
+        getUserData().role == 'admin' ||
+        request.auth.token.admin == true
+      );
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // Allow user creation without self-assigning ADMIN role
+      allow create: if isOwner(userId) && (
+        !('role' in request.resource.data) ||
+        request.resource.data.role in ['GENERADOR', 'RECEPTOR', 'MIXTO', 'user']
+      );
+      // Allow update, but forbid modifying the role unless admin
+      allow update: if isOwner(userId) && (
+        request.resource.data.role == resource.data.role || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Wood Waste publications (Economía Circular)
+    match /wood_wastes/{wasteId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.authorId == request.auth.uid ||
+        isAdmin() ||
+        // Permit status update from request lifecycle (reservation / completion)
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'reservedBy', 'completedAt', 'completedBy'])
+      );
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+
+      // Subcollection for withdrawal requests
+      match /requests/{requestId} {
+        allow read: if isAuthenticated() && (
+          resource.data.requesterId == request.auth.uid ||
+          get(/databases/$(database)/documents/wood_wastes/$(wasteId)).data.authorId == request.auth.uid ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated() && request.resource.data.requesterId == request.auth.uid;
+        allow update: if isAuthenticated() && (
+          resource.data.requesterId == request.auth.uid ||
+          get(/databases/$(database)/documents/wood_wastes/$(wasteId)).data.authorId == request.auth.uid ||
+          isAdmin()
+        );
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Legacy reports collection (backwards compatibility)
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}

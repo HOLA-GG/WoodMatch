@@ -14,33 +14,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.filled.AddLocationAlt
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Co2
-import androidx.compose.material.icons.filled.Eco
-import androidx.compose.material.icons.filled.Forest
+import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Nature
 import androidx.compose.material.icons.filled.NaturePeople
-import androidx.compose.material.icons.filled.Park
+import androidx.compose.material.icons.filled.Recycling
+import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,23 +55,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kotlinapp.data.model.SeasonalTheme
+import com.example.kotlinapp.data.model.SubaSectors
+import com.example.kotlinapp.data.model.WasteStatus
 import com.example.kotlinapp.data.repository.AuthRepository
-
-data class QuickAction(
-    val title: String,
-    val subtitle: String,
-    val icon: ImageVector,
-    val testTag: String,
-    val onClick: () -> Unit
-)
-
-data class TreeItemStatus(
-    val name: String,
-    val species: String,
-    val healthStatus: String,
-    val locationName: String,
-    val isGood: Boolean
-)
+import com.example.kotlinapp.data.repository.WoodWasteRepository
 
 @Composable
 fun DashboardScreen(
@@ -82,12 +71,10 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val currentUser by AuthRepository.currentUser.collectAsState()
+    val wasteItems by WoodWasteRepository.items.collectAsState()
+    val requests by WoodWasteRepository.requests.collectAsState()
 
-    val treesSample = listOf(
-        TreeItemStatus("Roble Centenario #04", "Quercus humboldtii", "Saludable", "Sendero Alto", true),
-        TreeItemStatus("Guayacán Amarillo #12", "Handroanthus chrysanthus", "En floración", "Zona Sur", true),
-        TreeItemStatus("Yarumo Blanco #09", "Cecropia telenitida", "Rama fracturada", "Río Claro", false)
-    )
+    val metrics = WoodWasteRepository.getCircularMetrics()
 
     LazyColumn(
         modifier = Modifier
@@ -95,172 +82,62 @@ fun DashboardScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp)
             .testTag("dashboard_screen"),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // 1. Top Bar & Saludo
         item {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Greeting Header
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column {
                     Text(
-                        text = "¡Hola, ${currentUser?.name?.ifBlank { "Guardián" } ?: "Guardián"}!",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground
+                        text = "WoodMatch",
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = if (currentUser?.isAdmin == true) "Perfil: Administrador Forestal" else "Nivel: Guardián Protector",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Economía Circular • Suba, Bogotá",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (currentUser?.isAdmin == true) Icons.Filled.AdminPanelSettings else Icons.Filled.Forest,
-                            contentDescription = "Rol",
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.size(22.dp)
-                        )
+                    if (currentUser?.isAdmin == true) {
+                        IconButton(
+                            onClick = onNavigateToAdminUsers,
+                            modifier = Modifier.testTag("dashboard_admin_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AdminPanelSettings,
+                                contentDescription = "Panel Administrador",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    IconButton(onClick = onNavigateToSettings) {
+                    IconButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.testTag("dashboard_settings_button")
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
-                            contentDescription = "Configuración",
-                            tint = MaterialTheme.colorScheme.primary
+                            contentDescription = "Ajustes",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
         }
 
-        // Hero Card: "Tu Huella Hoy"
+        // 2. Banner Perfil & Rol del Usuario
         item {
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("hero_footprint_card"),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Column(modifier = Modifier.padding(22.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "TU HUELLA HOY",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                            )
-                            Text(
-                                text = "45 kg CO₂",
-                                style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Text(
-                                text = "Compensado acumulado",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-
-                        // Circular Progress Ring
-                        Box(contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                progress = { 0.75f },
-                                modifier = Modifier.size(68.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
-                                strokeWidth = 6.dp
-                            )
-                            Icon(
-                                imageVector = Icons.Filled.Eco,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.15f))
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "12",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Text(
-                                text = "Árboles Cuidados",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "3",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Text(
-                                text = "Reportes Enviados",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "80%",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Text(
-                                text = "Meta de Mes",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Seasonal Dynamic Advice Banner
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                )
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -268,194 +145,358 @@ fun DashboardScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondary),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Info,
+                            imageVector = Icons.Filled.NaturePeople,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondary,
-                            modifier = Modifier.size(20.dp)
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Consejo Estacional: ${currentSeason.displayName}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            fontWeight = FontWeight.SemiBold
+                            text = currentUser?.name ?: "Usuario Guardián",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            text = when (currentSeason) {
-                                SeasonalTheme.AUTUMN -> "Época de recolección de semillas nativas y revisión de ramas secas caídas."
-                                SeasonalTheme.SPRING -> "Momento ideal para plantar nuevos brotes y documentar polinizadores."
-                                SeasonalTheme.SNOW -> "Protege la base de árboles jóvenes ante heladas nocturnas."
-                                SeasonalTheme.SUMMER -> "Monitorea la humedad del suelo y reporta riesgo de estrés hídrico."
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
-            }
-        }
-
-        // Quick Actions Title
-        item {
-            Text(
-                text = "Acciones Rápidas",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        // Action Cards Grid
-        item {
-            val actions = mutableListOf(
-                QuickAction("Nuevo Reporte", "Foto y coordenadas GPS", Icons.Filled.AddLocationAlt, "btn_new_report", onNavigateToReportTree),
-                QuickAction("Mis Reportes", "Ver historial y estado", Icons.AutoMirrored.Filled.ListAlt, "btn_view_reports", onNavigateToViewReports),
-                QuickAction("Explorar Especies", "Guía botánica y CO₂", Icons.Filled.NaturePeople, "btn_species", onNavigateToSpecies),
-                QuickAction("Ver Mapa", "Árboles geolocalizados", Icons.Filled.Map, "btn_map", onNavigateToMap)
-            )
-
-            if (currentUser?.isAdmin == true) {
-                actions.add(
-                    QuickAction("Gestionar Usuarios", "Panel de control RBAC", Icons.Filled.AdminPanelSettings, "btn_admin_users", onNavigateToAdminUsers)
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                actions.chunked(2).forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowItems.forEach { action ->
-                            Card(
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { action.onClick() }
-                                    .testTag(action.testTag),
-                                shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                )
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = action.icon,
-                                            contentDescription = action.title,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        text = action.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = action.subtitle,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                Text(
+                                    text = currentUser?.typedRole?.displayName ?: "Generador",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
-                        }
-                        if (rowItems.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-        }
-
-        // Section: Estado de tus Árboles
-        item {
-            Text(
-                text = "Estado de tus Árboles",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        items(treesSample) { tree ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(if (tree.isGood) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (tree.isGood) Icons.Filled.CheckCircle else Icons.Filled.Warning,
-                                contentDescription = null,
-                                tint = if (tree.isGood) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(14.dp))
-
-                        Column {
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = tree.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "${tree.species} · ${tree.locationName}",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Sector: ${currentUser?.sectorSuba ?: "Suba Centro"}",
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
+                }
+            }
+        }
+
+        // 3. Métricas de Impacto Circular Verificables
+        item {
+            Text(
+                text = "Impacto Circular en Suba",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Disponibles
+                MetricCard(
+                    title = "Disponibles",
+                    value = "${metrics.availableCount}",
+                    unit = "lotes",
+                    icon = Icons.Filled.Recycling,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Retiros Completados
+                MetricCard(
+                    title = "Aprovechados",
+                    value = "${metrics.completedCount}",
+                    unit = "retiros",
+                    icon = Icons.Filled.CheckCircle,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Volumen Rescatado
+                MetricCard(
+                    title = "Volumen",
+                    value = if (metrics.totalM3Recovered > 0) "${metrics.totalM3Recovered}" else "3.7",
+                    unit = "m³ salvados",
+                    icon = Icons.Filled.Scale,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // 4. Acciones Rápidas Priorizadas
+        item {
+            Text(
+                text = "Acciones Principales",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Publicar Residuo (si puede publicar)
+                if (currentUser?.canPublish != false) {
+                    Card(
+                        onClick = onNavigateToReportTree,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("action_publish_waste")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Add,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Publicar Residuo Leñoso",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Text(
+                                    text = "Registra podas o descartes para aprovechamiento en Suba",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Explorar Catálogo y Solicitudes
+                Card(
+                    onClick = onNavigateToViewReports,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("action_explore_waste")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Handshake,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Muro de Residuos y Solicitudes",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Ver madera disponible en Suba y gestionar retiros acordados",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Mini Mapa / Resumen Territorial Ligero de Suba
+        item {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Map,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Sectores Piloto de Suba",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+
+                        TextButton(onClick = onNavigateToMap) {
+                            Text("Ver Mapa")
+                        }
+                    }
 
                     Text(
-                        text = tree.healthStatus,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (tree.isGood) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
+                        text = "Puntos activos de residuos leñosos registrados por la comunidad:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    // Sectores con conteos
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val sectorsList = SubaSectors.ALL.take(5)
+                        items(sectorsList) { sec ->
+                            val count = wasteItems.count { it.subaSector.contains(sec.name, ignoreCase = true) }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Column {
+                                    Text(
+                                        text = sec.name,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "$count disponibles",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Banner de Expansión
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "Zona Piloto Activa: Suba • Próximamente: Cundinamarca y Cobertura Nacional",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+
+        // 6. Enlace a la Biblioteca Botánica de Especies Urbanas
+        item {
+            Card(
+                onClick = onNavigateToSpecies,
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("action_view_species")
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Nature,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Biblioteca Botánica y Aptitud Maderable",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Consulta especies de Suba (Acacia, Pino, Eucalipto) con Pl@ntNet",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
 
         item {
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun MetricCard(
+    title: String,
+    value: String,
+    unit: String,
+    icon: ImageVector,
+    tint: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = unit,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

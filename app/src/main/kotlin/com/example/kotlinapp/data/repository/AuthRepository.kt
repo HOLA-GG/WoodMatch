@@ -1,6 +1,7 @@
 package com.example.kotlinapp.data.repository
 
 import com.example.kotlinapp.data.model.User
+import com.example.kotlinapp.data.model.UserRole
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,40 +26,44 @@ object AuthRepository {
         }
     }
 
+    // Perfiles iniciales de prueba para verificación sin passwords hardcodeados en el APK
     private val demoUsers = mutableListOf(
         User(
-            uid = "admin_101",
-            name = "Guardaparques Central",
-            email = "admin@woodmatch.org",
+            uid = "admin_suba",
+            name = "Coordinador Ambiental Suba",
+            email = "coordinacion.suba@woodmatch.co",
             phone = "+573101234567",
-            dob = "15-05-1990",
+            dob = "15-05-1988",
             city = "Bogotá",
             gender = "Otro",
-            role = "admin"
+            role = UserRole.ADMIN.name,
+            sectorSuba = "Suba Centro"
         ),
         User(
-            uid = "user_202",
-            name = "Carlos Bosques",
-            email = "carlos@woodmatch.org",
+            uid = "gen_carlos",
+            name = "Carlos M. (Poda y Jardinería)",
+            email = "carlos.poda@woodmatch.co",
             phone = "+573159876543",
-            dob = "22-09-1995",
-            city = "Medellín",
+            dob = "22-09-1992",
+            city = "Bogotá",
             gender = "Masculino",
-            role = "user"
+            role = UserRole.GENERADOR.name,
+            sectorSuba = "El Rincón"
         ),
         User(
-            uid = "user_303",
-            name = "Elena Robledo",
-            email = "elena@woodmatch.org",
+            uid = "rec_elena",
+            name = "Elena R. (Taller Ebanistería)",
+            email = "elena.taller@woodmatch.co",
             phone = "+573204567890",
-            dob = "10-12-1998",
-            city = "Manizales",
+            dob = "10-12-1995",
+            city = "Bogotá",
             gender = "Femenino",
-            role = "user"
+            role = UserRole.RECEPTOR.name,
+            sectorSuba = "Niza / La Colina"
         )
     )
 
-    private val _currentUser = MutableStateFlow<User?>(demoUsers.first())
+    private val _currentUser = MutableStateFlow<User?>(demoUsers[1]) // Default to generator for seamless UX
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
     init {
@@ -71,10 +76,10 @@ object AuthRepository {
                 try {
                     firebaseAuth.signInAnonymously()
                         .addOnSuccessListener {
-                            android.util.Log.d("AuthRepository", "Sesión anónima de Firebase establecida correctamente")
+                            android.util.Log.d("AuthRepository", "Sesión de Firebase inicializada")
                         }
                         .addOnFailureListener { e ->
-                            android.util.Log.d("AuthRepository", "Sesión anónima Firebase omitida/no configurada: ${e.message}")
+                            android.util.Log.d("AuthRepository", "Sesión Firebase omitida: ${e.message}")
                         }
                 } catch (e: Exception) {
                     android.util.Log.d("AuthRepository", "Firebase auth fallback: ${e.message}")
@@ -109,47 +114,52 @@ object AuthRepository {
             return Result.failure(Exception("Por favor ingrese su contraseña."))
         }
 
-        // Try Firebase Auth
+        // 1. Check in-memory demo accounts first for fast access
+        val localMatch = demoUsers.find { it.email.equals(trimmedEmail, ignoreCase = true) }
+
+        // 2. Try Firebase Auth
         auth?.let { firebaseAuth ->
             try {
                 val authResult = firebaseAuth.signInWithEmailAndPassword(trimmedEmail, pass).await()
-                val uid = authResult.user?.uid ?: "uid_${System.currentTimeMillis()}"
+                val uid = authResult.user?.uid ?: (localMatch?.uid ?: "uid_${System.currentTimeMillis()}")
 
-                // Try fetching Firestore user doc
                 var userObj = fetchUserProfile(uid)
                 if (userObj == null) {
                     val displayName = authResult.user?.displayName?.takeIf { it.isNotBlank() } ?: trimmedEmail.substringBefore("@")
-                    userObj = User(
+                    userObj = localMatch ?: User(
                         uid = uid,
                         name = displayName,
                         email = trimmedEmail,
-                        role = if (trimmedEmail.contains("admin", ignoreCase = true)) "admin" else "user"
+                        role = if (trimmedEmail.contains("admin", ignoreCase = true)) UserRole.ADMIN.name else UserRole.GENERADOR.name,
+                        sectorSuba = "Suba Centro"
                     )
                 }
                 _currentUser.value = userObj
                 return Result.success(userObj)
             } catch (e: Exception) {
-                // If Firebase Auth throws (e.g., user not found or network disabled), check local users before failing
-                val localMatch = demoUsers.find { it.email.equals(trimmedEmail, ignoreCase = true) }
                 if (localMatch != null) {
                     _currentUser.value = localMatch
                     return Result.success(localMatch)
                 }
-                return Result.failure(Exception(e.message ?: "Error al autenticar credenciales."))
+                return Result.failure(Exception(e.message ?: "Credenciales incorrectas o usuario no encontrado."))
             }
         }
 
-        // Offline / fallback login
-        val localUser = demoUsers.find { it.email.equals(trimmedEmail, ignoreCase = true) }
-            ?: User(
-                uid = "usr_${System.currentTimeMillis()}",
-                name = trimmedEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
-                email = trimmedEmail,
-                role = if (trimmedEmail.contains("admin", ignoreCase = true)) "admin" else "user"
-            ).also { demoUsers.add(it) }
+        if (localMatch != null) {
+            _currentUser.value = localMatch
+            return Result.success(localMatch)
+        }
 
-        _currentUser.value = localUser
-        return Result.success(localUser)
+        val fallbackUser = User(
+            uid = "usr_${System.currentTimeMillis()}",
+            name = trimmedEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
+            email = trimmedEmail,
+            role = UserRole.GENERADOR.name,
+            sectorSuba = "Suba Centro"
+        ).also { demoUsers.add(it) }
+
+        _currentUser.value = fallbackUser
+        return Result.success(fallbackUser)
     }
 
     suspend fun register(
@@ -160,6 +170,7 @@ object AuthRepository {
         city: String,
         gender: String,
         role: String,
+        sectorSuba: String,
         pass: String,
         confirmPass: String
     ): Result<User> {
@@ -176,11 +187,11 @@ object AuthRepository {
         if (!validatePassword(pass)) return Result.failure(Exception("La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 minúscula y 1 número."))
         if (pass != confirmPass) return Result.failure(Exception("Las contraseñas no coinciden."))
 
-        // Safe role assignment (predefined admin emails or explicitly selected)
-        val finalRole = if (trimmedEmail.contains("admin", ignoreCase = true) || role.equals("admin", ignoreCase = true)) {
-            "admin"
-        } else {
-            "user"
+        // SEGURIDAD: Prevenir auto-asignación de ADMIN en registro
+        val sanitizedRole = when (role.uppercase()) {
+            UserRole.RECEPTOR.name -> UserRole.RECEPTOR.name
+            UserRole.MIXTO.name -> UserRole.MIXTO.name
+            else -> UserRole.GENERADOR.name
         }
 
         var newUid = "usr_${System.currentTimeMillis()}"
@@ -202,7 +213,8 @@ object AuthRepository {
             dob = dob,
             city = city,
             gender = gender,
-            role = finalRole
+            role = sanitizedRole,
+            sectorSuba = sectorSuba.ifBlank { "Suba Centro" }
         )
 
         firestore?.let { db ->
@@ -215,7 +227,8 @@ object AuthRepository {
                     "dob" to newUser.dob,
                     "city" to newUser.city,
                     "gender" to newUser.gender,
-                    "role" to newUser.role
+                    "role" to newUser.role,
+                    "sectorSuba" to newUser.sectorSuba
                 )
                 db.collection("users").document(newUid).set(data).await()
             } catch (e: Exception) {
@@ -228,13 +241,30 @@ object AuthRepository {
         return Result.success(newUser)
     }
 
+    fun switchUserForTesting(role: UserRole) {
+        val target = demoUsers.find { it.typedRole == role }
+        if (target != null) {
+            _currentUser.value = target
+        }
+    }
+
+    fun loginAsGuest() {
+        _currentUser.value = User(
+            uid = "guest_explore",
+            name = "Invitado Circular",
+            email = "invitado@woodmatch.co",
+            phone = "+573001234567",
+            dob = "01-01-2000",
+            city = "Bogotá",
+            gender = "Otro",
+            role = UserRole.RECEPTOR.name,
+            sectorSuba = "Suba Centro"
+        )
+    }
+
     suspend fun forgotPassword(email: String, phone: String, gender: String): Result<String> {
         val trimmedEmail = email.trim()
-        val trimmedPhone = phone.trim()
-
         if (!validateEmail(trimmedEmail)) return Result.failure(Exception("Correo no válido."))
-        if (!validatePhone(trimmedPhone)) return Result.failure(Exception("Teléfono +57 no válido."))
-        if (gender.isBlank()) return Result.failure(Exception("Seleccione el género registrado."))
 
         auth?.let { firebaseAuth ->
             try {
@@ -246,19 +276,6 @@ object AuthRepository {
         }
 
         return Result.success("Instrucciones enviadas exitosamente a $trimmedEmail.")
-    }
-
-    fun loginAsGuest() {
-        _currentUser.value = User(
-            uid = "guest_explore",
-            name = "Invitado Guardián",
-            email = "invitado@woodmatch.org",
-            phone = "+573001234567",
-            dob = "01-01-2000",
-            city = "Bosque Nuboso",
-            gender = "Otro",
-            role = "user"
-        )
     }
 
     fun logout() {
@@ -275,16 +292,17 @@ object AuthRepository {
                 if (!snapshot.isEmpty) {
                     val remote = snapshot.documents.mapNotNull { doc ->
                         val email = doc.getString("email") ?: ""
-                        val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Guardián" }
+                        val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Usuario" }
                         User(
                             uid = doc.getString("uid") ?: doc.id,
                             name = doc.getString("name")?.takeIf { it.isNotBlank() } ?: fallbackName,
                             email = email,
                             phone = doc.getString("phone") ?: "",
                             dob = doc.getString("dob") ?: "",
-                            city = doc.getString("city") ?: "",
+                            city = doc.getString("city") ?: "Bogotá",
                             gender = doc.getString("gender") ?: "",
-                            role = doc.getString("role") ?: if (email.contains("admin", ignoreCase = true)) "admin" else "user"
+                            role = doc.getString("role") ?: UserRole.GENERADOR.name,
+                            sectorSuba = doc.getString("sectorSuba") ?: "Suba Centro"
                         )
                     }
                     if (remote.isNotEmpty()) return remote
@@ -315,16 +333,17 @@ object AuthRepository {
             firestore?.collection("users")?.document(uid)?.get()?.await()?.let { doc ->
                 if (doc.exists()) {
                     val email = doc.getString("email") ?: ""
-                    val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Guardián" }
+                    val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Usuario" }
                     User(
                         uid = uid,
                         name = doc.getString("name")?.takeIf { it.isNotBlank() } ?: fallbackName,
                         email = email,
                         phone = doc.getString("phone") ?: "",
                         dob = doc.getString("dob") ?: "",
-                        city = doc.getString("city") ?: "",
+                        city = doc.getString("city") ?: "Bogotá",
                         gender = doc.getString("gender") ?: "",
-                        role = doc.getString("role") ?: if (email.contains("admin", ignoreCase = true)) "admin" else "user"
+                        role = doc.getString("role") ?: UserRole.GENERADOR.name,
+                        sectorSuba = doc.getString("sectorSuba") ?: "Suba Centro"
                     )
                 } else null
             }
