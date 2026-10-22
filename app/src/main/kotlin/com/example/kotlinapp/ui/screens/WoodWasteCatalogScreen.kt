@@ -58,6 +58,9 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.example.kotlinapp.ui.components.WithdrawalPassActions
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -93,9 +96,11 @@ fun WoodWasteCatalogScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCreateReport: () -> Unit
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val allWasteItems by WoodWasteRepository.items.collectAsState()
     val allRequests by WoodWasteRepository.requests.collectAsState()
+    val catalogError by WoodWasteRepository.error.collectAsState()
     val currentUser by AuthRepository.currentUser.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Muro de Residuos, 1: Solicitudes y Retiros
@@ -139,6 +144,8 @@ fun WoodWasteCatalogScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            catalogError?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
+            if (!AuthRepository.isAuthenticated) Text("Inicia sesión para ver publicaciones compartidas. Puedes consultar Especies como invitado.", modifier = Modifier.padding(16.dp))
             // Header
             Row(
                 modifier = Modifier
@@ -328,17 +335,17 @@ fun WoodWasteCatalogScreen(
                     currentUser = currentUser,
                     onAcceptRequest = { wasteId, reqId ->
                         coroutineScope.launch {
-                            WoodWasteRepository.acceptWithdrawalRequest(wasteId, reqId)
+                            WoodWasteRepository.acceptWithdrawalRequest(wasteId, reqId).onFailure { Toast.makeText(context, "No se pudo aceptar. Revisa la disponibilidad y tu conexión.", Toast.LENGTH_LONG).show() }
                         }
                     },
                     onRejectRequest = { wasteId, reqId, reason ->
                         coroutineScope.launch {
-                            WoodWasteRepository.rejectWithdrawalRequest(wasteId, reqId, reason)
+                            WoodWasteRepository.rejectWithdrawalRequest(wasteId, reqId, reason).onFailure { Toast.makeText(context, "No se pudo rechazar la solicitud.", Toast.LENGTH_LONG).show() }
                         }
                     },
                     onCompleteWithdrawal = { wasteId, reqId ->
                         coroutineScope.launch {
-                            WoodWasteRepository.completeWithdrawal(wasteId, reqId, currentUser?.uid ?: "user")
+                            WoodWasteRepository.completeWithdrawal(wasteId, reqId, currentUser?.uid ?: "").onFailure { Toast.makeText(context, "No se pudo cerrar el retiro. Valida el pase QR y vuelve a intentar.", Toast.LENGTH_LONG).show() }
                         }
                     }
                 )
@@ -691,10 +698,10 @@ fun RequestsManagementView(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            items(requests, key = { it.id }) { req ->
+            items(requests.filter { it.authorId == currentUser?.uid || it.requesterId == currentUser?.uid }, key = { it.id }) { req ->
                 RequestItemCard(
                     req = req,
-                    isCurrentUserAuthor = true, // Generador o Admin gestiona
+                    isCurrentUserAuthor = req.authorId == currentUser?.uid,
                     onAccept = { onAcceptRequest(req.wasteId, req.id) },
                     onReject = { onRejectRequest(req.wasteId, req.id, null) },
                     onComplete = { onCompleteWithdrawal(req.wasteId, req.id) }
@@ -826,12 +833,14 @@ fun RequestItemCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Contacto de coordinación: ${req.requesterPhone.ifBlank { "+57 315 987 6543" }}",
+                        text = "Contacto de coordinación: ${req.requesterPhone.ifBlank { "No compartido" }}",
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
+
+            WithdrawalPassActions(req, isCurrentUserAuthor)
 
             // Botones de Acción según estado
             if (req.isPending && isCurrentUserAuthor) {
@@ -854,7 +863,7 @@ fun RequestItemCard(
                         Text("Aceptar", maxLines = 1)
                     }
                 }
-            } else if (req.isAccepted && isCurrentUserAuthor) {
+            } else if (req.isAccepted && isCurrentUserAuthor && req.passValidatedAt != null) {
                 Button(
                     onClick = onComplete,
                     shape = RoundedCornerShape(10.dp),

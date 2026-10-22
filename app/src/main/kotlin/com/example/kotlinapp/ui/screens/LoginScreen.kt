@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.example.kotlinapp.ui.components.PrivacyNotice
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +77,7 @@ fun LoginScreen(
     val scrollState = rememberScrollState()
 
     fun performLogin() {
+        if (isLoading) return
         focusManager.clearFocus()
         errorMessage = null
         isLoading = true
@@ -105,6 +107,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            PrivacyNotice()
             // Logo & Header
             Box(
                 modifier = Modifier
@@ -130,7 +133,7 @@ fun LoginScreen(
             )
 
             Text(
-                text = "WoodMatch · Conservación y Reporte Forestal",
+                text = "WoodMatch · Aprovechamiento de residuos leñosos",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

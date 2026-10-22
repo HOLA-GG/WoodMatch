@@ -46,6 +46,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.example.kotlinapp.ui.components.PrivacyNotice
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -87,12 +88,14 @@ fun RegisterScreen(
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var privacyAccepted by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
     fun performRegister() {
+        if (isLoading || !privacyAccepted) return
         errorMessage = null
         isLoading = true
         coroutineScope.launch {
@@ -129,6 +132,7 @@ fun RegisterScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            PrivacyNotice()
             // Top Bar
             Row(
                 modifier = Modifier
@@ -310,20 +314,6 @@ fun RegisterScreen(
                         }
                     }
 
-                    // Date of Birth (DD-MM-YYYY)
-                    OutlinedTextField(
-                        value = dob,
-                        onValueChange = { dob = it },
-                        label = { Text("Fecha de Nacimiento (DD-MM-YYYY)") },
-                        placeholder = { Text("15-05-1995") },
-                        leadingIcon = { Icon(Icons.Filled.Cake, contentDescription = null) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("register_dob_input")
-                    )
-
                     // City
                     OutlinedTextField(
                         value = city,
@@ -337,30 +327,6 @@ fun RegisterScreen(
                             .fillMaxWidth()
                             .testTag("register_city_input")
                     )
-
-                    // Gender Selector
-                    Text(
-                        text = "Género",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        listOf("Masculino", "Femenino", "Otro").forEach { g ->
-                            FilterChip(
-                                selected = gender == g,
-                                onClick = { gender = g },
-                                label = { Text(g) },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
-                        }
-                    }
 
                     // Password
                     OutlinedTextField(
@@ -422,10 +388,14 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(checked = privacyAccepted, onCheckedChange = { privacyAccepted = it })
+                        Text("He leído el aviso de privacidad. Usaré datos ficticios en esta versión de prueba.")
+                    }
                     // Submit Button
                     Button(
                         onClick = { performRegister() },
-                        enabled = !isLoading,
+                        enabled = !isLoading && privacyAccepted,
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier

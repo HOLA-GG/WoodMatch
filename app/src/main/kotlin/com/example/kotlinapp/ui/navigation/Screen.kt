@@ -9,6 +9,7 @@ sealed class Screen(val route: String) {
     object ReportTree : Screen("report_tree")
     object ViewReports : Screen("view_reports")
     object Species : Screen("species")
+    object MyActivity : Screen("my_activity")
     object Profile : Screen("profile")
     object AdminUsers : Screen("admin_users")
     object TreeMap : Screen("tree_map")

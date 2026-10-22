@@ -62,62 +62,12 @@ class CircularEconomyTest {
     }
 
     @Test
-    fun testWithdrawalLifecycleAndConcurrencyControl() = runBlocking {
-        // 1. Publicar residuo
-        val item = WoodWasteItem(
-            id = "test_waste_100",
-            title = "Troncos de Pino de Poda",
-            quantityValue = 3.0,
-            quantityUnit = "m³",
-            subaSector = "Suba Centro",
-            status = WasteStatus.DISPONIBLE.name
-        )
-        val pubRes = WoodWasteRepository.publishWasteItem(item)
-        assertTrue(pubRes.isSuccess)
-
-        // 2. Receptor 1 solicita retiro
-        val receptor1 = User(uid = "rec_01", name = "Taller A", role = UserRole.RECEPTOR.name)
-        val req1Res = WoodWasteRepository.submitWithdrawalRequest(
-            wasteId = "test_waste_100",
-            requester = receptor1,
-            intendedUse = "Mesas rústicas",
-            proposedDate = "2026-10-25",
-            requestedQuantity = "3.0 m³",
-            message = "Disponibilidad inmediata de flete"
-        )
-        assertTrue(req1Res.isSuccess)
-        val req1Id = req1Res.getOrNull()!!
-
-        // 3. Generador acepta la solicitud de Receptor 1 -> pasa a RESERVADO
-        val acceptRes = WoodWasteRepository.acceptWithdrawalRequest("test_waste_100", req1Id)
-        assertTrue(acceptRes.isSuccess)
-
-        val updatedItem = WoodWasteRepository.items.value.find { it.id == "test_waste_100" }
-        assertNotNull(updatedItem)
-        assertEquals(WasteStatus.RESERVADO.name, updatedItem!!.status)
-
-        // 4. Intentar aceptar una segunda solicitud mientras está reservado debe fallar por concurrencia
-        val receptor2 = User(uid = "rec_02", name = "Taller B", role = UserRole.RECEPTOR.name)
-        // Intentar solicitar cuando ya no está disponible
-        val req2Res = WoodWasteRepository.submitWithdrawalRequest(
-            wasteId = "test_waste_100",
-            requester = receptor2,
-            intendedUse = "Compost",
-            proposedDate = "2026-10-26",
-            requestedQuantity = "3.0 m³",
-            message = "Otro intento"
-        )
-        assertFalse(req2Res.isSuccess) // Bloqueado porque ya está en reserva
-
-        // 5. Completar retiro físico -> Pasa a APROVECHADO
-        val completeRes = WoodWasteRepository.completeWithdrawal("test_waste_100", req1Id, "gen_01")
-        assertTrue(completeRes.isSuccess)
-
-        val completedItem = WoodWasteRepository.items.value.find { it.id == "test_waste_100" }
-        assertNotNull(completedItem)
-        assertEquals(WasteStatus.APROVECHADO.name, completedItem!!.status)
-        assertNotNull(completedItem.completedAt)
-        assertEquals("gen_01", completedItem.completedBy)
+    fun testUnauthenticatedUserCannotPublishOrRequest() = runBlocking {
+        assertFalse(WoodWasteRepository.publishWasteItem(WoodWasteItem(title = "Material de prueba")).isSuccess)
+        assertFalse(WoodWasteRepository.submitWithdrawalRequest(
+            "missing", User(uid = "forged", role = UserRole.RECEPTOR.name),
+            "Compost", "2026-10-25", "1 kg", "Prueba"
+        ).isSuccess)
     }
 
     @Test

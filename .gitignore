@@ -21,3 +21,17 @@ app/google-services.json
 # Firebase/Google service-account credentials (never commit)
 *-firebase-adminsdk-*.json
 service-account*.json
+
+# Backend dependencies, emulator outputs and signing secrets
+node_modules/
+.firebase/
+*-debug.log
+*.keystore
+*.jks
+keystore.properties
+functions/.env*
+!functions/.env.example
+
+.kotlin/
+
+functions/.secret.local

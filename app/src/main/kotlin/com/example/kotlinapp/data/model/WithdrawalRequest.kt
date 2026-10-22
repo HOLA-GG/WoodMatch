@@ -11,6 +11,8 @@ enum class RequestStatus(val displayName: String) {
 data class WithdrawalRequest(
     val id: String = "",
     val wasteId: String = "",
+    val authorId: String = "",
+    val passValidatedAt: Long? = null,
     val wasteTitle: String = "",
     val requesterId: String = "",
     val requesterName: String = "",
@@ -26,6 +28,7 @@ data class WithdrawalRequest(
     val updatedAt: Long = System.currentTimeMillis(),
     val completedAt: Long? = null
 ) {
+    @get:com.google.firebase.firestore.Exclude
     val typedStatus: RequestStatus
         get() = try {
             RequestStatus.valueOf(status.uppercase())
@@ -33,8 +36,12 @@ data class WithdrawalRequest(
             RequestStatus.PENDIENTE
         }
 
+    @get:com.google.firebase.firestore.Exclude
     val isPending: Boolean get() = typedStatus == RequestStatus.PENDIENTE
+    @get:com.google.firebase.firestore.Exclude
     val isAccepted: Boolean get() = typedStatus == RequestStatus.ACEPTADA
+    @get:com.google.firebase.firestore.Exclude
     val isCompleted: Boolean get() = typedStatus == RequestStatus.COMPLETADA
+    @get:com.google.firebase.firestore.Exclude
     val isClosed: Boolean get() = typedStatus in listOf(RequestStatus.RECHAZADA, RequestStatus.CANCELADA, RequestStatus.COMPLETADA)
 }

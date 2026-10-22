@@ -121,6 +121,19 @@ object ReportRepository {
         }
     }
 
+    suspend fun deleteUserReports(userId: String) = withContext(Dispatchers.IO) {
+        val all = load()
+        val context = appContext ?: return@withContext
+        all.filter { it.userId == userId }.forEach { report ->
+            report.imageUri?.let { source ->
+                val path = Uri.parse(source).path ?: return@let
+                val file = File(path)
+                if (file.canonicalPath.startsWith(File(context.filesDir, "report_photos").canonicalPath + File.separator)) file.delete()
+            }
+        }
+        check(save(all.filterNot { it.userId == userId })) { "No se pudieron eliminar los reportes locales." }
+    }
+
     suspend fun getUserReports(userId: String): List<TreeReport> = withContext(Dispatchers.IO) {
         load().filter { it.userId == userId }
     }

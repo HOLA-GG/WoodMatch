@@ -2,6 +2,7 @@ package com.example.kotlinapp.data.network
 
 import com.example.kotlinapp.BuildConfig
 import com.example.kotlinapp.data.model.WasteCategory
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -13,6 +14,7 @@ data class AiValorizationSuggestion(
     val recommendedCategory: WasteCategory,
     val suggestedUses: String,
     val technicalNotes: String,
+    val remote: Boolean = false,
     val disclaimer: String = "Sugerencia orientativa generada por IA. No constituye certificación estructural ni resistencia mecánica."
 )
 
@@ -27,42 +29,16 @@ object CircularEconomyAiService {
         materialState: String,
         speciesName: String
     ): AiValorizationSuggestion = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY.trim()
-
-        if (apiKey.isNotBlank() && !apiKey.contains("YOUR_GEMINI_API_KEY")) {
-            val prompt = "Actúa como especialista en economía circular de madera urbana y biomasa en Bogotá y Suba. " +
-                    "Dado el residuo: Tipo='$wasteType', Estado='$materialState', Especie='$speciesName'. " +
-                    "Devuelve en formato JSON con las claves: " +
-                    "'category' (uno de: BIOMASA, ESTANDAR, FINA), " +
-                    "'uses' (2-3 usos circulares prácticos y recomendados), " +
-                    "'notes' (1 recomendación breve de secado, curado o precauciones). " +
-                    "No incluyas markdown adicional, ni asteriscos, solo el JSON puro."
-
+        if (com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated) {
             try {
-                val apiJson = callGeminiWithFallback(apiKey, prompt)
-                if (apiJson != null) {
-                    val catStr = apiJson.optString("category", "ESTANDAR").uppercase()
-                    val cat = try {
-                        WasteCategory.valueOf(catStr)
-                    } catch (_: Exception) {
-                        determineFallbackCategory(wasteType, materialState)
-                    }
-                    val rawUses = apiJson.optString("uses", "Aprovechamiento en carpintería o tutores de huerta.")
-                    val rawNotes = apiJson.optString("notes", "Verificar humedad antes del uso.")
-                    val cleanUses = rawUses.replace("**", "").replace("*", "").trim()
-                    val cleanNotes = rawNotes.replace("**", "").replace("*", "").trim()
-
-                    return@withContext AiValorizationSuggestion(
-                        recommendedCategory = cat,
-                        suggestedUses = cleanUses,
-                        technicalNotes = cleanNotes
-                    )
-                }
-            } catch (e: Exception) {
-                android.util.Log.w("CircularAiService", "Fallo consulta Gemini: ${e.message}")
-            }
+                val prompt = "Sugiere usos prudentes de este residuo leñoso, sin certificar especie ni resistencia: tipo=${wasteType.take(120)}, estado=${materialState.take(120)}, especie reportada=${speciesName.take(160)}. Máximo 1000 caracteres."
+                val response = com.google.firebase.functions.FirebaseFunctions.getInstance().getHttpsCallable("botanicalAdvice").call(mapOf("prompt" to prompt)).await()
+                val text = ((response.data as Map<*, *>)["text"] as? String)?.take(1500)
+                if (!text.isNullOrBlank()) return@withContext AiValorizationSuggestion(
+                    determineFallbackCategory(wasteType, materialState), text,
+                    "Categoría interna estimada localmente; recomendaciones de Gemini pendientes de tu revisión.", remote = true)
+            } catch (_: Exception) { /* Local guidance remains available and is labelled. */ }
         }
-
         // Motor heurístico experto local (sin latencia y tolerante a fallos offline)
         getLocalExpertSuggestion(wasteType, materialState, speciesName)
     }
@@ -130,62 +106,4 @@ object CircularEconomyAiService {
         )
     }
 
-    private fun callGeminiWithFallback(apiKey: String, prompt: String): JSONObject? {
-        val models = listOf(MODEL_NAME, FALLBACK_MODEL_NAME)
-        for (model in models) {
-            val res = executeGeminiCall(apiKey, model, prompt)
-            if (res != null) return res
-        }
-        return null
-    }
-
-    private fun executeGeminiCall(apiKey: String, model: String, prompt: String): JSONObject? {
-        return try {
-            val url = URL("$BASE_URL/$model:generateContent?key=$apiKey")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                doOutput = true
-                connectTimeout = 12000
-                readTimeout = 15000
-                setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("Accept", "application/json")
-            }
-
-            val body = JSONObject().apply {
-                val contents = JSONArray().apply {
-                    put(JSONObject().apply {
-                        val parts = JSONArray().apply {
-                            put(JSONObject().put("text", prompt))
-                        }
-                        put("parts", parts)
-                    })
-                }
-                put("contents", contents)
-                put("generationConfig", JSONObject().put("temperature", 0.2))
-            }
-
-            connection.outputStream.use { os ->
-                os.write(body.toString().toByteArray(Charsets.UTF_8))
-            }
-
-            if (connection.responseCode in 200..299) {
-                val respText = connection.inputStream.bufferedReader().use { it.readText() }
-                val root = JSONObject(respText)
-                val candidates = root.optJSONArray("candidates")
-                if (candidates != null && candidates.length() > 0) {
-                    val candidate = candidates.getJSONObject(0)
-                    val content = candidate.optJSONObject("content")
-                    val parts = content?.optJSONArray("parts")
-                    if (parts != null && parts.length() > 0) {
-                        val text = parts.getJSONObject(0).optString("text")
-                        val clean = text.replace("```json", "").replace("```", "").trim()
-                        return JSONObject(clean)
-                    }
-                }
-            }
-            null
-        } catch (_: Exception) {
-            null
-        }
-    }
 }

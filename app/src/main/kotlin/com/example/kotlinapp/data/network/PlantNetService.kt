@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import com.example.kotlinapp.BuildConfig
 import com.example.kotlinapp.data.model.TreeSpecies
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -31,23 +32,17 @@ data class PlantNetCandidate(
     val primaryCommonName: String get() = commonNames.firstOrNull()?.replaceFirstChar { it.uppercase() } ?: scientificName
 
     fun toTreeSpecies(regionGroup: String = "Andina"): TreeSpecies {
-        val calculatedCo2 = when {
-            organ.equals("bark", ignoreCase = true) || primaryCommonName.contains("árbol", ignoreCase = true) -> 35
-            organ.equals("leaf", ignoreCase = true) -> 22
-            else -> 18
-        }
-
         return TreeSpecies(
             id = "pn_${UUID.randomUUID().toString().take(8)}",
             commonName = primaryCommonName,
             scientificName = scientificName,
-            season = "Primavera",
-            co2AbsorptionPerYearKg = calculatedCo2,
-            description = "Espécimen botánico identificado con ${(score * 100).toInt()}% de precisión. Perteneciente a la familia $family.",
-            nativeRegion = "$regionGroup, Colombia y Neotrópico",
-            conservationStatus = "Identificación Verificada",
+            season = "Sin datos",
+            co2AbsorptionPerYearKg = -1,
+            description = "Candidato botánico con puntuación del servicio de ${(score * 100).toInt()}%; no es una identificación confirmada. Perteneciente a la familia $family.",
+            nativeRegion = "Sin datos",
+            conservationStatus = "Sin verificar",
             tag = "Reconocimiento Inteligente",
-            category = if (calculatedCo2 > 25) "Árbol" else "Flor / Planta",
+            category = "Sin verificar",
             imageUrl = imageUrl,
             family = family,
             regionGroup = regionGroup
@@ -120,16 +115,6 @@ object PlantNetService {
         "mango" to "Mangifera"
     )
 
-    // Clave configurada desde BuildConfig / .env
-    var apiKey: String = BuildConfig.PLANTNET_API_KEY
-        private set
-
-    fun updateApiKey(newKey: String) {
-        if (newKey.isNotBlank()) {
-            apiKey = newKey.trim()
-        }
-    }
-
     /**
      * Identifica una planta a partir de una URL de imagen accesible públicamente
      */
@@ -137,38 +122,7 @@ object PlantNetService {
         imageUrl: String,
         organ: String = "auto"
     ): Result<PlantNetIdentificationResult> = withContext(Dispatchers.IO) {
-        try {
-            val encodedImg = URLEncoder.encode(imageUrl, "UTF-8")
-            val organParam = if (organ != "auto") "&organs=$organ" else ""
-            val fullUrl = "$BASE_URL?images=$encodedImg$organParam&lang=es&api-key=$apiKey"
-
-            val connection = (URL(fullUrl).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 15000
-                readTimeout = 20000
-                setRequestProperty("Accept", "application/json")
-            }
-
-            val responseCode = connection.responseCode
-            val responseStream = if (responseCode in 200..299) {
-                connection.inputStream
-            } else {
-                connection.errorStream
-            }
-
-            val responseBody = responseStream?.bufferedReader()?.use { it.readText() } ?: ""
-
-            if (responseCode !in 200..299) {
-                return@withContext Result.failure(
-                    Exception("No se pudo identificar la especie ($responseCode). Intenta con una foto más nítida.")
-                )
-            }
-
-            val result = parseIdentificationJson(responseBody)
-            Result.success(result)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        Result.failure(Exception("Selecciona una fotografía local para identificarla. No se aceptan enlaces externos."))
     }
 
     /**
@@ -197,63 +151,13 @@ object PlantNetService {
         organ: String = "auto"
     ): Result<PlantNetIdentificationResult> = withContext(Dispatchers.IO) {
         try {
-            val boundary = "===PlantNetBoundary${System.currentTimeMillis()}==="
-            val organParam = if (organ != "auto") "&organs=$organ" else ""
-            val fullUrl = "$BASE_URL?lang=es$organParam&api-key=$apiKey"
-
-            val connection = (URL(fullUrl).openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                doOutput = true
-                doInput = true
-                useCaches = false
-                connectTimeout = 20000
-                readTimeout = 25000
-                setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
-                setRequestProperty("Accept", "application/json")
-            }
-
-            DataOutputStream(connection.outputStream).use { out ->
-                // Campo 'images' como archivo binario JPEG
-                out.writeBytes("--$boundary\r\n")
-                out.writeBytes("Content-Disposition: form-data; name=\"images\"; filename=\"plant.jpg\"\r\n")
-                out.writeBytes("Content-Type: image/jpeg\r\n\r\n")
-                out.write(imageBytes)
-                out.writeBytes("\r\n")
-
-                if (organ != "auto") {
-                    out.writeBytes("--$boundary\r\n")
-                    out.writeBytes("Content-Disposition: form-data; name=\"organs\"\r\n\r\n")
-                    out.writeBytes(organ)
-                    out.writeBytes("\r\n")
-                }
-
-                out.writeBytes("--$boundary--\r\n")
-                out.flush()
-            }
-
-            val responseCode = connection.responseCode
-            val responseStream = if (responseCode in 200..299) {
-                connection.inputStream
-            } else {
-                connection.errorStream
-            }
-
-            val responseBody = responseStream?.bufferedReader()?.use { it.readText() } ?: ""
-
-            if (responseCode !in 200..299) {
-                val detailMsg = when (responseCode) {
-                    401, 403 -> "Clave de Pl@ntNet inválida o no autorizada ($responseCode). Configura tu PLANTNET_API_KEY en Secrets panel."
-                    404 -> "Pl@ntNet no encontró coincidencias para esta planta ($responseCode). Prueba con un enfoque más cercano a la hoja o corteza."
-                    429 -> "Cuota diaria de Pl@ntNet superada (429 - 500 solicitudes/día). Intenta más tarde o con otra clave."
-                    else -> "Error en Pl@ntNet ($responseCode). Intenta con una foto con mejor iluminación y enfoque."
-                }
-                return@withContext Result.failure(Exception(detailMsg))
-            }
-
-            val result = parseIdentificationJson(responseBody)
-            Result.success(result)
-        } catch (e: Exception) {
-            Result.failure(e)
+            check(com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated) { "Inicia sesión para consultar identificación botánica." }
+            require(imageBytes.size <= 3 * 1024 * 1024) { "La imagen supera 3 MB." }
+            val response = com.google.firebase.functions.FirebaseFunctions.getInstance().getHttpsCallable("identifyPlant")
+                .call(mapOf("image" to android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP), "organ" to organ)).await()
+            Result.success(parseIdentificationJson(JSONObject(response.data as Map<*, *>).toString()))
+        } catch (_: Exception) {
+            Result.failure(Exception("Identificación no disponible. Inicia sesión y comprueba tu conexión; puedes continuar sin identificar la especie."))
         }
     }
 
@@ -332,36 +236,9 @@ object PlantNetService {
     }
 
     private fun readAndCompressImage(context: Context, uri: Uri): ByteArray? {
-        val inputStream: InputStream = context.contentResolver.openInputStream(uri) ?: return null
-        val originalBitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream.close()
-
-        if (originalBitmap == null) return null
-
-        // Redimensionar suavemente si excede 1200px para acelerar la subida y respetar límite de 50MB
-        val maxDimension = 1200
-        val width = originalBitmap.width
-        val height = originalBitmap.height
-
-        val scaledBitmap = if (width > maxDimension || height > maxDimension) {
-            val ratio = width.toFloat() / height.toFloat()
-            val newWidth: Int
-            val newHeight: Int
-            if (ratio > 1) {
-                newWidth = maxDimension
-                newHeight = (maxDimension / ratio).toInt()
-            } else {
-                newHeight = maxDimension
-                newWidth = (maxDimension * ratio).toInt()
-            }
-            Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
-        } else {
-            originalBitmap
-        }
-
-        val outputStream = ByteArrayOutputStream()
-        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-        return outputStream.toByteArray()
+        val local = com.example.kotlinapp.data.image.PhotoStorage.importPhoto(context, uri)
+        val file = java.io.File(requireNotNull(local.path))
+        return try { file.readBytes().takeIf { it.size <= 3 * 1024 * 1024 } } finally { file.delete() }
     }
 
     /**
@@ -373,107 +250,17 @@ object PlantNetService {
         query: String,
         lang: String = "es"
     ): Result<List<TreeSpecies>> = withContext(Dispatchers.IO) {
-        val trimmed = query.trim()
-        if (trimmed.length < 2) {
-            return@withContext Result.failure(IllegalArgumentException("Ingresa al menos 2 letras para buscar en el catálogo botánico."))
-        }
-
         try {
-            // Resolver si es nombre común mapeado o prefijo directo
-            val lower = trimmed.lowercase()
-            val resolvedPrefix = commonNameToGenusMap[lower] ?: trimmed.replaceFirstChar { it.uppercase() }
-            val encodedPrefix = URLEncoder.encode(resolvedPrefix, "UTF-8")
-
-            val fullUrl = "$SPECIES_URL?api-key=$apiKey&lang=$lang&prefix=$encodedPrefix"
-
-            val connection = (URL(fullUrl).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 12000
-                readTimeout = 15000
-                setRequestProperty("Accept", "application/json")
-            }
-
-            val responseCode = connection.responseCode
-            val responseStream = if (responseCode in 200..299) connection.inputStream else connection.errorStream
-            val responseText = responseStream?.bufferedReader()?.use { it.readText() } ?: "[]"
-
-            if (responseCode !in 200..299) {
-                val errMsg = parseErrorMessage(responseText)
-                return@withContext Result.failure(Exception("Error de consulta botánica ($responseCode): $errMsg"))
-            }
-
-            val jsonArray = JSONArray(responseText)
-            val speciesList = mutableListOf<TreeSpecies>()
-
-            for (i in 0 until jsonArray.length().coerceAtMost(30)) {
-                val item = jsonArray.getJSONObject(i)
-                val id = item.optString("id", UUID.randomUUID().toString().take(8))
-                val scientificWithoutAuthor = item.optString("scientificNameWithoutAuthor", "")
-                val scientificAuthor = item.optString("scientificNameAuthorship", "")
-                val commonNamesArray = item.optJSONArray("commonNames")
-
-                val commonNames = mutableListOf<String>()
-                if (commonNamesArray != null) {
-                    for (j in 0 until commonNamesArray.length()) {
-                        commonNames.add(commonNamesArray.getString(j))
-                    }
-                }
-
-                val primaryCommon = commonNames.firstOrNull()?.replaceFirstChar { it.uppercase() }
-                    ?: scientificWithoutAuthor.ifBlank { "Espécimen Botánico" }
-
-                val fullScientific = if (scientificAuthor.isNotBlank()) {
-                    "$scientificWithoutAuthor $scientificAuthor"
-                } else {
-                    scientificWithoutAuthor
-                }
-
-                // Determinar categoría botánica y CO2 estimado
-                val lowerSci = scientificWithoutAuthor.lowercase()
-                val isTree = lowerSci.startsWith("quercus") || lowerSci.startsWith("pinus") ||
-                        lowerSci.startsWith("cedrela") || lowerSci.startsWith("eucalyptus") ||
-                        lowerSci.startsWith("ceiba") || lowerSci.startsWith("handroanthus") ||
-                        lowerSci.startsWith("ceroxylon") || primaryCommon.contains("árbol", ignoreCase = true)
-                val isShrub = lowerSci.startsWith("fuchsia") || lowerSci.startsWith("hydrangea") ||
-                        lowerSci.startsWith("lavandula") || primaryCommon.contains("arbusto", ignoreCase = true)
-
-                val category = when {
-                    isTree -> "Árbol"
-                    isShrub -> "Arbusto"
-                    else -> "Flor / Planta"
-                }
-
-                val co2 = when (category) {
-                    "Árbol" -> 35
-                    "Arbusto" -> 14
-                    else -> 8
-                }
-
-                val imageUrl = getRepresentativeBotanicalImage(resolvedPrefix, lowerSci)
-
-                speciesList.add(
-                    TreeSpecies(
-                        id = "pn_sp_$id",
-                        commonName = primaryCommon,
-                        scientificName = fullScientific,
-                        season = "Primavera",
-                        co2AbsorptionPerYearKg = co2,
-                        description = "Especie botánica indexada por Pl@ntNet (GET /v2/species). Nombre común: $primaryCommon. Taxonomía verificada.",
-                        nativeRegion = "Registro botánico global y neotropical",
-                        conservationStatus = "Catalogado",
-                        tag = "Pl@ntNet GET",
-                        category = category,
-                        imageUrl = imageUrl,
-                        family = resolvedPrefix,
-                        regionGroup = "Andina"
-                    )
-                )
-            }
-
-            Result.success(speciesList)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+            check(com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated)
+            val response = com.google.firebase.functions.FirebaseFunctions.getInstance().getHttpsCallable("searchSpecies")
+                .call(mapOf("query" to query.take(120))).await()
+            val values = (response.data as? Map<*, *>)?.get("species") as? List<*> ?: emptyList<Any>()
+            Result.success(values.take(20).mapNotNull { value ->
+                val row = value as? Map<*, *> ?: return@mapNotNull null
+                val scientific = row["scientificName"] as? String ?: return@mapNotNull null
+                TreeSpecies(id = "remote_${scientific.hashCode()}", commonName = row["commonName"] as? String ?: scientific, scientificName = scientific, season = "Sin datos", co2AbsorptionPerYearKg = -1, description = "Dato consultado en Pl@ntNet; requiere revisión.", nativeRegion = "Sin datos", conservationStatus = "Sin verificar", tag = "Consulta remota")
+            })
+        } catch (_: Exception) { Result.failure(Exception("Consulta remota no disponible. Puedes buscar en el catálogo local.")) }
     }
 
     private fun getRepresentativeBotanicalImage(genus: String, scientific: String): String {

@@ -1,6 +1,7 @@
 package com.example.kotlinapp.data.network
 
 import com.example.kotlinapp.BuildConfig
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -19,23 +20,15 @@ object ForestAiService {
      * Restringido a máximo 3 puntos clave y enfocado en la localidad de Suba, Bogotá.
      */
     suspend fun askBotanicalConsultant(userPrompt: String): Result<String> = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY.trim()
-
-        if (apiKey.isNotBlank() && !apiKey.contains("YOUR_GEMINI_API_KEY")) {
-            val apiResult = callGeminiRest(apiKey, userPrompt)
-            if (apiResult.isSuccess) {
-                return@withContext apiResult
-            }
+        if (com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated) {
+            try {
+                val response = com.google.firebase.functions.FirebaseFunctions.getInstance()
+                    .getHttpsCallable("botanicalAdvice").call(mapOf("prompt" to userPrompt.take(2000))).await()
+                val text = (response.data as Map<*, *>)["text"] as? String
+                if (!text.isNullOrBlank()) return@withContext Result.success("Sugerencia Gemini · Requiere revisión humana\n\n" + cleanFormatting(text.take(3000)))
+            } catch (_: Exception) { /* Explicit local fallback below. */ }
         }
-
-        // Si la clave no está configurada o hay fallo de red, usamos el motor experto local estructurado
-        val fallbackResponse = getExpertFallbackResponse(userPrompt)
-        val notice = if (apiKey.isBlank() || apiKey.contains("YOUR_GEMINI_API_KEY")) {
-            "(Modo Local - Sin clave GEMINI)\n\n"
-        } else {
-            "(Respaldo Local Inteligente)\n\n"
-        }
-        Result.success(cleanFormatting(notice + fallbackResponse))
+        Result.success(cleanFormatting("Orientación local · Sin consulta a IA remota\n\n" + getExpertFallbackResponse(userPrompt)))
     }
 
     /**
@@ -72,94 +65,6 @@ object ForestAiService {
         return text.replace("**", "").replace("*", "")
     }
 
-    private fun callGeminiRest(apiKey: String, prompt: String): Result<String> {
-        val modelsToTry = listOf(MODEL_NAME, FALLBACK_MODEL_NAME)
-        for (model in modelsToTry) {
-            val result = executeGeminiRequest(apiKey, model, prompt)
-            if (result.isSuccess) {
-                return Result.success(cleanFormatting(result.getOrThrow()))
-            }
-        }
-        return Result.failure(Exception("No se pudo conectar con el servicio Gemini."))
-    }
-
-    private fun executeGeminiRequest(apiKey: String, model: String, prompt: String): Result<String> {
-        return try {
-            val url = URL("$BASE_URL/$model:generateContent?key=$apiKey")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                doOutput = true
-                connectTimeout = 12000
-                readTimeout = 18000
-                setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("Accept", "application/json")
-            }
-
-            // Prompt de sistema blindado contra desvíos de tema y con límite de formato en 3 puntos
-            val systemInstruction = "Eres el Asistente Botánico y de Gestión Forestal de WoodMatch para la localidad de Suba, Bogotá. " +
-                    "Tu función exclusiva es asesorar a usuarios nuevos sobre especies vegetales, madera urbana y cómo crear reportes de residuos en Suba. " +
-                    "REGLA 1 (ANTI-DESVÍO): NUNCA hables de temas ajenos a la botánica, madera, árboles urbanos o reciclaje leñoso en Suba. Si te preguntan otra cosa, responde cortésmente que solo orientas temas de madera y flora de Suba. " +
-                    "REGLA 2 (ESTRUCTURA): Responde OBLIGATORIAMENTE en MÁXIMO 3 PUNTOS CLAVE numerados (1, 2 y 3). " +
-                    "REGLA 3 (SINTAXIS): No uses texto de relleno ni introducciones largas. No uses asteriscos dobles (**) ni cursivas (*), usa texto limpio y legible."
-
-            val jsonBody = JSONObject().apply {
-                val contentsArr = JSONArray().apply {
-                    val contentObj = JSONObject().apply {
-                        val partsArr = JSONArray().apply {
-                            put(JSONObject().apply { put("text", prompt) })
-                        }
-                        put("parts", partsArr)
-                    }
-                    put(contentObj)
-                }
-                put("contents", contentsArr)
-
-                val systemObj = JSONObject().apply {
-                    val partsArr = JSONArray().apply {
-                        put(JSONObject().apply { put("text", systemInstruction) })
-                    }
-                    put("parts", partsArr)
-                }
-                put("systemInstruction", systemObj)
-
-                // Límite estricto de longitud de salida para evitar respuestas largas
-                val genConfig = JSONObject().apply {
-                    put("maxOutputTokens", 280)
-                    put("temperature", 0.2)
-                }
-                put("generationConfig", genConfig)
-            }
-
-            connection.outputStream.bufferedWriter().use { it.write(jsonBody.toString()) }
-
-            val responseCode = connection.responseCode
-            val stream = if (responseCode in 200..299) connection.inputStream else connection.errorStream
-            val rawResponse = stream?.bufferedReader()?.use { it.readText() } ?: ""
-
-            if (responseCode in 200..299) {
-                val root = JSONObject(rawResponse)
-                val candidates = root.optJSONArray("candidates")
-                val firstCandidate = candidates?.optJSONObject(0)
-                val content = firstCandidate?.optJSONObject("content")
-                val parts = content?.optJSONArray("parts")
-                val text = parts?.optJSONObject(0)?.optString("text")
-
-                if (!text.isNullOrBlank()) {
-                    Result.success(text.trim())
-                } else {
-                    Result.failure(Exception("Respuesta vacía"))
-                }
-            } else {
-                Result.failure(Exception("Error de comunicación ($responseCode)"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Motor de conocimiento botánico local estructurado en 3 puntos clave
-     */
     private fun getExpertFallbackResponse(query: String): String {
         val q = query.lowercase()
         return when {

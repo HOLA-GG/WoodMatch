@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+ match /b/{bucket}/o {
+  function activeAccount() {
+   return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous'
+    && !firestore.exists(/databases/(default)/documents/account_tombstones/$(request.auth.uid));
+  }
+  match /waste_photos/{uid}/{fileName} {
+   allow read: if activeAccount();
+   allow create: if activeAccount() && request.auth.uid == uid
+     && request.resource.size < 5 * 1024 * 1024
+     && request.resource.contentType == 'image/jpeg';
+   allow delete: if activeAccount() && request.auth.uid == uid;
+   allow update: if false;
+  }
+ }
+}

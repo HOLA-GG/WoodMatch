@@ -7,6 +7,9 @@ import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import com.example.kotlinapp.data.repository.WoodWasteRepository
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +29,7 @@ import com.example.kotlinapp.ui.screens.AdminUsersScreen
 import com.example.kotlinapp.ui.screens.DashboardScreen
 import com.example.kotlinapp.ui.screens.ForgotPasswordScreen
 import com.example.kotlinapp.ui.screens.LoginScreen
+import com.example.kotlinapp.ui.screens.MyActivityScreen
 import com.example.kotlinapp.ui.screens.ProfileScreen
 import com.example.kotlinapp.ui.screens.PublishWoodWasteScreen
 import com.example.kotlinapp.ui.screens.RegisterScreen
@@ -42,6 +46,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (com.google.firebase.FirebaseApp.getApps(this).isNotEmpty()) AppIntegrity.initialize()
         ReportRepository.init(applicationContext)
 
         setContent {
@@ -62,6 +67,8 @@ fun WoodMatchApp(
     currentSeason: SeasonalTheme,
     onSeasonChange: (SeasonalTheme) -> Unit
 ) {
+    val activeUser by AuthRepository.currentUser.collectAsState()
+    LaunchedEffect(activeUser?.uid) { WoodWasteRepository.refreshSession() }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Splash.route
@@ -71,7 +78,8 @@ fun WoodMatchApp(
         Screen.Species.route,
         Screen.TreeMap.route,
         Screen.ViewReports.route,
-        Screen.Profile.route
+        Screen.Profile.route,
+        Screen.MyActivity.route
     )
 
     val showBottomBar = currentRoute in bottomNavRoutes
@@ -185,6 +193,10 @@ fun WoodMatchApp(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToCreateReport = { navController.navigate(Screen.ReportTree.route) }
                 )
+            }
+
+            composable(Screen.MyActivity.route) {
+                MyActivityScreen(onExplore = { navController.navigate(Screen.ViewReports.route) })
             }
 
             composable(Screen.Profile.route) {

@@ -98,7 +98,7 @@ fun BogotaArcGisWebView(
             }
             array.put(obj)
         }
-        array.toString()
+        array.toString().replace("<", "\\u003c").replace(">", "\\u003e")
     }
 
     // Generar JSON de reservas ecológicas de Suba
@@ -119,7 +119,7 @@ fun BogotaArcGisWebView(
                 }
                 array.put(obj)
             }
-            array.toString()
+            array.toString().replace("<", "\\u003c").replace(">", "\\u003e")
         }
     }
 
@@ -171,7 +171,7 @@ fun BogotaArcGisWebView(
                         setSupportZoom(true)
                         builtInZoomControls = true
                         displayZoomControls = false
-                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     }
 
                     // Puente bidireccional entre JavaScript y Jetpack Compose
@@ -209,6 +209,7 @@ fun BogotaArcGisWebView(
 
                     webChromeClient = WebChromeClient()
                     webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean = true
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             isLoading = true
                         }
@@ -468,13 +469,13 @@ private fun buildBogotaMapHtml(
 
               var marker = L.marker([item.lat, item.lng], { icon: customIcon }).addTo(map);
 
-              var popupContent = '<div class="popup-card">' +
-                '<div class="popup-title">' + item.title + '</div>' +
-                '<div class="popup-sector">📍 ' + item.sector + ' • ' + item.quantity + '</div>' +
-                '<span class="popup-badge badge-' + item.status + '">' + item.statusLabel + '</span>' +
-                '<button class="popup-btn" onclick="selectWaste(\'' + item.id + '\')">Ver Información de Retiro</button>' +
-                '</div>';
-
+              var popupContent = document.createElement('div');
+              popupContent.className = 'popup-card';
+              var title = document.createElement('div'); title.className = 'popup-title'; title.textContent = item.title;
+              var detail = document.createElement('div'); detail.textContent = item.sector + ' · ' + item.quantity + ' · ' + item.statusLabel;
+              var action = document.createElement('button'); action.className = 'popup-btn'; action.textContent = 'Ver información de retiro';
+              action.addEventListener('click', function() { window.selectWaste(item.id); });
+              popupContent.appendChild(title); popupContent.appendChild(detail); popupContent.appendChild(action);
               marker.bindPopup(popupContent);
             });
 

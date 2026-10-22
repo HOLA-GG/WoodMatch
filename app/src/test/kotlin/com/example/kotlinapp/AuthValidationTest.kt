@@ -9,6 +9,21 @@ import org.junit.Test
 class AuthValidationTest {
 
     @Test
+    fun loginCannotInventAnAccountWhenFirebaseIsUnavailable() = kotlinx.coroutines.runBlocking {
+        val result = AuthRepository.login("unregistered@example.org", "AnyPassword123")
+        assertFalse(result.isSuccess)
+        assertFalse(AuthRepository.isAuthenticated)
+    }
+
+    @Test
+    fun guestCannotPublishOrRequest() {
+        val guest = com.example.kotlinapp.data.model.User(uid = "guest_explore", role = "INVITADO")
+        assertFalse(guest.canPublish)
+        assertFalse(guest.canRequest)
+        assertFalse(guest.isAdmin)
+    }
+
+    @Test
     fun testEmailValidation() {
         assertTrue(AuthRepository.validateEmail("forest@woodmatch.org"))
         assertTrue(AuthRepository.validateEmail("user.name@domain.co"))

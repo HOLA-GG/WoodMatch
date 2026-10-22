@@ -46,7 +46,7 @@ fun WoodMatchBottomNav(
         NavItem("Inicio", Screen.Dashboard.route, Icons.Filled.Home, "nav_home"),
         NavItem("Residuos", Screen.ViewReports.route, Icons.AutoMirrored.Filled.Assignment, "nav_reports"),
         NavItem("Especies", Screen.Species.route, Icons.Filled.NaturePeople, "nav_species"),
-        NavItem("Mapa", Screen.TreeMap.route, Icons.Filled.Map, "nav_map"),
+        NavItem("Mi actividad", Screen.MyActivity.route, Icons.Filled.Map, "nav_activity"),
         NavItem("Perfil", Screen.Profile.route, Icons.Filled.Person, "nav_profile")
     )
 

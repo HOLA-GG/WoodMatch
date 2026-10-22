@@ -1,41 +1,30 @@
-# WoodMatch Prototipo Android
+# WoodMatch · Android
 
-WoodMatch es un prototipo Android de economía circular para registrar, explorar y solicitar residuos leñosos urbanos en Suba, Bogotá.
+Aplicación de prueba para publicar y encontrar residuos leñosos urbanos en Suba, Bogotá, y coordinar retiros entre generadores y receptores.
 
-## Incluye en modo demo
+Abre **esta carpeta raíz**, no `Kotlin_App` (prototipo histórico). Usa JDK 21, Android SDK 36 y el Gradle Wrapper incluido.
 
-- Panel con indicadores calculados desde el inventario visible.
-- Catálogo filtrable de residuos, publicación y solicitudes de retiro.
-- Biblioteca botánica con asistencia opcional de PlantNet y Gemini.
-- Mapa eco-vectorial de Suba que funciona sin claves ni conexión, con visores conectados opcionales.
-- Datos de ejemplo para recorrer el flujo sin configurar Firebase.
-- Reportes y fotos guardados en el almacenamiento privado del teléfono, sin Firebase Storage.
-
-## Abrir en Android Studio
-
-1. Abra esta carpeta raíz, no `Kotlin_App`.
-2. Use JDK 21 y deje que Android Studio sincronice Gradle.
-3. Ejecute la configuración `app` en un dispositivo Android o emulador.
-
-El proyecto incluye Gradle Wrapper. Desde una terminal se puede crear un APK debug con:
+## Ejecutar y comprobar
 
 ```bash
-./gradlew assembleDebug
+./gradlew --max-workers=2 assembleDebug testDebugUnitTest lintDebug
+./gradlew --max-workers=2 assembleRelease
 ```
 
-El APK queda en `app/build/outputs/apk/debug/app-debug.apk`.
+- APK de prueba: `app/build/outputs/apk/debug/app-debug.apk`.
+- Release ofuscada con R8 y recursos reducidos: `app/build/outputs/apk/release/` (sin firma productiva).
+- Mapa R8: `app/build/outputs/mapping/release/mapping.txt`. Custodiarlo para interpretar errores; no distribuirlo públicamente.
+- Invitado: permite consultar especies; no simula una cuenta autenticada ni operaciones de retiro.
+- Publicaciones, fotografías compartidas y retiros: requieren Firebase, conexión, cuenta y backend desplegado. Una falta de configuración muestra un error; no se presenta un guardado ficticio.
 
-## Datos y servicios
+## Conectar Firebase y servicios
 
-Los reportes creados por el usuario se guardan en este dispositivo. No se suben a Firebase ni se restauran tras desinstalar la aplicación. Las fotos se copian a los archivos privados de la app para que sigan disponibles después de cerrar la galería. Firebase Auth y Firestore continúan disponibles para los demás módulos.
+Coloca la configuración Android del proyecto de pruebas en `app/google-services.json` (ignorada por Git). Configura Authentication, Firestore, Storage y App Check. Las funciones de `functions/` usan Node 22. Los secretos de PlantNet y Gemini se configuran en Secret Manager; no se incorporan desde `.env` al APK.
 
-El mapa ofrece una vista local y capas abiertas de OpenStreetMap y Bogotá. Google Maps no es necesario para navegar por la app.
+Consulta [Operación, seguridad y publicación](docs/OPERACION_Y_SEGURIDAD.md) para configuración, pruebas, QR, firma, privacidad y bloqueos pendientes. El script `scripts/deploy-firebase.sh` exige un proyecto explícito y configuración previa; no se ha ejecutado contra un proyecto remoto en esta entrega.
 
-El prototipo compila sin servicios externos. Para conectar Firebase en un entorno propio, coloque un `google-services.json` válido dentro de `app/`; Git lo ignora y el plugin se activa automáticamente. Las claves opcionales se pueden declarar en un archivo `.env` local a partir de `.env.example`:
+## Privacidad y límites de la versión
 
-```properties
-PLANTNET_API_KEY=tu_clave
-GEMINI_API_KEY=tu_clave
-```
+El aviso dentro de la app es de prueba. `Cookietech@woodmatch.org` es un contacto ficticio pendiente de sustitución. Utiliza datos ficticios hasta definir el responsable real, la política de tratamiento/retención y los canales de derechos. La app no acredita identidad física mediante QR ni certifica especies, calidad de madera o cumplimiento jurídico.
 
-No incluya claves reales ni archivos de Firebase en el repositorio.
+El historial nuevo corresponde a publicaciones y solicitudes en el backend. Los reportes locales del prototipo anterior no se migran automáticamente. Las publicaciones antiguas sin `schemaVersion=2` quedan fuera del catálogo nuevo para evitar exponer datos que no hayan sido revisados.

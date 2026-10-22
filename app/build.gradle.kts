@@ -11,33 +11,6 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
-val envFile = rootProject.file(".env")
-val envProperties = Properties()
-if (envFile.isFile) {
-    envFile.inputStream().use { stream ->
-        envProperties.load(stream)
-    }
-}
-
-// AI Studio puede exportar secretos como archivos individuales dentro de .env/.
-// Se leen solo durante la compilación y toda la carpeta está excluida de Git.
-fun secretFileValue(name: String): String? {
-    val secretFile = rootProject.file(".env/$name")
-    return secretFile.takeIf { it.isFile }
-        ?.readText()
-        ?.trim()
-        ?.takeIf { it.isNotBlank() }
-}
-val plantNetApiKey = envProperties.getProperty("PLANTNET_API_KEY")
-    ?: System.getenv("PLANTNET_API_KEY")
-    ?: secretFileValue("PLANTNET_API_KEY")
-    ?: ""
-
-val geminiApiKey = envProperties.getProperty("GEMINI_API_KEY")
-    ?: System.getenv("GEMINI_API_KEY")
-    ?: secretFileValue("GEMINI_API_KEY")
-    ?: ""
-
 android {
     namespace = "com.example.kotlinapp"
     compileSdk = 36
@@ -46,21 +19,22 @@ android {
         applicationId = "com.example.kotlinapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "PLANTNET_API_KEY", "\"$plantNetApiKey\"")
-        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        buildConfigField("String", "PLANTNET_API_KEY", "\"\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"\"")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -104,6 +78,12 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-functions")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation(libs.coil.compose)
 
     debugImplementation(libs.androidx.ui.tooling)

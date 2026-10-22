@@ -823,7 +823,7 @@ fun SpeciesScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Fijación: ${sp.co2AbsorptionPerYearKg} kg CO₂ / año",
+                            text = if (sp.co2AbsorptionPerYearKg < 0) "Captura de CO₂: sin datos verificados" else "Estimación de referencia: ${sp.co2AbsorptionPerYearKg} kg CO₂ / año",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -1581,7 +1581,7 @@ fun SpeciesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "~${species.co2AbsorptionPerYearKg} kg CO₂/año",
+                                    text = if (species.co2AbsorptionPerYearKg < 0) "CO₂: sin datos" else "~${species.co2AbsorptionPerYearKg} kg CO₂/año (referencia)",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold

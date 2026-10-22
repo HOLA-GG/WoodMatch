@@ -15,6 +15,7 @@ enum class WasteCategory(val displayName: String, val description: String) {
 
 data class WoodWasteItem(
     val id: String = "",
+    val schemaVersion: Int = 2,
     val title: String = "",
     val description: String = "",
     val wasteType: String = "Ramas y podas de arbolado",
@@ -49,6 +50,7 @@ data class WoodWasteItem(
     val completedBy: String? = null,
     val imageUri: String? = null
 ) {
+    @get:com.google.firebase.firestore.Exclude
     val typedStatus: WasteStatus
         get() = try {
             WasteStatus.valueOf(status.uppercase())
@@ -56,6 +58,7 @@ data class WoodWasteItem(
             WasteStatus.DISPONIBLE
         }
 
+    @get:com.google.firebase.firestore.Exclude
     val typedCategory: WasteCategory
         get() = try {
             WasteCategory.valueOf(category.uppercase())
@@ -63,10 +66,14 @@ data class WoodWasteItem(
             WasteCategory.ESTANDAR
         }
 
+    @get:com.google.firebase.firestore.Exclude
     val isAvailable: Boolean get() = typedStatus == WasteStatus.DISPONIBLE
+    @get:com.google.firebase.firestore.Exclude
     val isReserved: Boolean get() = typedStatus == WasteStatus.RESERVADO
+    @get:com.google.firebase.firestore.Exclude
     val isCompleted: Boolean get() = typedStatus == WasteStatus.APROVECHADO
 
+    @get:com.google.firebase.firestore.Exclude
     val formattedQuantity: String
         get() = "${if (quantityValue % 1.0 == 0.0) quantityValue.toInt().toString() else quantityValue.toString()} $quantityUnit" +
                 if (quantityEstimated) " (Aprox.)" else ""

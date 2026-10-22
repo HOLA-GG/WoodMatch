@@ -1,6 +1,7 @@
 package com.example.kotlinapp.data.repository
 
 import com.example.kotlinapp.data.model.User
+import com.example.kotlinapp.BuildConfig
 import com.example.kotlinapp.data.model.UserRole
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -63,30 +64,18 @@ object AuthRepository {
         )
     )
 
-    private val _currentUser = MutableStateFlow<User?>(demoUsers[1]) // Default to generator for seamless UX
+    private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
-    init {
-        ensureFirebaseSession()
+    fun ensureFirebaseSession() { /* No crear sesiones anónimas para operaciones protegidas. */ }
+
+    suspend fun restoreSession() {
+        val uid = auth?.currentUser?.takeUnless { it.isAnonymous }?.uid ?: return
+        _currentUser.value = fetchUserProfile(uid)
     }
 
-    fun ensureFirebaseSession() {
-        auth?.let { firebaseAuth ->
-            if (firebaseAuth.currentUser == null) {
-                try {
-                    firebaseAuth.signInAnonymously()
-                        .addOnSuccessListener {
-                            android.util.Log.d("AuthRepository", "Sesión de Firebase inicializada")
-                        }
-                        .addOnFailureListener { e ->
-                            android.util.Log.d("AuthRepository", "Sesión Firebase omitida: ${e.message}")
-                        }
-                } catch (e: Exception) {
-                    android.util.Log.d("AuthRepository", "Firebase auth fallback: ${e.message}")
-                }
-            }
-        }
-    }
+    val isAuthenticated: Boolean
+        get() = auth?.currentUser?.let { !it.isAnonymous && it.uid == _currentUser.value?.uid } == true
 
     fun validateEmail(email: String): Boolean {
         val emailRegex = Regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
@@ -114,52 +103,18 @@ object AuthRepository {
             return Result.failure(Exception("Por favor ingrese su contraseña."))
         }
 
-        // 1. Check in-memory demo accounts first for fast access
-        val localMatch = demoUsers.find { it.email.equals(trimmedEmail, ignoreCase = true) }
-
-        // 2. Try Firebase Auth
-        auth?.let { firebaseAuth ->
-            try {
-                val authResult = firebaseAuth.signInWithEmailAndPassword(trimmedEmail, pass).await()
-                val uid = authResult.user?.uid ?: (localMatch?.uid ?: "uid_${System.currentTimeMillis()}")
-
-                var userObj = fetchUserProfile(uid)
-                if (userObj == null) {
-                    val displayName = authResult.user?.displayName?.takeIf { it.isNotBlank() } ?: trimmedEmail.substringBefore("@")
-                    userObj = localMatch ?: User(
-                        uid = uid,
-                        name = displayName,
-                        email = trimmedEmail,
-                        role = if (trimmedEmail.contains("admin", ignoreCase = true)) UserRole.ADMIN.name else UserRole.GENERADOR.name,
-                        sectorSuba = "Suba Centro"
-                    )
-                }
-                _currentUser.value = userObj
-                return Result.success(userObj)
-            } catch (e: Exception) {
-                if (localMatch != null) {
-                    _currentUser.value = localMatch
-                    return Result.success(localMatch)
-                }
-                return Result.failure(Exception(e.message ?: "Credenciales incorrectas o usuario no encontrado."))
-            }
+        val firebaseAuth = auth ?: return Result.failure(Exception("El servicio de cuentas no está configurado. Puedes explorar como invitado."))
+        return try {
+            val uid = firebaseAuth.signInWithEmailAndPassword(trimmedEmail, pass).await().user?.uid
+                ?: error("No se pudo iniciar sesión.")
+            val profile = fetchUserProfile(uid) ?: error("Tu cuenta no tiene un perfil válido. Contacta al responsable del servicio.")
+            _currentUser.value = profile
+            Result.success(profile)
+        } catch (_: Exception) {
+            firebaseAuth.signOut()
+            _currentUser.value = null
+            Result.failure(Exception("No fue posible iniciar sesión. Comprueba tus credenciales y conexión."))
         }
-
-        if (localMatch != null) {
-            _currentUser.value = localMatch
-            return Result.success(localMatch)
-        }
-
-        val fallbackUser = User(
-            uid = "usr_${System.currentTimeMillis()}",
-            name = trimmedEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
-            email = trimmedEmail,
-            role = UserRole.GENERADOR.name,
-            sectorSuba = "Suba Centro"
-        ).also { demoUsers.add(it) }
-
-        _currentUser.value = fallbackUser
-        return Result.success(fallbackUser)
     }
 
     suspend fun register(
@@ -181,9 +136,7 @@ object AuthRepository {
         if (trimmedName.isBlank()) return Result.failure(Exception("El nombre es requerido."))
         if (!validateEmail(trimmedEmail)) return Result.failure(Exception("Correo electrónico inválido."))
         if (!validatePhone(trimmedPhone)) return Result.failure(Exception("El teléfono debe comenzar con +57 y tener 10 dígitos."))
-        if (dob.isBlank()) return Result.failure(Exception("La fecha de nacimiento es requerida."))
         if (city.isBlank()) return Result.failure(Exception("La ciudad o municipio es requerida."))
-        if (gender.isBlank()) return Result.failure(Exception("Seleccione un género."))
         if (!validatePassword(pass)) return Result.failure(Exception("La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 minúscula y 1 número."))
         if (pass != confirmPass) return Result.failure(Exception("Las contraseñas no coinciden."))
 
@@ -194,14 +147,15 @@ object AuthRepository {
             else -> UserRole.GENERADOR.name
         }
 
-        var newUid = "usr_${System.currentTimeMillis()}"
+        val firebaseAuth = auth ?: return Result.failure(Exception("El registro no está disponible en este entorno. Puedes explorar como invitado."))
+        var newUid = ""
 
-        auth?.let { firebaseAuth ->
+        firebaseAuth.let { firebaseAuth ->
             try {
                 val res = firebaseAuth.createUserWithEmailAndPassword(trimmedEmail, pass).await()
-                newUid = res.user?.uid ?: newUid
+                newUid = res.user?.uid ?: error("No se creó la cuenta")
             } catch (e: Exception) {
-                android.util.Log.w("AuthRepository", "Firebase create user fallback: ${e.message}")
+                return Result.failure(Exception("No se pudo crear la cuenta. Comprueba tu conexión y correo."))
             }
         }
 
@@ -210,9 +164,9 @@ object AuthRepository {
             name = trimmedName,
             email = trimmedEmail,
             phone = trimmedPhone,
-            dob = dob,
+            dob = "",
             city = city,
-            gender = gender,
+            gender = "",
             role = sanitizedRole,
             sectorSuba = sectorSuba.ifBlank { "Suba Centro" }
         )
@@ -228,11 +182,15 @@ object AuthRepository {
                     "city" to newUser.city,
                     "gender" to newUser.gender,
                     "role" to newUser.role,
-                    "sectorSuba" to newUser.sectorSuba
+                    "sectorSuba" to newUser.sectorSuba,
+                    "privacyVersion" to "2026-10-22-prototipo",
+                    "privacyAcceptedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
                 )
                 db.collection("users").document(newUid).set(data).await()
             } catch (e: Exception) {
-                android.util.Log.w("AuthRepository", "Firestore write user fallback: ${e.message}")
+                runCatching { firebaseAuth.currentUser?.delete()?.await() }
+                firebaseAuth.signOut()
+                return Result.failure(Exception("No se pudo guardar el perfil. Vuelve a intentar el registro."))
             }
         }
 
@@ -242,6 +200,7 @@ object AuthRepository {
     }
 
     fun switchUserForTesting(role: UserRole) {
+        if (!BuildConfig.DEBUG || auth != null) return
         val target = demoUsers.find { it.typedRole == role }
         if (target != null) {
             _currentUser.value = target
@@ -257,7 +216,7 @@ object AuthRepository {
             dob = "01-01-2000",
             city = "Bogotá",
             gender = "Otro",
-            role = UserRole.RECEPTOR.name,
+            role = "INVITADO",
             sectorSuba = "Suba Centro"
         )
     }
@@ -275,7 +234,7 @@ object AuthRepository {
             }
         }
 
-        return Result.success("Instrucciones enviadas exitosamente a $trimmedEmail.")
+        return Result.failure(Exception("No se pudo enviar el correo. Comprueba la configuración del servicio y tu conexión."))
     }
 
     fun logout() {
@@ -286,6 +245,7 @@ object AuthRepository {
     }
 
     suspend fun getAllUsers(): List<User> {
+        if (!isAuthenticated || _currentUser.value?.isAdmin != true) return emptyList()
         firestore?.let { db ->
             try {
                 val snapshot = db.collection("users").get().await()
@@ -309,23 +269,11 @@ object AuthRepository {
                 }
             } catch (_: Exception) {}
         }
-        return demoUsers
+        return emptyList()
     }
 
     suspend fun updateUserRole(uid: String, newRole: String): Result<Unit> {
-        val userIdx = demoUsers.indexOfFirst { it.uid == uid }
-        if (userIdx != -1) {
-            demoUsers[userIdx] = demoUsers[userIdx].copy(role = newRole)
-        }
-        firestore?.let { db ->
-            try {
-                db.collection("users").document(uid).update("role", newRole).await()
-            } catch (_: Exception) {}
-        }
-        if (_currentUser.value?.uid == uid) {
-            _currentUser.value = _currentUser.value?.copy(role = newRole)
-        }
-        return Result.success(Unit)
+        return Result.failure(Exception("Los roles se administran en el servidor por personal autorizado."))
     }
 
     private suspend fun fetchUserProfile(uid: String): User? {

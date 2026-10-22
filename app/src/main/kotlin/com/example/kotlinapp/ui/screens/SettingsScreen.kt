@@ -45,6 +45,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.example.kotlinapp.ui.components.PrivacyNotice
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -119,16 +120,16 @@ fun SettingsScreen(
                 )
             },
             title = {
-                Text("WoodMatch v2.0.0", style = MaterialTheme.typography.titleLarge)
+                Text("WoodMatch ${com.example.kotlinapp.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleLarge)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "WoodMatch es una plataforma comunitaria de monitoreo forestal y protección de especies andinas y neotropicales.",
+                        text = "WoodMatch conecta generadores y receptores para el aprovechamiento responsable de residuos leñosos urbanos.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "• Cobertura: Regiones Andina, Caribe, Amazonía, Páramo y Pacífico\n• Reconocimiento de Flora y Catálogo de Especies\n• Monitoreo y Conservación Forestal Comunitaria\n• Modo Offline: Activo para trabajo de campo",
+                        text = "• Piloto de economía circular en Suba\n• Catálogo botánico e identificación orientativa\n• Publicaciones y solicitudes requieren conexión y cuenta\n• Versión de prueba: utiliza datos ficticios",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -202,6 +203,8 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
+            PrivacyNotice()
+            com.example.kotlinapp.ui.components.AccountDataControls(onDeleted = onLogout)
             // Section 1: Apariencia y Selector Visual de Temas (Sin exceso de texto)
             Text(
                 text = "APARIENCIA Y ESTACIONES",

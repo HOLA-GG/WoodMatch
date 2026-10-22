@@ -1,6 +1,7 @@
 package com.example.kotlinapp.data.model
 
 enum class UserRole(val displayName: String, val description: String) {
+    INVITADO("Invitado", "Consulta sin operaciones protegidas"),
     GENERADOR("Generador de Residuos", "Publica podas, troncos y madera para aprovechamiento"),
     RECEPTOR("Receptor / Aprovechador", "Solicita material para carpintería, biomasa o compost"),
     MIXTO("Usuario Mixto", "Genera y aprovecha residuos leñosos"),
@@ -31,6 +32,6 @@ data class User(
         get() = try {
             UserRole.valueOf(role.uppercase())
         } catch (_: Exception) {
-            if (role.equals("admin", ignoreCase = true)) UserRole.ADMIN else UserRole.GENERADOR
+            if (role.equals("admin", ignoreCase = true)) UserRole.ADMIN else UserRole.INVITADO
         }
 }

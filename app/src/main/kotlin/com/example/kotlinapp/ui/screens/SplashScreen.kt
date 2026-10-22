@@ -54,7 +54,8 @@ fun SplashScreen(
     }
 
     LaunchedEffect(Unit) {
-        delay(1800)
+        AuthRepository.restoreSession()
+        delay(400)
         val user = AuthRepository.currentUser.value
         if (user != null) {
             onNavigateToDashboard()

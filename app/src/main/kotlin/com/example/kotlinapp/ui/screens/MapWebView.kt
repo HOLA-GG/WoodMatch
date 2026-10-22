@@ -188,7 +188,7 @@ fun MapWebView(
             }
             array.put(obj)
         }
-        array.toString()
+        array.toString().replace("<", "\\u003c").replace(">", "\\u003e")
     }
 
     // Generar JSON de reservas naturales de Suba
@@ -209,7 +209,7 @@ fun MapWebView(
                 }
                 array.put(obj)
             }
-            array.toString()
+            array.toString().replace("<", "\\u003c").replace(">", "\\u003e")
         }
     }
 
@@ -329,11 +329,11 @@ fun MapWebView(
                             setSupportZoom(true)
                             builtInZoomControls = true
                             displayZoomControls = false
-                            allowFileAccess = true
-                            allowContentAccess = true
-                            allowFileAccessFromFileURLs = true
-                            allowUniversalAccessFromFileURLs = true
-                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            allowFileAccess = false
+                            allowContentAccess = false
+                            allowFileAccessFromFileURLs = false
+                            allowUniversalAccessFromFileURLs = false
+                            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                             userAgentString = OSM_USER_AGENT
                         }
 
@@ -389,6 +389,7 @@ fun MapWebView(
 
                         // 5. WebViewClient para gestión de errores de red y SSL
                         webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean = true
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                 isLoading = true
                                 hasError = false
@@ -423,7 +424,7 @@ fun MapWebView(
                                 handler: SslErrorHandler?,
                                 error: SslError?
                             ) {
-                                handler?.proceed()
+                                handler?.cancel()
                             }
                         }
 
@@ -812,13 +813,13 @@ private fun buildOsmHtml(
 
               var marker = L.marker([item.lat, item.lng], { icon: customIcon }).addTo(map);
 
-              var popupContent = '<div class="popup-card">' +
-                '<div class="popup-title">' + item.title + '</div>' +
-                '<div class="popup-sector">📍 ' + item.sector + ' • ' + item.quantity + '</div>' +
-                '<span class="popup-badge badge-' + item.status + '">' + item.statusLabel + '</span>' +
-                '<button class="popup-btn" onclick="selectWaste(\'' + item.id + '\')">Ver Información de Retiro</button>' +
-                '</div>';
-
+              var popupContent = document.createElement('div');
+              popupContent.className = 'popup-card';
+              var title = document.createElement('div'); title.className = 'popup-title'; title.textContent = item.title;
+              var detail = document.createElement('div'); detail.textContent = item.sector + ' · ' + item.quantity + ' · ' + item.statusLabel;
+              var action = document.createElement('button'); action.className = 'popup-btn'; action.textContent = 'Ver información de retiro';
+              action.addEventListener('click', function() { window.selectWaste(item.id); });
+              popupContent.appendChild(title); popupContent.appendChild(detail); popupContent.appendChild(action);
               marker.bindPopup(popupContent);
             });
 

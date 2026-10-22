@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.example.kotlinapp.BuildConfig
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -167,63 +168,6 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Selector Rápido de Prueba de Roles (Académico y Auditoría)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.SwapHoriz,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Entorno de Prueba de Roles",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                    Text(
-                        text = "Cambia de perfil para verificar el comportamiento de cada actor de economía circular:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf(
-                            UserRole.GENERADOR to "Generador",
-                            UserRole.RECEPTOR to "Receptor",
-                            UserRole.ADMIN to "Admin"
-                        ).forEach { (r, label) ->
-                            val isCurrent = currentUser?.typedRole == r
-                            FilterChip(
-                                selected = isCurrent,
-                                onClick = { AuthRepository.switchUserForTesting(r) },
-                                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Actividad y Aportes Circulares
             Card(
                 modifier = Modifier.fillMaxWidth(),

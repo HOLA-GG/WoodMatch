@@ -57,6 +57,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.kotlinapp.ui.components.PhotoAttachment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -96,40 +98,35 @@ fun PublishWoodWasteScreen(
     val currentUser by AuthRepository.currentUser.collectAsState()
 
     // Form fields
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var wasteType by remember { mutableStateOf("Ramas y podas de arbolado") }
-    var materialState by remember { mutableStateOf("Verde recién cortado") }
-    var category by remember { mutableStateOf(WasteCategory.ESTANDAR.name) }
+    var title by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var wasteType by rememberSaveable { mutableStateOf("Ramas y podas de arbolado") }
+    var materialState by rememberSaveable { mutableStateOf("Verde recién cortado") }
+    var category by rememberSaveable { mutableStateOf(WasteCategory.ESTANDAR.name) }
 
     // Cantidades estructuradas (sin métricas engañosas)
-    var quantityValueStr by remember { mutableStateOf("1.0") }
-    var quantityUnit by remember { mutableStateOf("m³") }
-    var quantityEstimated by remember { mutableStateOf(true) }
+    var quantityValueStr by rememberSaveable { mutableStateOf("1.0") }
+    var quantityUnit by rememberSaveable { mutableStateOf("m³") }
+    var quantityEstimated by rememberSaveable { mutableStateOf(true) }
 
     // Ubicación protegida en Suba
-    var selectedSector by remember { mutableStateOf(currentUser?.sectorSuba ?: "Suba Centro") }
-    var sectorExpanded by remember { mutableStateOf(false) }
-    var referenceAddress by remember { mutableStateOf("") }
+    var selectedSector by rememberSaveable { mutableStateOf(currentUser?.sectorSuba ?: "Suba Centro") }
+    var sectorExpanded by rememberSaveable { mutableStateOf(false) }
+    var referenceAddress by rememberSaveable { mutableStateOf("") }
 
     // Especie botánica y soporte
-    var speciesName by remember { mutableStateOf("Especie no identificada") }
-    var isSpeciesKnown by remember { mutableStateOf(false) }
+    var speciesName by rememberSaveable { mutableStateOf("Especie no identificada") }
+    var isSpeciesKnown by rememberSaveable { mutableStateOf(false) }
 
     // Sugerencias orientativas de IA
-    var suggestedUses by remember { mutableStateOf("") }
-    var technicalNotes by remember { mutableStateOf("") }
-    var isAiAssisted by remember { mutableStateOf(false) }
+    var suggestedUses by rememberSaveable { mutableStateOf("") }
+    var technicalNotes by rememberSaveable { mutableStateOf("") }
+    var isAiAssisted by rememberSaveable { mutableStateOf(false) }
     var isAiLoading by remember { mutableStateOf(false) }
 
     // Imagen
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        imageUri = uri
-    }
-
+    var imagePath by rememberSaveable { mutableStateOf<String?>(null) }
+    val imageUri = imagePath?.let(Uri::parse)
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -145,8 +142,8 @@ fun PublishWoodWasteScreen(
                 )
                 category = suggestion.recommendedCategory.name
                 suggestedUses = suggestion.suggestedUses
-                technicalNotes = suggestion.technicalNotes
-                isAiAssisted = true
+                technicalNotes = (if (suggestion.remote) "Consulta Gemini. " else "Orientación local; no se consultó IA remota. ") + suggestion.technicalNotes
+                isAiAssisted = suggestion.remote
             } catch (e: Exception) {
                 errorMessage = "No fue posible conectar con el asistente de IA. Puedes ingresar las sugerencias manualmente."
             } finally {
@@ -156,12 +153,16 @@ fun PublishWoodWasteScreen(
     }
 
     fun submitPublication() {
+        if (isSubmitting) return
+        if (!AuthRepository.isAuthenticated || currentUser?.canPublish != true) {
+            errorMessage = "Inicia sesión con un perfil generador para publicar."; return
+        }
         val qVal = quantityValueStr.toDoubleOrNull()
         if (title.isBlank()) {
             errorMessage = "El título de la publicación es obligatorio."
             return
         }
-        if (qVal == null || qVal <= 0.0) {
+        if (qVal == null || !qVal.isFinite() || qVal <= 0.0 || qVal > 1000000) {
             errorMessage = "Ingresa una cantidad numérica válida mayor a 0."
             return
         }
@@ -194,9 +195,9 @@ fun PublishWoodWasteScreen(
                 speciesName = if (isSpeciesKnown && speciesName.isNotBlank()) speciesName.trim() else "Especie no identificada",
                 suggestedUses = suggestedUses.trim(),
                 isAiAssisted = isAiAssisted,
-                authorId = author?.uid ?: "gen_carlos",
+                authorId = author?.uid ?: "",
                 authorName = author?.name ?: "Generador Suba",
-                authorPhone = author?.phone ?: "+573001234567",
+                authorPhone = "",
                 imageUri = imageUri?.toString()
             )
 
@@ -653,15 +654,7 @@ fun PublishWoodWasteScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedButton(
-                            onClick = { photoPickerLauncher.launch("image/*") },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("publish_select_photo_button")
-                        ) {
-                            Icon(Icons.Filled.AddAPhoto, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (imageUri != null) "Cambiar Foto" else "Seleccionar Foto")
-                        }
+                        PhotoAttachment { imagePath = it.toString() }
 
                         if (imageUri != null) {
                             AsyncImage(
@@ -704,7 +697,7 @@ fun PublishWoodWasteScreen(
                     // Botón de Publicación
                     Button(
                         onClick = { submitPublication() },
-                        enabled = !isSubmitting,
+                        enabled = !isSubmitting && currentUser?.canPublish == true,
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier
