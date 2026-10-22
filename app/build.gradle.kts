@@ -38,10 +38,6 @@ val geminiApiKey = envProperties.getProperty("GEMINI_API_KEY")
     ?: secretFileValue("GEMINI_API_KEY")
     ?: ""
 
-val mapsApiKey = envProperties.getProperty("MAPS_API_KEY")
-    ?: System.getenv("MAPS_API_KEY")
-    ?: ""
-
 android {
     namespace = "com.example.kotlinapp"
     compileSdk = 36
@@ -58,10 +54,8 @@ android {
             useSupportLibrary = true
         }
 
-        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
         buildConfigField("String", "PLANTNET_API_KEY", "\"$plantNetApiKey\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
-        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
     }
 
     buildTypes {
@@ -105,8 +99,6 @@ dependencies {
 
     // Location & Google Maps SDK
     implementation(libs.play.services.location)
-    implementation(libs.play.services.maps)
-    implementation(libs.maps.compose)
 
     // Firebase Auth & Firestore
     implementation(platform(libs.firebase.bom))

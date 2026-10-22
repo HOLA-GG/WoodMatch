@@ -74,23 +74,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.kotlinapp.BuildConfig
 import com.example.kotlinapp.data.model.SubaSector
 import com.example.kotlinapp.data.model.SubaSectors
 import com.example.kotlinapp.data.model.WasteStatus
 import com.example.kotlinapp.data.model.WoodWasteItem
 import com.example.kotlinapp.data.repository.WoodWasteRepository
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.Circle
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapType
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.rememberCameraPositionState
 
 data class EcologicalZone(
     val name: String,
@@ -196,18 +184,7 @@ enum class MapEngineView(val displayName: String, val subtitle: String) {
     VECTOR_CANVAS(
         "Vista sin conexión",
         "Ubicaciones guardadas en esta app"
-    ),
-    GOOGLE_MAPS(
-        "📍 Google Maps SDK",
-        "Capas Terreno y Satélite de Google Maps"
     )
-}
-
-enum class GoogleMapTypeChoice(val displayName: String, val mapType: MapType) {
-    TERRAIN("🏔️ Terreno", MapType.TERRAIN),
-    SATELLITE("🛰️ Satélite", MapType.SATELLITE),
-    NORMAL("🗺️ Normal", MapType.NORMAL),
-    HYBRID("🌍 Híbrido", MapType.HYBRID)
 }
 
 @Composable
@@ -229,17 +206,8 @@ fun TreeMapScreen(
     var mapCenterLng by remember { mutableStateOf(-74.0850) }
     var mapZoomLevel by remember { mutableIntStateOf(13) }
 
-    // Capa de Google Maps seleccionada si el usuario activa ese motor
-    var selectedMapTypeChoice by remember { mutableStateOf(GoogleMapTypeChoice.TERRAIN) }
-
     // Capas ecológicas activas
     var showGreenReserves by remember { mutableStateOf(true) }
-
-    // Cámara de Google Maps centrada en Suba
-    val subaCenter = LatLng(4.7450, -74.0850)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(subaCenter, 13f)
-    }
 
     // Controles de zoom y paneo para motor vectorial de respaldo
     var zoomScale by remember { mutableFloatStateOf(1f) }
@@ -249,25 +217,6 @@ fun TreeMapScreen(
     val filteredItems = remember(wasteItems, selectedSectorName) {
         if (selectedSectorName == "TODOS") wasteItems
         else wasteItems.filter { it.subaSector.equals(selectedSectorName, ignoreCase = true) }
-    }
-
-    // Abrir Google Maps satelital oficial
-    fun openGoogleMapsSatellite(lat: Double, lng: Double, label: String) {
-        try {
-            val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng(${Uri.encode(label)})&z=18&t=k")
-            val mapIntent = Intent(Intent.ACTION_VIEW, uri).apply {
-                setPackage("com.google.android.apps.maps")
-            }
-            if (mapIntent.resolveActivity(context.packageManager) != null) {
-                context.startActivity(mapIntent)
-            } else {
-                val webUri = Uri.parse("https://www.google.com/maps/@$lat,$lng,18z/data=!3m1!1e3")
-                context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
-            }
-        } catch (_: Exception) {
-            val fallbackUri = Uri.parse("https://maps.google.com/?q=$lat,$lng&t=k")
-            context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
-        }
     }
 
     // Abrir el visor web oficial de OpenStreetMap en Suba
@@ -312,7 +261,6 @@ fun TreeMapScreen(
                         text = when (currentEngine) {
                             MapEngineView.OPEN_STREET_MAP -> "Mapa de Suba"
                             MapEngineView.VECTOR_CANVAS -> "Mapa de Suba"
-                            MapEngineView.GOOGLE_MAPS -> "Mapa de Suba"
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onBackground,
@@ -334,7 +282,6 @@ fun TreeMapScreen(
                         currentEngine = when (currentEngine) {
                             MapEngineView.OPEN_STREET_MAP -> MapEngineView.VECTOR_CANVAS
                             MapEngineView.VECTOR_CANVAS -> MapEngineView.OPEN_STREET_MAP
-                            MapEngineView.GOOGLE_MAPS -> MapEngineView.OPEN_STREET_MAP
                         }
                     }
                 ) {
@@ -342,7 +289,6 @@ fun TreeMapScreen(
                         imageVector = when (currentEngine) {
                             MapEngineView.OPEN_STREET_MAP -> Icons.Filled.Public
                             MapEngineView.VECTOR_CANVAS -> Icons.Filled.Map
-                            MapEngineView.GOOGLE_MAPS -> Icons.Filled.Layers
                         },
                         contentDescription = "Cambiar vista del mapa",
                         tint = MaterialTheme.colorScheme.primary
@@ -385,17 +331,6 @@ fun TreeMapScreen(
                     )
                 }
 
-                // Capas específicas de Google Maps solo si está en ese motor
-                if (currentEngine == MapEngineView.GOOGLE_MAPS) {
-                    items(GoogleMapTypeChoice.values()) { choice ->
-                        FilterChip(
-                            selected = selectedMapTypeChoice == choice,
-                            onClick = { selectedMapTypeChoice = choice },
-                            label = { Text(choice.displayName, maxLines = 1) },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
-                }
             }
 
             // Barra 2: Filtro de Sectores de Suba
@@ -415,7 +350,6 @@ fun TreeMapScreen(
                             mapCenterLat = 4.7450
                             mapCenterLng = -74.0850
                             mapZoomLevel = 13
-                            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(4.7450, -74.0850), 13f)
                         },
                         label = { Text("Toda Suba (${wasteItems.size})", maxLines = 1) },
                         shape = RoundedCornerShape(10.dp)
@@ -432,10 +366,6 @@ fun TreeMapScreen(
                             mapCenterLat = sec.referenceLatitude
                             mapCenterLng = sec.referenceLongitude
                             mapZoomLevel = 14
-                            cameraPositionState.position = CameraPosition.fromLatLngZoom(
-                                LatLng(sec.referenceLatitude, sec.referenceLongitude),
-                                14f
-                            )
                         },
                         label = { Text("${sec.name} ($count)", maxLines = 1) },
                         shape = RoundedCornerShape(10.dp)
@@ -473,66 +403,6 @@ fun TreeMapScreen(
                             },
                             modifier = Modifier.fillMaxSize()
                         )
-                    }
-
-                    MapEngineView.GOOGLE_MAPS -> {
-                        // 2. MOTOR GOOGLE MAPS SDK (Opcional con clave de Google Cloud)
-                        GoogleMap(
-                            modifier = Modifier.fillMaxSize(),
-                            cameraPositionState = cameraPositionState,
-                            properties = MapProperties(
-                                mapType = selectedMapTypeChoice.mapType,
-                                isMyLocationEnabled = false
-                            ),
-                            uiSettings = MapUiSettings(
-                                zoomControlsEnabled = true,
-                                mapToolbarEnabled = true,
-                                compassEnabled = true,
-                                myLocationButtonEnabled = false,
-                                rotationGesturesEnabled = true,
-                                scrollGesturesEnabled = true,
-                                tiltGesturesEnabled = true,
-                                zoomGesturesEnabled = true
-                            )
-                        ) {
-                            if (showGreenReserves) {
-                                SubaEcologicalData.ZONES.forEach { zone ->
-                                    Circle(
-                                        center = LatLng(zone.centerLat, zone.centerLng),
-                                        radius = (zone.radiusWidthKm * 1000 * 1.2),
-                                        fillColor = zone.color.copy(alpha = 0.28f),
-                                        strokeColor = zone.color,
-                                        strokeWidth = 3f,
-                                        clickable = true,
-                                        onClick = {
-                                            selectedReserve = zone
-                                            selectedItem = null
-                                        }
-                                    )
-                                }
-                            }
-
-                            filteredItems.forEach { item ->
-                                val markerColorHue = when (item.typedStatus) {
-                                    WasteStatus.DISPONIBLE -> BitmapDescriptorFactory.HUE_GREEN
-                                    WasteStatus.RESERVADO -> BitmapDescriptorFactory.HUE_ORANGE
-                                    WasteStatus.APROVECHADO -> BitmapDescriptorFactory.HUE_AZURE
-                                    WasteStatus.INACTIVO -> BitmapDescriptorFactory.HUE_VIOLET
-                                }
-
-                                Marker(
-                                    state = MarkerState(position = LatLng(item.exactLatitude, item.exactLongitude)),
-                                    title = item.title,
-                                    snippet = "${item.subaSector} • ${item.formattedQuantity} • ${item.typedStatus.displayName}",
-                                    icon = BitmapDescriptorFactory.defaultMarker(markerColorHue),
-                                    onClick = {
-                                        selectedItem = item
-                                        selectedReserve = null
-                                        false
-                                    }
-                                )
-                            }
-                        }
                     }
 
                     MapEngineView.VECTOR_CANVAS -> {
@@ -748,7 +618,6 @@ fun TreeMapScreen(
                             text = when (currentEngine) {
                                 MapEngineView.OPEN_STREET_MAP -> ""
                                 MapEngineView.VECTOR_CANVAS -> "Vista sin conexión"
-                                MapEngineView.GOOGLE_MAPS -> "Mapa de Suba"
                             },
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.primary,
@@ -813,23 +682,6 @@ fun TreeMapScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Button(
-                                onClick = { openGoogleMapsSatellite(res.centerLat, res.centerLng, res.name) },
-                                colors = ButtonDefaults.buttonColors(containerColor = res.color),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = 44.dp)
-                            ) {
-                                Icon(Icons.Filled.Public, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Abrir en Maps",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
                             OutlinedButton(
                                 onClick = { openOpenStreetMapOfficial(res.centerLat, res.centerLng) },
                                 modifier = Modifier
@@ -839,7 +691,7 @@ fun TreeMapScreen(
                                 Icon(Icons.Filled.Public, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Visor OSM",
+                                    text = "Abrir mapa",
                                     style = MaterialTheme.typography.labelMedium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -946,28 +798,6 @@ fun TreeMapScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            OutlinedButton(
-                                onClick = {
-                                    openGoogleMapsSatellite(
-                                        lat = item.exactLatitude,
-                                        lng = item.exactLongitude,
-                                        label = "Retiro de Residuo: ${item.title}"
-                                    )
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = 44.dp)
-                            ) {
-                                Icon(Icons.Filled.Public, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Maps Satélite",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
                             Button(
                                 onClick = { openOpenStreetMapOfficial(item.exactLatitude, item.exactLongitude) },
                                 modifier = Modifier
@@ -977,7 +807,7 @@ fun TreeMapScreen(
                                 Icon(Icons.Filled.Public, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Ver en OSM",
+                                    text = "Abrir mapa",
                                     style = MaterialTheme.typography.labelMedium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
