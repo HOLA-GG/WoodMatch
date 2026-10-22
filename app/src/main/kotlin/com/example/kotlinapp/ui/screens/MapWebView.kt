@@ -129,7 +129,7 @@ const val OSM_USER_AGENT =
  * 3. Invocación automática de `map.invalidateSize()` para asegurar el cálculo del contenedor.
  * 4. Delimitación y enfoque en la localidad de Suba, Bogotá.
  * 5. Polígonos interactivos para todas las reservas ecológicas de Suba.
- * 6. Marcadores de residuos de madera sincronizados bidireccionalmente con Jetpack Compose.
+ * 6. Marcadores de reportes locales sincronizados bidireccionalmente con Jetpack Compose.
  * 7. Alternancia instantánea entre 4 estilos de capas OSM (Estándar, Eco/Verde, Satélite y Relieve).
  */
 @SuppressLint("SetJavaScriptEnabled")
@@ -418,12 +418,12 @@ fun MapWebView(
                                 }
                             }
 
-                            @SuppressLint("WebViewClientOnReceivedSslError")
                             override fun onReceivedSslError(
                                 view: WebView?,
                                 handler: SslErrorHandler?,
                                 error: SslError?
                             ) {
+                                // No se aceptan certificados inválidos: evita que una red intercepte el mapa.
                                 handler?.cancel()
                             }
                         }
@@ -796,7 +796,7 @@ private fun buildOsmHtml(
               circle.bindPopup(popupHtml);
             });
 
-            // 5. Inyectar Marcadores de Residuos de Madera
+            // 5. Inyectar marcadores de reportes locales
             var wasteData = $wasteJson;
             wasteData.forEach(function(item) {
               var color = '#2E7D32';
@@ -806,7 +806,7 @@ private fun buildOsmHtml(
 
               var customIcon = L.divIcon({
                 className: 'custom-pin',
-                html: '<div style="background-color:' + color + ';width:22px;height:22px;border-radius:50%;border:2.5px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;">🪵</div>',
+                html: '<div style="background-color:' + color + ';width:22px;height:22px;border-radius:50%;border:2.5px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;">•</div>',
                 iconSize: [22, 22],
                 iconAnchor: [11, 11]
               });
@@ -816,8 +816,8 @@ private fun buildOsmHtml(
               var popupContent = document.createElement('div');
               popupContent.className = 'popup-card';
               var title = document.createElement('div'); title.className = 'popup-title'; title.textContent = item.title;
-              var detail = document.createElement('div'); detail.textContent = item.sector + ' · ' + item.quantity + ' · ' + item.statusLabel;
-              var action = document.createElement('button'); action.className = 'popup-btn'; action.textContent = 'Ver información de retiro';
+               var detail = document.createElement('div'); detail.textContent = 'Ubicación aproximada: ' + item.sector + ' · ' + item.statusLabel;
+               var action = document.createElement('button'); action.className = 'popup-btn'; action.textContent = 'Ver reporte';
               action.addEventListener('click', function() { window.selectWaste(item.id); });
               popupContent.appendChild(title); popupContent.appendChild(detail); popupContent.appendChild(action);
               marker.bindPopup(popupContent);

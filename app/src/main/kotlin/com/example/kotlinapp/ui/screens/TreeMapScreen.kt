@@ -52,6 +52,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -76,9 +77,42 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kotlinapp.data.model.SubaSector
 import com.example.kotlinapp.data.model.SubaSectors
+import com.example.kotlinapp.data.model.TreeReport
 import com.example.kotlinapp.data.model.WasteStatus
 import com.example.kotlinapp.data.model.WoodWasteItem
-import com.example.kotlinapp.data.repository.WoodWasteRepository
+import com.example.kotlinapp.data.repository.ReportRepository
+
+private fun TreeReport.toLocalMapMarker(): WoodWasteItem {
+    val isExpired = expiresAt <= System.currentTimeMillis()
+    val markerStatus = when {
+        isExpired -> WasteStatus.INACTIVO
+        condition == "Caído" || condition == "En riesgo" -> WasteStatus.DISPONIBLE
+        condition == "Dañado" -> WasteStatus.RESERVADO
+        else -> WasteStatus.APROVECHADO
+    }
+    return WoodWasteItem(
+        id = id,
+        title = species.ifBlank { "Árbol sin especie identificada" },
+        description = description,
+        wasteType = condition,
+        materialState = if (isExpired) "Vencido: requiere nueva verificación" else "Pendiente de verificación",
+        quantityValue = 1.0,
+        quantityUnit = "reporte",
+        quantityEstimated = false,
+        subaSector = SubaSectors.ALL.minByOrNull { sector ->
+            (sector.referenceLatitude - latitude) * (sector.referenceLatitude - latitude) +
+                (sector.referenceLongitude - longitude) * (sector.referenceLongitude - longitude)
+        }?.name ?: "Suba",
+        exactLatitude = latitude,
+        exactLongitude = longitude,
+        speciesName = species,
+        status = markerStatus.name,
+        authorId = userId,
+        authorName = userName,
+        createdAt = timestamp,
+        updatedAt = timestamp
+    )
+}
 
 data class EcologicalZone(
     val name: String,
@@ -179,7 +213,7 @@ object SubaEcologicalData {
 enum class MapEngineView(val displayName: String, val subtitle: String) {
     OPEN_STREET_MAP(
         "Mapa de calles",
-        "Calles, barrios y puntos de retiro"
+        "Calles, barrios y reportes locales"
     ),
     VECTOR_CANVAS(
         "Vista sin conexión",
@@ -192,7 +226,12 @@ fun TreeMapScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val wasteItems by WoodWasteRepository.items.collectAsState()
+    var reports by remember { mutableStateOf<List<TreeReport>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        reports = ReportRepository.getAllReports()
+    }
+    // El mapa no debe inventar publicaciones: muestra únicamente los reportes de este teléfono.
+    val wasteItems = remember(reports) { reports.map { it.toLocalMapMarker() } }
     var selectedSectorName by remember { mutableStateOf("TODOS") }
     var selectedItem by remember { mutableStateOf<WoodWasteItem?>(null) }
     var selectedReserve by remember { mutableStateOf<EcologicalZone?>(null) }
@@ -534,7 +573,7 @@ fun TreeMapScreen(
                                 )
                             }
 
-                            // Pines de Residuos
+                            // Pines de reportes locales
                             filteredItems.forEach { item ->
                                 val pos = projectPoint(item.exactLongitude, item.exactLatitude)
                                 val isSel = selectedItem?.id == item.id
@@ -702,7 +741,7 @@ fun TreeMapScreen(
                 }
             }
 
-            // TARJETA 2: Detalle del Residuo Seleccionado (Botones responsivos sin desbordamiento)
+            // TARJETA 2: Detalle del reporte seleccionado
             selectedItem?.let { item ->
                 Card(
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
@@ -747,7 +786,7 @@ fun TreeMapScreen(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "Sector: ${item.subaSector}",
+                                        text = "Sector aproximado: ${item.subaSector}",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
@@ -761,7 +800,7 @@ fun TreeMapScreen(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = item.formattedQuantity,
+                                        text = "Condición: ${item.wasteType}",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
@@ -775,7 +814,7 @@ fun TreeMapScreen(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = item.typedStatus.displayName,
+                                        text = item.materialState,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -783,9 +822,9 @@ fun TreeMapScreen(
                             }
                         }
 
-                        if (item.suggestedUses.isNotBlank()) {
+                        if (item.description.isNotBlank()) {
                             Text(
-                                text = "Aprovechamiento: ${item.suggestedUses}",
+                                text = item.description,
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,

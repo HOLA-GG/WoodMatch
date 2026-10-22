@@ -236,6 +236,8 @@ object PlantNetService {
     }
 
     private fun readAndCompressImage(context: Context, uri: Uri): ByteArray? {
+        // Importa, limita el tamaño y recodifica la foto antes de enviarla.
+        // Así se evita decodificar una imagen de cámara completa en memoria.
         val local = com.example.kotlinapp.data.image.PhotoStorage.importPhoto(context, uri)
         val file = java.io.File(requireNotNull(local.path))
         return try { file.readBytes().takeIf { it.size <= 3 * 1024 * 1024 } } finally { file.delete() }

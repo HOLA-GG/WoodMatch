@@ -54,6 +54,9 @@ import com.example.kotlinapp.data.repository.ReportRepository
 import com.example.kotlinapp.ui.components.WoodMatchTopAppBar
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ViewReportsScreen(
@@ -66,6 +69,14 @@ fun ViewReportsScreen(
     var selectedReport by remember { mutableStateOf<TreeReport?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
+    fun reportStatusText(report: TreeReport): String {
+        val expires = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(report.expiresAt))
+        return if (report.expiresAt <= System.currentTimeMillis()) {
+            "Vencido: requiere una nueva verificación"
+        } else {
+            "Pendiente de verificación · vigente hasta $expires"
+        }
+    }
 
     fun loadReports() {
         isLoading = true
@@ -117,6 +128,11 @@ fun ViewReportsScreen(
                         color = if (rep.condition == "Caído") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
                     )
                     Text(
+                        text = reportStatusText(rep),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (rep.expiresAt <= System.currentTimeMillis()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                    Text(
                         text = "Descripción: ${rep.description}",
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -148,7 +164,7 @@ fun ViewReportsScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             WoodMatchTopAppBar(
-                title = "Reportes de este teléfono",
+                title = "Mis reportes",
                 showBackButton = true,
                 onBackClick = onNavigateBack,
                 trailingContent = {
@@ -163,7 +179,7 @@ fun ViewReportsScreen(
             )
 
             Text(
-                text = "Guardados en este teléfono. Se perderán si desinstalas la app.",
+                text = "Guardados solo en este teléfono. Aún no se envían a la comunidad y se perderán si desinstalas la app.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -265,6 +281,13 @@ fun ViewReportsScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 2
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = reportStatusText(report),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (report.expiresAt <= System.currentTimeMillis()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                 )
 
                                 Spacer(modifier = Modifier.height(12.dp))

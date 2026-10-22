@@ -1,6 +1,7 @@
 package com.example.kotlinapp.ui.screens
 
 import android.net.Uri
+import android.os.Environment
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -79,6 +80,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.core.content.FileProvider
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -94,6 +96,7 @@ import com.example.kotlinapp.data.repository.SpeciesRepository
 import com.example.kotlinapp.ui.components.WoodMatchTopAppBar
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.io.File
 
 @Composable
 fun SpeciesScreen(
@@ -207,6 +210,33 @@ fun SpeciesScreen(
                 errorMessage = null
             }
         }
+        var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+        val cameraLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicture()
+        ) { captured ->
+            if (captured) {
+                selectedImageUri = pendingCameraUri
+                imageUrlInput = ""
+                identificationResult = null
+                errorMessage = null
+            }
+            pendingCameraUri = null
+        }
+
+        fun takeBotanicalPhoto() {
+            runCatching {
+                val picturesDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                    ?: error("No se pudo preparar el almacenamiento de la cámara")
+                val file = File(picturesDir, "plant_${System.currentTimeMillis()}.jpg")
+                file.parentFile?.mkdirs()
+                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            }.onSuccess { uri ->
+                pendingCameraUri = uri
+                cameraLauncher.launch(uri)
+            }.onFailure { error ->
+                errorMessage = error.message ?: "No se pudo abrir la cámara."
+            }
+        }
 
         AlertDialog(
             onDismissRequest = { showScannerDialog = false },
@@ -236,17 +266,30 @@ fun SpeciesScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    Button(
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                    OutlinedButton(
                         onClick = {
                             photoPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Galería")
+                    }
+                    OutlinedButton(
+                        onClick = { takeBotanicalPhoto() },
+                        modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Elegir de Galería o Cámara")
+                        Text("Cámara")
+                    }
                     }
 
                     OutlinedTextField(

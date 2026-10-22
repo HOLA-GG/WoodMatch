@@ -17,6 +17,7 @@ import java.util.UUID
 object ReportRepository {
     private const val PREFS_NAME = "woodmatch_reports_storage"
     private const val KEY_REPORTS = "persisted_reports_json"
+    private const val REPORT_VALIDITY_MS = 30L * 24 * 60 * 60 * 1000
     private var appContext: Context? = null
 
     fun init(context: Context) {
@@ -43,7 +44,9 @@ object ReportRepository {
                     longitude = item.optDouble("longitude"),
                     imageUri = item.optString("imageUri").takeIf { it.isNotBlank() },
                     timestamp = timestamp,
-                    formattedDate = item.optString("formattedDate", formatDate(timestamp))
+                    formattedDate = item.optString("formattedDate", formatDate(timestamp)),
+                    expiresAt = item.optLong("expiresAt", timestamp + REPORT_VALIDITY_MS),
+                    status = item.optString("status", "PENDIENTE")
                 )
             }.sortedByDescending { it.timestamp }
         } catch (error: Exception) {
@@ -68,6 +71,8 @@ object ReportRepository {
                 put("imageUri", report.imageUri ?: "")
                 put("timestamp", report.timestamp)
                 put("formattedDate", report.formattedDate)
+                put("expiresAt", report.expiresAt)
+                put("status", report.status)
             })
         }
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -114,7 +119,9 @@ object ReportRepository {
                 longitude = longitude,
                 imageUri = localPhoto,
                 timestamp = now,
-                formattedDate = formatDate(now)
+                formattedDate = formatDate(now),
+                expiresAt = now + REPORT_VALIDITY_MS,
+                status = "PENDIENTE"
             )
             check(save(listOf(report) + load())) { "No se pudo guardar el reporte en el teléfono" }
             report

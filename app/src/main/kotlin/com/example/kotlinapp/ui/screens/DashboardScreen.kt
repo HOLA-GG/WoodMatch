@@ -14,24 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Handshake
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Nature
 import androidx.compose.material.icons.filled.NaturePeople
-import androidx.compose.material.icons.filled.Recycling
-import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,10 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kotlinapp.data.model.SeasonalTheme
-import com.example.kotlinapp.data.model.SubaSectors
-import com.example.kotlinapp.data.model.WasteStatus
 import com.example.kotlinapp.data.repository.AuthRepository
-import com.example.kotlinapp.data.repository.WoodWasteRepository
 
 @Composable
 fun DashboardScreen(
@@ -71,10 +59,6 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val currentUser by AuthRepository.currentUser.collectAsState()
-    val wasteItems by WoodWasteRepository.items.collectAsState()
-    val requests by WoodWasteRepository.requests.collectAsState()
-
-    val metrics = WoodWasteRepository.getCircularMetrics()
 
     LazyColumn(
         modifier = Modifier
@@ -99,7 +83,7 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Madera aprovechable en Suba",
+                        text = "Reportes forestales en Suba",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -189,49 +173,19 @@ fun DashboardScreen(
             }
         }
 
-        // 3. Métricas de Impacto Circular Verificables
+        // 3. Propósito claro, sin métricas de ejemplo que puedan confundirse con datos reales.
         item {
             Text(
-                text = "Actividad en Suba",
+                text = "Cuida el arbolado de tu sector",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Disponibles
-                MetricCard(
-                    title = "Disponibles",
-                    value = "${metrics.availableCount}",
-                    unit = "lotes",
-                    icon = Icons.Filled.Recycling,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Retiros Completados
-                MetricCard(
-                    title = "Aprovechados",
-                    value = "${metrics.completedCount}",
-                    unit = "retiros",
-                    icon = Icons.Filled.CheckCircle,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Volumen Rescatado
-                MetricCard(
-                    title = "Volumen",
-                    value = "${metrics.totalM3Recovered}",
-                    unit = "m³ salvados",
-                    icon = Icons.Filled.Scale,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            Text(
+                text = "Registra árboles caídos, dañados o en riesgo con una foto, descripción y ubicación. Tus reportes quedan guardados en este teléfono mientras el servicio comunitario se habilita.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         // 4. Acciones Rápidas Priorizadas
@@ -244,7 +198,7 @@ fun DashboardScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Publicar Residuo (si puede publicar)
+                // Crear reporte
                 if (currentUser?.canPublish != false) {
                     Card(
                         onClick = onNavigateToReportTree,
@@ -274,12 +228,12 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Publicar madera disponible",
+                            text = "Crear un reporte",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Text(
-                                    text = "Registra podas o descartes para aprovechamiento en Suba",
+                                text = "Registra un árbol caído, dañado o en riesgo",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
                                 )
@@ -288,7 +242,7 @@ fun DashboardScreen(
                     }
                 }
 
-                // Explorar Catálogo y Solicitudes
+                // Historial local
                 Card(
                     onClick = onNavigateToViewReports,
                     shape = RoundedCornerShape(16.dp),
@@ -310,7 +264,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Handshake,
+                            imageVector = Icons.AutoMirrored.Filled.ListAlt,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer
                             )
@@ -318,12 +272,12 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                            text = "Explorar publicaciones",
+                            text = "Mis reportes",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Ver madera disponible en Suba y gestionar retiros acordados",
+                                text = "Consulta el estado, fecha y evidencia de tus reportes",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -333,7 +287,7 @@ fun DashboardScreen(
             }
         }
 
-        // 5. Mini Mapa / Resumen Territorial Ligero de Suba
+        // 5. Mapa como segundo flujo principal
         item {
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -359,7 +313,7 @@ fun DashboardScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Sectores Piloto de Suba",
+                            text = "Mapa de Suba",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
                         }
@@ -370,47 +324,11 @@ fun DashboardScreen(
                     }
 
                     Text(
-                        text = "Puntos activos de residuos leñosos registrados por la comunidad:",
+                        text = "Consulta zonas verdes y los reportes guardados en este dispositivo.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // Sectores con conteos
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val sectorsList = SubaSectors.ALL
-                            .map { sector ->
-                                sector to wasteItems.count {
-                                    it.subaSector.equals(sector.name, ignoreCase = true) && it.isAvailable
-                                }
-                            }
-                            .filter { (_, count) -> count > 0 }
-                            .sortedByDescending { (_, count) -> count }
-                            .take(5)
-                        items(sectorsList) { sec ->
-                            val (sector, count) = sec
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Column {
-                                    Text(
-                                        text = sector.name,
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "$count lote${if (count == 1) "" else "s"} disponible${if (count == 1) "" else "s"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Banner de Expansión
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -419,7 +337,7 @@ fun DashboardScreen(
                             .padding(8.dp)
                     ) {
                         Text(
-                            text = "Zona Piloto Activa: Suba • Próximamente: Cundinamarca y Cobertura Nacional",
+                            text = "Los reportes se conservan solo en el teléfono durante esta etapa de desarrollo.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -428,7 +346,7 @@ fun DashboardScreen(
             }
         }
 
-        // 6. Enlace a la Biblioteca Botánica de Especies Urbanas
+        // 6. Herramienta secundaria, no parte del flujo crítico de reporte.
         item {
             Card(
                 onClick = onNavigateToSpecies,
@@ -451,11 +369,11 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Biblioteca Botánica y Aptitud Maderable",
+                            text = "Consulta botánica (opcional)",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                         )
                         Text(
-                            text = "Consulta especies de Suba (Acacia, Pino, Eucalipto) con Pl@ntNet",
+                            text = "Úsala solo si quieres identificar una especie con Pl@ntNet.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -11,5 +11,8 @@ data class TreeReport(
     val longitude: Double = 0.0,
     val imageUri: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
-    val formattedDate: String = ""
+    val formattedDate: String = "",
+    /** Un reporte sin verificación central deja de mostrarse como activo tras 30 días. */
+    val expiresAt: Long = timestamp + 30L * 24 * 60 * 60 * 1000,
+    val status: String = "PENDIENTE"
 )

@@ -31,7 +31,6 @@ import com.example.kotlinapp.ui.screens.ForgotPasswordScreen
 import com.example.kotlinapp.ui.screens.LoginScreen
 import com.example.kotlinapp.ui.screens.MyActivityScreen
 import com.example.kotlinapp.ui.screens.ProfileScreen
-import com.example.kotlinapp.ui.screens.PublishWoodWasteScreen
 import com.example.kotlinapp.ui.screens.RegisterScreen
 import com.example.kotlinapp.ui.screens.ReportTreeScreen
 import com.example.kotlinapp.ui.screens.SettingsScreen
@@ -39,7 +38,6 @@ import com.example.kotlinapp.ui.screens.SpeciesScreen
 import com.example.kotlinapp.ui.screens.SplashScreen
 import com.example.kotlinapp.ui.screens.TreeMapScreen
 import com.example.kotlinapp.ui.screens.ViewReportsScreen
-import com.example.kotlinapp.ui.screens.WoodWasteCatalogScreen
 import com.example.kotlinapp.ui.theme.WoodMatchTheme
 
 class MainActivity : FragmentActivity() {
@@ -189,7 +187,7 @@ fun WoodMatchApp(
             }
 
             composable(Screen.ViewReports.route) {
-                WoodWasteCatalogScreen(
+                ViewReportsScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToCreateReport = { navController.navigate(Screen.ReportTree.route) }
                 )
@@ -228,9 +226,9 @@ fun WoodMatchApp(
 
             // Report / Publish Wood Waste Screen
             composable(Screen.ReportTree.route) {
-                PublishWoodWasteScreen(
+                ReportTreeScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onPublishSuccess = {
+                    onNavigateToReports = {
                         navController.navigate(Screen.ViewReports.route) {
                             popUpTo(Screen.Dashboard.route)
                         }

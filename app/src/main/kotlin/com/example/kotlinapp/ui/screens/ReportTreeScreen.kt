@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
+import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -64,11 +65,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.example.kotlinapp.data.repository.AuthRepository
 import com.example.kotlinapp.data.repository.ReportRepository
 import com.example.kotlinapp.ui.components.WoodMatchTopAppBar
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.launch
+import java.io.File
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -84,10 +87,10 @@ fun ReportTreeScreen(
     var condition by remember { mutableStateOf("Caído") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    var latitude by remember { mutableDoubleStateOf(4.6097) }
-    var longitude by remember { mutableDoubleStateOf(-74.0817) }
+    var latitude by remember { mutableDoubleStateOf(4.7480) }
+    var longitude by remember { mutableDoubleStateOf(-74.0940) }
     var isLocating by remember { mutableStateOf(false) }
-    var locationStatus by remember { mutableStateOf("Ubicación inicial de referencia (Bogotá)") }
+    var locationStatus by remember { mutableStateOf("Ubicación aproximada de Suba. Actualiza el GPS antes de enviar.") }
 
     var isSubmitting by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -150,6 +153,30 @@ fun ReportTreeScreen(
             selectedImageUri = uri
         }
     }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { captured ->
+        if (captured) {
+            selectedImageUri = pendingCameraUri
+        }
+        pendingCameraUri = null
+    }
+
+    fun takePhoto() {
+        runCatching {
+            val picturesDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                ?: error("No se pudo preparar el almacenamiento de la cámara")
+            val file = File(picturesDir, "report_${System.currentTimeMillis()}.jpg")
+            file.parentFile?.mkdirs()
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        }.onSuccess { uri ->
+            pendingCameraUri = uri
+            cameraLauncher.launch(uri)
+        }.onFailure { error ->
+            errorMessage = error.message ?: "No se pudo abrir la cámara."
+        }
+    }
 
     fun handleSubmit() {
         if (description.isBlank()) {
@@ -193,14 +220,14 @@ fun ReportTreeScreen(
             },
             title = {
                 Text(
-                    text = "Reporte guardado",
+                        text = "Reporte guardado localmente",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             },
             text = {
                 Text(
-                    text = "Tu reporte y su foto están guardados en este teléfono. Puedes consultarlos en Mis reportes, incluso sin conexión.",
+                    text = "Tu reporte y su foto están guardados en este teléfono. Quedará pendiente de verificación y vencerá en 30 días si no hay una sincronización comunitaria.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -248,13 +275,13 @@ fun ReportTreeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Documentar Estado o Caída de Árbol",
+                text = "Reporta un árbol en riesgo",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
 
             Text(
-                text = "Captura la evidencia fotográfica y las coordenadas GPS para alertar a los guardabosques y la comunidad.",
+                text = "Añade evidencia y ubicación. Durante esta etapa, el reporte se guarda en este teléfono y no se envía todavía a una entidad.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -333,7 +360,7 @@ fun ReportTreeScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Tomar o Seleccionar Foto",
+                                text = "Adjunta una foto",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -347,9 +374,37 @@ fun ReportTreeScreen(
                 }
             }
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { takePhoto() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Cámara")
+                }
+                OutlinedButton(
+                    onClick = {
+                        photoPickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Galería")
+                }
+            }
+
             // Tree Condition Chip Group
             Text(
-                text = "Condición del Árbol",
+                text = "¿Cuál es la situación?",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -375,7 +430,7 @@ fun ReportTreeScreen(
             OutlinedTextField(
                 value = species,
                 onValueChange = { species = it },
-                label = { Text("Especie Identificada") },
+                label = { Text("Especie (opcional)") },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
@@ -387,7 +442,7 @@ fun ReportTreeScreen(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Descripción del incidente / árbol") },
+                label = { Text("¿Qué ocurre y dónde?") },
                 placeholder = { Text("Describe el lugar exacto, causas aparentes, afectación de caminos...") },
                 minLines = 3,
                 maxLines = 5,
@@ -420,7 +475,7 @@ fun ReportTreeScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Geolocalización GPS",
+                        text = "Ubicación",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.SemiBold
@@ -476,7 +531,7 @@ fun ReportTreeScreen(
                     )
                 } else {
                     Text(
-                        text = "Publicar Reporte Forestal",
+                        text = "Guardar reporte",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
