@@ -85,29 +85,29 @@ enum class OsmLayerStyle(
 ) {
     STANDARD(
         layerId = "standard",
-        title = "🌱 OSM Estándar",
-        subtitle = "Cartografía base abierta • Barrios, calles y comercio de Suba",
+        title = "Calles",
+        subtitle = "Barrios y vías de Suba",
         tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         attribution = "© OpenStreetMap contributors"
     ),
     HUMANITARIAN(
         layerId = "humanitarian",
-        title = "🌿 Zonas Verdes (Eco)",
-        subtitle = "Enfoque ambiental • Reservas, humedales y vegetación de Suba",
+        title = "Zonas verdes",
+        subtitle = "Humedales y parques",
         tileUrl = "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
         attribution = "© OpenStreetMap contributors, Humanitarian OpenStreetMap Team"
     ),
     SATELLITE(
         layerId = "satellite",
-        title = "🛰️ Satelital Libre",
-        subtitle = "Ortoimágenes satelitales en alta resolución para identificar puntos",
+        title = "Satélite",
+        subtitle = "Imágenes aéreas",
         tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attribution = "Source: Esri, Maxar, Earthstar Geographics"
     ),
     TOPO(
         layerId = "topo",
-        title = "🏔️ Relieve / Topo",
-        subtitle = "Curvas de nivel y elevación de los Cerros de Suba",
+        title = "Relieve",
+        subtitle = "Altitud y terreno",
         tileUrl = "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
         attribution = "© OpenStreetMap contributors, OpenTopoMap",
         maxZoom = 17
@@ -484,7 +484,7 @@ fun MapWebView(
                             strokeWidth = 3.dp
                         )
                         Text(
-                            text = "Cargando OpenStreetMap Suba...",
+                            text = "Cargando mapa...",
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -519,7 +519,7 @@ fun MapWebView(
                             modifier = Modifier.size(36.dp)
                         )
                         Text(
-                            text = "No se pudo conectar a OpenStreetMap",
+                            text = "No se pudo cargar el mapa",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
@@ -548,7 +548,7 @@ fun MapWebView(
                         ) {
                             Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Reintentar Carga")
+                            Text("Reintentar")
                         }
                     }
                 }
@@ -699,7 +699,7 @@ private fun buildOsmHtml(
         <body>
           <div id="map"></div>
           <div id="badge" class="suba-badge">🌿 Suba • ${initialLayer.title}</div>
-          <div class="suba-legend">OpenStreetMap • 100% Abierto y Gratuito</div>
+          <div class="suba-legend">Suba, Bogotá</div>
 
           <script>
             // 1. Inicializar mapa Leaflet centrado en Suba

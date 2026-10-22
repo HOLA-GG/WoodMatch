@@ -95,8 +95,6 @@ fun SettingsScreen(
     var notifySeasonalAdvice by remember { mutableStateOf(true) }
     var notifyMonthlySummary by remember { mutableStateOf(false) }
 
-    var isSyncing by remember { mutableStateOf(false) }
-    var syncSuccessMsg by remember { mutableStateOf<String?>(null) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showPasswordResetConfirm by remember { mutableStateOf(false) }
 
@@ -108,21 +106,6 @@ fun SettingsScreen(
         SeasonOption(SeasonalTheme.AUTUMN, "Otoño", "Terracota", Icons.Filled.Eco, AutumnPrimary),
         SeasonOption(SeasonalTheme.SNOW, "Invierno", "Escarcha", Icons.Filled.AcUnit, SnowPrimary)
     )
-
-    fun performManualSync() {
-        isSyncing = true
-        coroutineScope.launch {
-            try {
-                SpeciesRepository.fetchFromFirestore()
-                ReportRepository.getAllReports()
-                syncSuccessMsg = "Catálogo y reportes actualizados con éxito."
-            } catch (e: Exception) {
-                syncSuccessMsg = "Datos sincronizados localmente."
-            } finally {
-                isSyncing = false
-            }
-        }
-    }
 
     if (showAboutDialog) {
         AlertDialog(
@@ -444,7 +427,7 @@ fun SettingsScreen(
 
             // Section 3: Base de Datos & Sincronización Firebase
             Text(
-                text = "FIREBASE & ALMACENAMIENTO",
+                text = "MIS DATOS",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -476,57 +459,18 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Sincronización en la Nube",
+                                text = "Reportes en este teléfono",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Tus datos están protegidos y respaldados automáticamente",
+                                text = "Los reportes y fotos se conservan aquí hasta que desinstales la app",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    if (syncSuccessMsg != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = syncSuccessMsg ?: "",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { performManualSync() },
-                            enabled = !isSyncing,
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Filled.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Sincronizar")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                Toast.makeText(context, "Caché de imágenes temporales liberada.", Toast.LENGTH_SHORT).show()
-                            },
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Filled.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Limpiar Caché")
-                        }
-                    }
                 }
             }
 

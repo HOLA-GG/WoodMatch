@@ -193,14 +193,14 @@ fun ReportTreeScreen(
             },
             title = {
                 Text(
-                    text = "¡Reporte Registrado!",
+                    text = "Reporte guardado",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             },
             text = {
                 Text(
-                    text = "El reporte de árbol ha sido guardado exitosamente con coordenadas GPS ($latitude, $longitude) en la red de WoodMatch.",
+                    text = "Tu reporte y su foto están guardados en este teléfono. Puedes consultarlos en Mis reportes, incluso sin conexión.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },

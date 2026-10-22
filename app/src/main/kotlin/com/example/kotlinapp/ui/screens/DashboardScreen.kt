@@ -99,7 +99,7 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Economía Circular • Suba, Bogotá",
+                        text = "Madera aprovechable en Suba",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -192,7 +192,7 @@ fun DashboardScreen(
         // 3. Métricas de Impacto Circular Verificables
         item {
             Text(
-                text = "Impacto Circular en Suba",
+                text = "Actividad en Suba",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -225,7 +225,7 @@ fun DashboardScreen(
                 // Volumen Rescatado
                 MetricCard(
                     title = "Volumen",
-                    value = if (metrics.totalM3Recovered > 0) "${metrics.totalM3Recovered}" else "3.7",
+                    value = "${metrics.totalM3Recovered}",
                     unit = "m³ salvados",
                     icon = Icons.Filled.Scale,
                     tint = MaterialTheme.colorScheme.tertiary,
@@ -237,7 +237,7 @@ fun DashboardScreen(
         // 4. Acciones Rápidas Priorizadas
         item {
             Text(
-                text = "Acciones Principales",
+                text = "¿Qué quieres hacer?",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -274,7 +274,7 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Publicar Residuo Leñoso",
+                                    text = "Publicar madera disponible",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
@@ -318,7 +318,7 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Muro de Residuos y Solicitudes",
+                            text = "Explorar publicaciones",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -377,9 +377,17 @@ fun DashboardScreen(
 
                     // Sectores con conteos
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val sectorsList = SubaSectors.ALL.take(5)
+                        val sectorsList = SubaSectors.ALL
+                            .map { sector ->
+                                sector to wasteItems.count {
+                                    it.subaSector.equals(sector.name, ignoreCase = true) && it.isAvailable
+                                }
+                            }
+                            .filter { (_, count) -> count > 0 }
+                            .sortedByDescending { (_, count) -> count }
+                            .take(5)
                         items(sectorsList) { sec ->
-                            val count = wasteItems.count { it.subaSector.contains(sec.name, ignoreCase = true) }
+                            val (sector, count) = sec
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
@@ -388,12 +396,12 @@ fun DashboardScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = sec.name,
+                                        text = sector.name,
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "$count disponibles",
+                                        text = "$count lote${if (count == 1) "" else "s"} disponible${if (count == 1) "" else "s"}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )

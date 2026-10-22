@@ -4,6 +4,7 @@
 /.idea
 .DS_Store
 /build
+**/build/
 /captures
 .externalNativeBuild
 .cxx
@@ -12,3 +13,11 @@
 
 # Environment secrets
 .env
+
+# Firebase Android configuration (project-specific; keep outside Git)
+app/google-services.json
+**/google-services.json
+
+# Firebase/Google service-account credentials (never commit)
+*-firebase-adminsdk-*.json
+service-account*.json

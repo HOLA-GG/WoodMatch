@@ -190,12 +190,12 @@ object SubaEcologicalData {
 
 enum class MapEngineView(val displayName: String, val subtitle: String) {
     OPEN_STREET_MAP(
-        "🗺️ OpenStreetMap (Suba)",
-        "Servicio Abierto y Gratuito • Zonas Verdes, Reservas y Puntos de Retiro"
+        "Mapa de calles",
+        "Calles, barrios y puntos de retiro"
     ),
     VECTOR_CANVAS(
-        "🌿 Mapa Eco-Vectorial",
-        "Modo Local Ligero • Funciona 100% Offline"
+        "Vista sin conexión",
+        "Ubicaciones guardadas en esta app"
     ),
     GOOGLE_MAPS(
         "📍 Google Maps SDK",
@@ -220,8 +220,9 @@ fun TreeMapScreen(
     var selectedItem by remember { mutableStateOf<WoodWasteItem?>(null) }
     var selectedReserve by remember { mutableStateOf<EcologicalZone?>(null) }
 
-    // Motor de Mapa: Por defecto, OpenStreetMap Suba (100% gratis, abierto y sin límites)
-    var currentEngine by remember { mutableStateOf(MapEngineView.OPEN_STREET_MAP) }
+    // El modo local abre primero para que el prototipo sea navegable sin credenciales ni red.
+    // Los visores conectados permanecen disponibles desde los chips superiores.
+    var currentEngine by remember { mutableStateOf(MapEngineView.VECTOR_CANVAS) }
 
     // Coordenadas dinámicas de enfoque en Suba
     var mapCenterLat by remember { mutableStateOf(4.7450) }
@@ -309,9 +310,9 @@ fun TreeMapScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = when (currentEngine) {
-                            MapEngineView.OPEN_STREET_MAP -> "Suba • OpenStreetMap"
-                            MapEngineView.VECTOR_CANVAS -> "Suba • Mapa Eco-Vectorial"
-                            MapEngineView.GOOGLE_MAPS -> "Suba • Google Maps SDK"
+                            MapEngineView.OPEN_STREET_MAP -> "Mapa de Suba"
+                            MapEngineView.VECTOR_CANVAS -> "Mapa de Suba"
+                            MapEngineView.GOOGLE_MAPS -> "Mapa de Suba"
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onBackground,
@@ -332,7 +333,7 @@ fun TreeMapScreen(
                     onClick = {
                         currentEngine = when (currentEngine) {
                             MapEngineView.OPEN_STREET_MAP -> MapEngineView.VECTOR_CANVAS
-                            MapEngineView.VECTOR_CANVAS -> MapEngineView.GOOGLE_MAPS
+                            MapEngineView.VECTOR_CANVAS -> MapEngineView.OPEN_STREET_MAP
                             MapEngineView.GOOGLE_MAPS -> MapEngineView.OPEN_STREET_MAP
                         }
                     }
@@ -343,7 +344,7 @@ fun TreeMapScreen(
                             MapEngineView.VECTOR_CANVAS -> Icons.Filled.Map
                             MapEngineView.GOOGLE_MAPS -> Icons.Filled.Layers
                         },
-                        contentDescription = "Cambiar Motor de Mapa",
+                        contentDescription = "Cambiar vista del mapa",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -357,7 +358,7 @@ fun TreeMapScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                items(MapEngineView.values()) { engine ->
+                items(listOf(MapEngineView.OPEN_STREET_MAP, MapEngineView.VECTOR_CANVAS)) { engine ->
                     FilterChip(
                         selected = currentEngine == engine,
                         onClick = { currentEngine = engine },
@@ -375,7 +376,7 @@ fun TreeMapScreen(
                     FilterChip(
                         selected = showGreenReserves,
                         onClick = { showGreenReserves = !showGreenReserves },
-                        label = { Text("🌿 Reservas", maxLines = 1) },
+                        label = { Text("Zonas verdes", maxLines = 1) },
                         shape = RoundedCornerShape(12.dp),
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = Color(0xFF2E7D32).copy(alpha = 0.2f),
@@ -746,8 +747,8 @@ fun TreeMapScreen(
                         Text(
                             text = when (currentEngine) {
                                 MapEngineView.OPEN_STREET_MAP -> ""
-                                MapEngineView.VECTOR_CANVAS -> "🌿 Modo Vectorial Offline"
-                                MapEngineView.GOOGLE_MAPS -> "🗺️ Google Maps (${selectedMapTypeChoice.displayName})"
+                                MapEngineView.VECTOR_CANVAS -> "Vista sin conexión"
+                                MapEngineView.GOOGLE_MAPS -> "Mapa de Suba"
                             },
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.primary,

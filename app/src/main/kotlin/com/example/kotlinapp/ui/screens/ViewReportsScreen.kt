@@ -52,6 +52,7 @@ import com.example.kotlinapp.data.model.TreeReport
 import com.example.kotlinapp.data.repository.AuthRepository
 import com.example.kotlinapp.data.repository.ReportRepository
 import com.example.kotlinapp.ui.components.WoodMatchTopAppBar
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
 @Composable
@@ -69,13 +70,7 @@ fun ViewReportsScreen(
     fun loadReports() {
         isLoading = true
         coroutineScope.launch {
-            val user = currentUser
-            val list = if (user != null) {
-                ReportRepository.getUserReports(user.uid)
-            } else {
-                ReportRepository.getAllReports()
-            }
-            reports = list
+            reports = ReportRepository.getAllReports()
             isLoading = false
         }
     }
@@ -105,6 +100,16 @@ fun ViewReportsScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rep.imageUri?.let { photo ->
+                        AsyncImage(
+                            model = photo,
+                            contentDescription = "Foto del reporte",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                    }
                     Text(
                         text = "Condición: ${rep.condition}",
                         style = MaterialTheme.typography.titleMedium,
@@ -116,7 +121,7 @@ fun ViewReportsScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "Ubicación GPS: ${rep.latitude}, ${rep.longitude}",
+                        text = "Ubicación: ${rep.latitude}, ${rep.longitude}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -143,7 +148,7 @@ fun ViewReportsScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             WoodMatchTopAppBar(
-                title = "Mis Reportes",
+                title = "Reportes de este teléfono",
                 showBackButton = true,
                 onBackClick = onNavigateBack,
                 trailingContent = {
@@ -155,6 +160,13 @@ fun ViewReportsScreen(
                         )
                     }
                 }
+            )
+
+            Text(
+                text = "Guardados en este teléfono. Se perderán si desinstalas la app.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
 
             if (isLoading) {

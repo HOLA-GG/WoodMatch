@@ -3,28 +3,43 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.services)
+}
+
+// El prototipo funciona con datos locales. Firebase se activa automáticamente
+// cuando cada entorno incorpora su propio app/google-services.json (ignorado por Git).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 val envFile = rootProject.file(".env")
 val envProperties = Properties()
-if (envFile.exists()) {
+if (envFile.isFile) {
     envFile.inputStream().use { stream ->
         envProperties.load(stream)
     }
 }
+
+// AI Studio puede exportar secretos como archivos individuales dentro de .env/.
+// Se leen solo durante la compilación y toda la carpeta está excluida de Git.
+fun secretFileValue(name: String): String? {
+    val secretFile = rootProject.file(".env/$name")
+    return secretFile.takeIf { it.isFile }
+        ?.readText()
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+}
 val plantNetApiKey = envProperties.getProperty("PLANTNET_API_KEY")
     ?: System.getenv("PLANTNET_API_KEY")
-    ?: "2b102T0dOfHbl754djiJTeIgXO"
+    ?: secretFileValue("PLANTNET_API_KEY")
+    ?: ""
 
 val geminiApiKey = envProperties.getProperty("GEMINI_API_KEY")
     ?: System.getenv("GEMINI_API_KEY")
+    ?: secretFileValue("GEMINI_API_KEY")
     ?: ""
 
 val mapsApiKey = envProperties.getProperty("MAPS_API_KEY")
     ?: System.getenv("MAPS_API_KEY")
-    ?: envProperties.getProperty("GEMINI_API_KEY")
-    ?: System.getenv("GEMINI_API_KEY")
     ?: ""
 
 android {
@@ -49,19 +64,7 @@ android {
         buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
     }
 
-    signingConfigs {
-        getByName("debug") {
-            storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-    }
-
     buildTypes {
-        debug {
-            signingConfig = signingConfigs.getByName("debug")
-        }
         release {
             isMinifyEnabled = false
             proguardFiles(
