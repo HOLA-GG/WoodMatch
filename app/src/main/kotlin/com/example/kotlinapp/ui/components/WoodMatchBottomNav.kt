@@ -44,9 +44,8 @@ fun WoodMatchBottomNav(
 ) {
     val items = listOf(
         NavItem("Inicio", Screen.Dashboard.route, Icons.Filled.Home, "nav_home"),
-        NavItem("Reportes", Screen.ViewReports.route, Icons.AutoMirrored.Filled.Assignment, "nav_reports"),
         NavItem("Mapa", Screen.TreeMap.route, Icons.Filled.Map, "nav_map"),
-        NavItem("Mi actividad", Screen.MyActivity.route, Icons.Filled.NaturePeople, "nav_activity"),
+        NavItem("Reportes", Screen.ViewReports.route, Icons.AutoMirrored.Filled.Assignment, "nav_reports"),
         NavItem("Perfil", Screen.Profile.route, Icons.Filled.Person, "nav_profile")
     )
 

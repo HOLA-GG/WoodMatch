@@ -83,12 +83,12 @@ enum class OsmLayerStyle(
     val attribution: String,
     val maxZoom: Int = 19
 ) {
-    STANDARD(
-        layerId = "standard",
+    VOYAGER(
+        layerId = "voyager",
         title = "Calles",
-        subtitle = "Barrios y vías de Suba",
-        tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        attribution = "© OpenStreetMap contributors"
+        subtitle = "Barrios y vías de Suba (OSM)",
+        tileUrl = "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        attribution = "© OpenStreetMap contributors, © CARTO"
     ),
     HUMANITARIAN(
         layerId = "humanitarian",
@@ -115,10 +115,10 @@ enum class OsmLayerStyle(
 }
 
 /**
- * User-Agent de navegador móvil legítimo conforme a la política de uso de teselas de OpenStreetMap
+ * User-Agent legítimo conforme a la política de uso de teselas de OpenStreetMap
  */
 const val OSM_USER_AGENT =
-    "Mozilla/5.0 (Linux; Android 14; Mobile; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36 WoodMatchSuba/2.0"
+    "WoodMatchSubaApp/2.0 (com.example.kotlinapp; contact: privacidad@woodmatch.co)"
 
 /**
  * Componente MapWebView basado exclusivamente en el ecosistema OpenStreetMap.
@@ -147,7 +147,7 @@ fun MapWebView(
 ) {
     val context = LocalContext.current
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
-    var selectedLayer by remember { mutableStateOf(OsmLayerStyle.STANDARD) }
+    var selectedLayer by remember { mutableStateOf(OsmLayerStyle.VOYAGER) }
     var isLoading by remember { mutableStateOf(true) }
     var loadingProgress by remember { mutableIntStateOf(0) }
     var hasError by remember { mutableStateOf(false) }
@@ -181,9 +181,16 @@ fun MapWebView(
                 put("lat", item.exactLatitude)
                 put("lng", item.exactLongitude)
                 put("sector", item.subaSector)
-                put("quantity", item.formattedQuantity)
-                put("status", item.typedStatus.name)
-                put("statusLabel", item.typedStatus.displayName)
+                val statusStr = item.status.uppercase()
+                put("status", statusStr)
+                put("statusLabel", when (statusStr) {
+                    "PENDIENTE" -> "Pendiente de verificación (IA)"
+                    "DISPONIBLE" -> "Disponible"
+                    "RESERVADO" -> "En Reserva"
+                    "APROVECHADO" -> "Aprovechado"
+                    "INACTIVO" -> "Inactivo"
+                    else -> item.typedStatus.displayName
+                })
                 put("uses", item.suggestedUses)
             }
             array.put(obj)
@@ -270,7 +277,7 @@ fun MapWebView(
                     leadingIcon = {
                         Icon(
                             imageVector = when (layer) {
-                                OsmLayerStyle.STANDARD -> Icons.Filled.Public
+                                OsmLayerStyle.VOYAGER -> Icons.Filled.Public
                                 OsmLayerStyle.HUMANITARIAN -> Icons.Filled.Forest
                                 OsmLayerStyle.SATELLITE -> Icons.Filled.Layers
                                 OsmLayerStyle.TOPO -> Icons.Filled.Terrain
@@ -596,6 +603,7 @@ private fun buildOsmHtml(
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <meta name="referrer" content="origin" />
           <title>OpenStreetMap Suba</title>
           $cssHeader
           $jsHeader
@@ -677,6 +685,7 @@ private fun buildOsmHtml(
               font-weight: 700;
               margin-bottom: 8px;
             }
+            .badge-PENDIENTE { background: #fff3e0; color: #e65100; border: 1.5px solid #ff9800; }
             .badge-DISPONIBLE { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
             .badge-RESERVADO { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
             .badge-APROVECHADO { background: #e1f5fe; color: #0288d1; border: 1px solid #81d4fa; }
@@ -727,10 +736,10 @@ private fun buildOsmHtml(
             window.addEventListener('resize', invalidateSizeSafely);
 
             // 2. Capa base de respaldo OSM siempre activa
-            var osmFallback = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            var osmFallback = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
               maxZoom: 19,
               opacity: 0.99,
-              attribution: '© OpenStreetMap contributors'
+              attribution: '© OpenStreetMap contributors, © CARTO'
             }).addTo(map);
 
             // 3. Capa activa seleccionada
@@ -800,15 +809,21 @@ private fun buildOsmHtml(
             var wasteData = $wasteJson;
             wasteData.forEach(function(item) {
               var color = '#2E7D32';
-              if (item.status === 'RESERVADO') color = '#E65100';
-              if (item.status === 'APROVECHADO') color = '#0288D1';
-              if (item.status === 'INACTIVO') color = '#757575';
+              var isPending = (item.status === 'PENDIENTE');
+              if (isPending) color = '#FF9800';
+              else if (item.status === 'RESERVADO') color = '#E65100';
+              else if (item.status === 'APROVECHADO') color = '#0288D1';
+              else if (item.status === 'INACTIVO') color = '#757575';
+
+              var pinHtml = isPending ?
+                '<div style="background-color:#FF9800;width:28px;height:28px;border-radius:50%;border:2.5px solid #ffffff;box-shadow:0 0 12px rgba(255,152,0,0.9), 0 3px 8px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900;">📍</div>' :
+                '<div style="background-color:' + color + ';width:22px;height:22px;border-radius:50%;border:2.5px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;">•</div>';
 
               var customIcon = L.divIcon({
                 className: 'custom-pin',
-                html: '<div style="background-color:' + color + ';width:22px;height:22px;border-radius:50%;border:2.5px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;">•</div>',
-                iconSize: [22, 22],
-                iconAnchor: [11, 11]
+                html: pinHtml,
+                iconSize: isPending ? [28, 28] : [22, 22],
+                iconAnchor: isPending ? [14, 14] : [11, 11]
               });
 
               var marker = L.marker([item.lat, item.lng], { icon: customIcon }).addTo(map);
@@ -816,10 +831,12 @@ private fun buildOsmHtml(
               var popupContent = document.createElement('div');
               popupContent.className = 'popup-card';
               var title = document.createElement('div'); title.className = 'popup-title'; title.textContent = item.title;
-               var detail = document.createElement('div'); detail.textContent = 'Ubicación aproximada: ' + item.sector + ' · ' + item.statusLabel;
-               var action = document.createElement('button'); action.className = 'popup-btn'; action.textContent = 'Ver reporte';
+              var badgeClass = 'popup-badge badge-' + (isPending ? 'PENDIENTE' : (item.status || 'DISPONIBLE'));
+              var badgeSpan = document.createElement('span'); badgeSpan.className = badgeClass; badgeSpan.textContent = item.statusLabel;
+              var detail = document.createElement('div'); detail.className = 'popup-sector'; detail.textContent = 'Ubicación aproximada: ' + item.sector;
+              var action = document.createElement('button'); action.className = 'popup-btn'; action.textContent = 'Ver detalle del reporte';
               action.addEventListener('click', function() { window.selectWaste(item.id); });
-              popupContent.appendChild(title); popupContent.appendChild(detail); popupContent.appendChild(action);
+              popupContent.appendChild(title); popupContent.appendChild(badgeSpan); popupContent.appendChild(detail); popupContent.appendChild(action);
               marker.bindPopup(popupContent);
             });
 

@@ -103,17 +103,40 @@ object AuthRepository {
             return Result.failure(Exception("Por favor ingrese su contraseña."))
         }
 
-        val firebaseAuth = auth ?: return Result.failure(Exception("El servicio de cuentas no está configurado. Puedes explorar como invitado."))
+        val firebaseAuth = auth ?: return Result.failure(
+            Exception("Servicio de Firebase no inicializado. Para autenticarte con tu consola de Firebase en producción, coloca tu archivo 'google-services.json' en la carpeta 'app/' del proyecto.")
+        )
         return try {
-            val uid = firebaseAuth.signInWithEmailAndPassword(trimmedEmail, pass).await().user?.uid
-                ?: error("No se pudo iniciar sesión.")
-            val profile = fetchUserProfile(uid) ?: error("Tu cuenta no tiene un perfil válido. Contacta al responsable del servicio.")
+            val res = firebaseAuth.signInWithEmailAndPassword(trimmedEmail, pass).await()
+            val uid = res.user?.uid ?: error("No se pudo iniciar sesión.")
+            val profile = fetchUserProfile(uid) ?: User(
+                uid = uid,
+                name = res.user?.displayName?.takeIf { it.isNotBlank() } ?: trimmedEmail.substringBefore("@"),
+                email = trimmedEmail,
+                phone = res.user?.phoneNumber ?: "",
+                dob = "",
+                city = "Bogotá",
+                gender = "",
+                role = UserRole.GENERADOR.name,
+                sectorSuba = "Suba Centro"
+            )
             _currentUser.value = profile
             Result.success(profile)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             firebaseAuth.signOut()
             _currentUser.value = null
-            Result.failure(Exception("No fue posible iniciar sesión. Comprueba tus credenciales y conexión."))
+            val message = when {
+                e.message?.contains("password", ignoreCase = true) == true ||
+                e.message?.contains("credential", ignoreCase = true) == true ->
+                    "Contraseña o credenciales incorrectas en Firebase."
+                e.message?.contains("user-not-found", ignoreCase = true) == true ||
+                e.message?.contains("no user record", ignoreCase = true) == true ->
+                    "No se encontró ninguna cuenta registrada con este correo en Firebase."
+                e.message?.contains("network", ignoreCase = true) == true ->
+                    "Error de conexión de red al contactar con Firebase."
+                else -> e.localizedMessage ?: (e.message ?: "Error al autenticar con Firebase.")
+            }
+            Result.failure(Exception(message))
         }
     }
 
@@ -147,16 +170,23 @@ object AuthRepository {
             else -> UserRole.GENERADOR.name
         }
 
-        val firebaseAuth = auth ?: return Result.failure(Exception("El registro no está disponible en este entorno. Puedes explorar como invitado."))
+        val firebaseAuth = auth ?: return Result.failure(
+            Exception("Firebase no está inicializado. Coloca tu archivo 'google-services.json' en 'app/' para registrar usuarios en tu consola de Firebase.")
+        )
         var newUid = ""
 
-        firebaseAuth.let { firebaseAuth ->
-            try {
-                val res = firebaseAuth.createUserWithEmailAndPassword(trimmedEmail, pass).await()
-                newUid = res.user?.uid ?: error("No se creó la cuenta")
-            } catch (e: Exception) {
-                return Result.failure(Exception("No se pudo crear la cuenta. Comprueba tu conexión y correo."))
+        try {
+            val res = firebaseAuth.createUserWithEmailAndPassword(trimmedEmail, pass).await()
+            newUid = res.user?.uid ?: error("No se creó la cuenta.")
+        } catch (e: Exception) {
+            val msg = when {
+                e.message?.contains("email-already-in-use", ignoreCase = true) == true ->
+                    "Este correo electrónico ya se encuentra registrado en Firebase."
+                e.message?.contains("weak-password", ignoreCase = true) == true ->
+                    "La contraseña es demasiado débil para las reglas de Firebase."
+                else -> e.localizedMessage ?: (e.message ?: "Error al registrar usuario en Firebase.")
             }
+            return Result.failure(Exception(msg))
         }
 
         val newUser = User(
@@ -183,7 +213,7 @@ object AuthRepository {
                     "gender" to newUser.gender,
                     "role" to newUser.role,
                     "sectorSuba" to newUser.sectorSuba,
-                    "privacyVersion" to "2026-10-22-prototipo",
+                    "privacyVersion" to "2026-10-production",
                     "privacyAcceptedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
                 )
                 db.collection("users").document(newUid).set(data).await()
@@ -272,8 +302,108 @@ object AuthRepository {
         return emptyList()
     }
 
+    suspend fun updateCurrentUserProfile(
+        name: String,
+        phone: String,
+        sectorSuba: String,
+        role: String
+    ): Result<User> {
+        val current = _currentUser.value ?: return Result.failure(Exception("No hay una sesión activa."))
+        val trimmedName = name.trim()
+        val trimmedPhone = phone.trim()
+
+        if (trimmedName.isBlank()) return Result.failure(Exception("El nombre no puede estar vacío."))
+        if (!validatePhone(trimmedPhone)) return Result.failure(Exception("El teléfono debe comenzar con +57 y tener 10 dígitos (ej: +573101234567)."))
+
+        val targetRole = when {
+            current.isAdmin -> UserRole.ADMIN.name
+            role.uppercase() == UserRole.RECEPTOR.name -> UserRole.RECEPTOR.name
+            role.uppercase() == UserRole.MIXTO.name -> UserRole.MIXTO.name
+            else -> UserRole.GENERADOR.name
+        }
+
+        val updatedUser = current.copy(
+            name = trimmedName,
+            phone = trimmedPhone,
+            sectorSuba = sectorSuba.ifBlank { "Suba Centro" },
+            role = targetRole
+        )
+
+        firestore?.let { db ->
+            try {
+                db.collection("users").document(current.uid).update(
+                    mapOf(
+                        "name" to updatedUser.name,
+                        "phone" to updatedUser.phone,
+                        "sectorSuba" to updatedUser.sectorSuba,
+                        "role" to updatedUser.role,
+                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                ).await()
+            } catch (_: Exception) {
+                try {
+                    db.collection("users").document(current.uid).set(
+                        mapOf(
+                            "uid" to updatedUser.uid,
+                            "name" to updatedUser.name,
+                            "email" to updatedUser.email,
+                            "phone" to updatedUser.phone,
+                            "city" to updatedUser.city,
+                            "sectorSuba" to updatedUser.sectorSuba,
+                            "role" to updatedUser.role,
+                            "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                        ),
+                        com.google.firebase.firestore.SetOptions.merge()
+                    ).await()
+                } catch (err: Exception) {
+                    return Result.failure(Exception("Error al guardar en el servidor: ${err.localizedMessage ?: err.message}"))
+                }
+            }
+        }
+
+        _currentUser.value = updatedUser
+        return Result.success(updatedUser)
+    }
+
+    suspend fun deleteCurrentAccount(): Result<Unit> {
+        val user = _currentUser.value ?: return Result.failure(Exception("No hay una sesión activa para eliminar."))
+        val uid = user.uid
+
+        // 1. Eliminar datos en Firestore
+        firestore?.let { db ->
+            try {
+                db.collection("users").document(uid).delete().await()
+            } catch (_: Exception) {}
+        }
+
+        // 2. Limpiar reportes locales asociados al usuario
+        try {
+            com.example.kotlinapp.data.repository.ReportRepository.deleteUserReports(uid)
+        } catch (_: Exception) {}
+
+        // 3. Eliminar usuario en Firebase Authentication
+        val firebaseAuth = auth
+        if (firebaseAuth?.currentUser != null && firebaseAuth.currentUser?.uid == uid) {
+            try {
+                firebaseAuth.currentUser?.delete()?.await()
+            } catch (e: Exception) {
+                if (e.message?.contains("recent", ignoreCase = true) == true) {
+                    return Result.failure(Exception("Por seguridad de autenticación, debes volver a iniciar sesión antes de borrar tu cuenta definitivamente."))
+                }
+            }
+        }
+
+        logout()
+        return Result.success(Unit)
+    }
+
     suspend fun updateUserRole(uid: String, newRole: String): Result<Unit> {
-        return Result.failure(Exception("Los roles se administran en el servidor por personal autorizado."))
+        return updateCurrentUserProfile(
+            name = _currentUser.value?.name ?: "",
+            phone = _currentUser.value?.phone ?: "",
+            sectorSuba = _currentUser.value?.sectorSuba ?: "Suba Centro",
+            role = newRole
+        ).map { }
     }
 
     private suspend fun fetchUserProfile(uid: String): User? {

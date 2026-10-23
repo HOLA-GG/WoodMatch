@@ -39,18 +39,23 @@ import androidx.compose.material.icons.filled.Nature
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Terrain
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,9 +64,13 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.kotlinapp.data.model.EstadoResiduo
+import com.example.kotlinapp.data.network.ValidadorReportesService
+import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -84,18 +93,20 @@ import com.example.kotlinapp.data.repository.ReportRepository
 
 private fun TreeReport.toLocalMapMarker(): WoodWasteItem {
     val isExpired = expiresAt <= System.currentTimeMillis()
+    val isPending = status.uppercase() == "PENDIENTE"
     val markerStatus = when {
-        isExpired -> WasteStatus.INACTIVO
-        condition == "Caído" || condition == "En riesgo" -> WasteStatus.DISPONIBLE
-        condition == "Dañado" -> WasteStatus.RESERVADO
-        else -> WasteStatus.APROVECHADO
+        isExpired -> "INACTIVO"
+        isPending -> "PENDIENTE"
+        condition == "Caído" || condition == "En riesgo" -> "DISPONIBLE"
+        condition == "Dañado" -> "RESERVADO"
+        else -> "APROVECHADO"
     }
     return WoodWasteItem(
         id = id,
-        title = species.ifBlank { "Árbol sin especie identificada" },
+        title = if (isPending) "$species (Reporte pendiente)" else species.ifBlank { "Árbol sin especie identificada" },
         description = description,
         wasteType = condition,
-        materialState = if (isExpired) "Vencido: requiere nueva verificación" else "Pendiente de verificación",
+        materialState = if (isExpired) "Vencido: requiere nueva verificación" else if (isPending) "Pendiente de verificación" else "Verificado",
         quantityValue = 1.0,
         quantityUnit = "reporte",
         quantityEstimated = false,
@@ -106,7 +117,7 @@ private fun TreeReport.toLocalMapMarker(): WoodWasteItem {
         exactLatitude = latitude,
         exactLongitude = longitude,
         speciesName = species,
-        status = markerStatus.name,
+        status = markerStatus,
         authorId = userId,
         authorName = userName,
         createdAt = timestamp,
@@ -212,12 +223,12 @@ object SubaEcologicalData {
 
 enum class MapEngineView(val displayName: String, val subtitle: String) {
     OPEN_STREET_MAP(
-        "Mapa de calles",
-        "Calles, barrios y reportes locales"
+        "OpenStreetMap",
+        "Calles, barrios y humedales de Suba"
     ),
     VECTOR_CANVAS(
-        "Vista sin conexión",
-        "Ubicaciones guardadas en esta app"
+        "Respaldo sin red",
+        "Esquema sin conexión"
     )
 }
 
@@ -236,9 +247,8 @@ fun TreeMapScreen(
     var selectedItem by remember { mutableStateOf<WoodWasteItem?>(null) }
     var selectedReserve by remember { mutableStateOf<EcologicalZone?>(null) }
 
-    // El modo local abre primero para que el prototipo sea navegable sin credenciales ni red.
-    // Los visores conectados permanecen disponibles desde los chips superiores.
-    var currentEngine by remember { mutableStateOf(MapEngineView.VECTOR_CANVAS) }
+    // OpenStreetMap es el motor oficial y principal para Suba
+    var currentEngine by remember { mutableStateOf(MapEngineView.OPEN_STREET_MAP) }
 
     // Coordenadas dinámicas de enfoque en Suba
     var mapCenterLat by remember { mutableStateOf(4.7450) }
@@ -247,6 +257,7 @@ fun TreeMapScreen(
 
     // Capas ecológicas activas
     var showGreenReserves by remember { mutableStateOf(true) }
+    var showFiltersAndLegend by remember { mutableStateOf(false) }
 
     // Controles de zoom y paneo para motor vectorial de respaldo
     var zoomScale by remember { mutableFloatStateOf(1f) }
@@ -277,7 +288,7 @@ fun TreeMapScreen(
             .testTag("tree_map_screen")
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header Adaptable con protección contra desbordamiento
+            // Header con botón desplegable de Filtros y Leyenda
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -297,17 +308,14 @@ fun TreeMapScreen(
                 Spacer(modifier = Modifier.width(4.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = when (currentEngine) {
-                            MapEngineView.OPEN_STREET_MAP -> "Mapa de Suba"
-                            MapEngineView.VECTOR_CANVAS -> "Mapa de Suba"
-                        },
+                        text = "Mapa de Suba",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = currentEngine.subtitle,
+                        text = if (showFiltersAndLegend) "Filtros y Leyenda abiertos" else currentEngine.subtitle,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -315,100 +323,147 @@ fun TreeMapScreen(
                     )
                 }
 
-                // Botón selector de motor de mapas
-                IconButton(
-                    onClick = {
-                        currentEngine = when (currentEngine) {
-                            MapEngineView.OPEN_STREET_MAP -> MapEngineView.VECTOR_CANVAS
-                            MapEngineView.VECTOR_CANVAS -> MapEngineView.OPEN_STREET_MAP
+                // Botón selector de Filtros y Leyenda (Ocultable para máxima visibilidad del mapa)
+                FilterChip(
+                    selected = showFiltersAndLegend,
+                    onClick = { showFiltersAndLegend = !showFiltersAndLegend },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (showFiltersAndLegend) Icons.Filled.Close else Icons.Filled.Layers,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = if (showFiltersAndLegend) "Ocultar" else "Filtros",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+            }
+
+            // Panel Desplegable: Filtros de Motor, Sectores de Suba y Leyenda de Colores
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showFiltersAndLegend,
+                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 1. Selector de Capas
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilterChip(
+                                selected = currentEngine == MapEngineView.OPEN_STREET_MAP,
+                                onClick = { currentEngine = MapEngineView.OPEN_STREET_MAP },
+                                label = { Text("OpenStreetMap", maxLines = 1) },
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            FilterChip(
+                                selected = currentEngine == MapEngineView.VECTOR_CANVAS,
+                                onClick = { currentEngine = MapEngineView.VECTOR_CANVAS },
+                                label = { Text("Sin red", maxLines = 1) },
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            FilterChip(
+                                selected = showGreenReserves,
+                                onClick = { showGreenReserves = !showGreenReserves },
+                                label = { Text("Zonas verdes", maxLines = 1) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Color(0xFF2E7D32).copy(alpha = 0.2f),
+                                    selectedLabelColor = Color(0xFF1B5E20)
+                                )
+                            )
+                        }
+
+                        // 2. Filtro de Sectores de Suba
+                        Text(
+                            text = "Sectores de Suba:",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            item {
+                                FilterChip(
+                                    selected = selectedSectorName == "TODOS",
+                                    onClick = {
+                                        selectedSectorName = "TODOS"
+                                        selectedItem = null
+                                        selectedReserve = null
+                                        mapCenterLat = 4.7450
+                                        mapCenterLng = -74.0850
+                                        mapZoomLevel = 13
+                                    },
+                                    label = { Text("Toda Suba (${wasteItems.size})", maxLines = 1) },
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                            }
+                            items(SubaSectors.ALL) { sec ->
+                                val count = wasteItems.count { it.subaSector.contains(sec.name, ignoreCase = true) }
+                                FilterChip(
+                                    selected = selectedSectorName == sec.name,
+                                    onClick = {
+                                        selectedSectorName = sec.name
+                                        selectedItem = null
+                                        selectedReserve = null
+                                        mapCenterLat = sec.referenceLatitude
+                                        mapCenterLng = sec.referenceLongitude
+                                        mapZoomLevel = 14
+                                    },
+                                    label = { Text("${sec.name} ($count)", maxLines = 1) },
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                            }
+                        }
+
+                        // 3. Leyenda de Colores de Pines
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color(0xFF2E7D32)))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Verificado (GPS)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color(0xFFFF9800)))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Pendiente GPS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color(0xFF1B5E20)))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Humedal/Reserva", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                            }
                         }
                     }
-                ) {
-                    Icon(
-                        imageVector = when (currentEngine) {
-                            MapEngineView.OPEN_STREET_MAP -> Icons.Filled.Public
-                            MapEngineView.VECTOR_CANVAS -> Icons.Filled.Map
-                        },
-                        contentDescription = "Cambiar vista del mapa",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            // Barra 1: Selector de Motores de Mapa (Horizontalmente scrolleable)
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(listOf(MapEngineView.OPEN_STREET_MAP, MapEngineView.VECTOR_CANVAS)) { engine ->
-                    FilterChip(
-                        selected = currentEngine == engine,
-                        onClick = { currentEngine = engine },
-                        label = { Text(engine.displayName, maxLines = 1) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    )
-                }
-
-                // Toggle para mostrar/ocultar reservas
-                item {
-                    FilterChip(
-                        selected = showGreenReserves,
-                        onClick = { showGreenReserves = !showGreenReserves },
-                        label = { Text("Zonas verdes", maxLines = 1) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF2E7D32).copy(alpha = 0.2f),
-                            selectedLabelColor = Color(0xFF1B5E20)
-                        )
-                    )
-                }
-
-            }
-
-            // Barra 2: Filtro de Sectores de Suba
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                item {
-                    FilterChip(
-                        selected = selectedSectorName == "TODOS",
-                        onClick = {
-                            selectedSectorName = "TODOS"
-                            selectedItem = null
-                            selectedReserve = null
-                            mapCenterLat = 4.7450
-                            mapCenterLng = -74.0850
-                            mapZoomLevel = 13
-                        },
-                        label = { Text("Toda Suba (${wasteItems.size})", maxLines = 1) },
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                }
-                items(SubaSectors.ALL) { sec ->
-                    val count = wasteItems.count { it.subaSector.contains(sec.name, ignoreCase = true) }
-                    FilterChip(
-                        selected = selectedSectorName == sec.name,
-                        onClick = {
-                            selectedSectorName = sec.name
-                            selectedItem = null
-                            selectedReserve = null
-                            mapCenterLat = sec.referenceLatitude
-                            mapCenterLng = sec.referenceLongitude
-                            mapZoomLevel = 14
-                        },
-                        label = { Text("${sec.name} ($count)", maxLines = 1) },
-                        shape = RoundedCornerShape(10.dp)
-                    )
                 }
             }
 
@@ -423,9 +478,8 @@ fun TreeMapScreen(
             ) {
                 when (currentEngine) {
                     MapEngineView.OPEN_STREET_MAP -> {
-                        // 1. COMPONENTE MAPWEBVIEW: Visor OpenStreetMap Suba (100% abierto y gratuito)
-                        // Con capas OSM Estándar, Zonas Verdes (Eco), Satelital Libre y Topo/Relieve
-                        MapWebView(
+                        // Motor nativo OpenStreetMap (osmdroid) optimizado para Suba
+                        OsmNativeMapView(
                             wasteItems = filteredItems,
                             ecologicalZones = SubaEcologicalData.ZONES,
                             showReserves = showGreenReserves,

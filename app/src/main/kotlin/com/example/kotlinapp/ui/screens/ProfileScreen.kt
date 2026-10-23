@@ -26,11 +26,13 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Recycling
 import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -165,9 +167,19 @@ fun ProfileScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Selector Rápido de Prueba de Roles (Académico y Auditoría)
+            OutlinedButton(
+                onClick = onNavigateToSettings,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Editar mis datos", style = MaterialTheme.typography.labelMedium)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             // Actividad y Aportes Circulares
             Card(
                 modifier = Modifier.fillMaxWidth(),

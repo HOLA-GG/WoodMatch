@@ -73,11 +73,9 @@ fun WoodMatchApp(
 
     val bottomNavRoutes = listOf(
         Screen.Dashboard.route,
-        Screen.Species.route,
         Screen.TreeMap.route,
         Screen.ViewReports.route,
-        Screen.Profile.route,
-        Screen.MyActivity.route
+        Screen.Profile.route
     )
 
     val showBottomBar = currentRoute in bottomNavRoutes
@@ -230,6 +228,11 @@ fun WoodMatchApp(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToReports = {
                         navController.navigate(Screen.ViewReports.route) {
+                            popUpTo(Screen.Dashboard.route)
+                        }
+                    },
+                    onNavigateToMap = {
+                        navController.navigate(Screen.TreeMap.route) {
                             popUpTo(Screen.Dashboard.route)
                         }
                     }

@@ -37,6 +37,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.kotlinapp.R
 import androidx.compose.material3.TextButton
 import com.example.kotlinapp.ui.components.PrivacyNotice
 import androidx.compose.runtime.Composable
@@ -66,8 +69,8 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit
 ) {
-    var email by remember { mutableStateOf("admin@woodmatch.org") }
-    var password by remember { mutableStateOf("WoodMatch2025*") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -108,37 +111,16 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             PrivacyNotice()
-            // Logo & Header
-            Box(
+            // Official WoodMatch Logo
+            Image(
+                painter = painterResource(id = R.drawable.logo),
+                contentDescription = "WoodMatch - Madera Urbana y Economía Circular Suba",
                 modifier = Modifier
-                    .size(90.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Park,
-                    contentDescription = "WoodMatch",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(50.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Conecta con la Raíz",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
+                    .fillMaxWidth(0.82f)
+                    .height(130.dp)
             )
 
-            Text(
-                text = "WoodMatch · Aprovechamiento de residuos leñosos",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Glass/Parchment Card
             Card(

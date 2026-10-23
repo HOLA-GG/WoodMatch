@@ -27,8 +27,11 @@ android {
             useSupportLibrary = true
         }
 
+        val geminiApiKey = (project.findProperty("GEMINI_API_KEY") as? String)
+            ?: System.getenv("GEMINI_API_KEY")
+            ?: ""
         buildConfigField("String", "PLANTNET_API_KEY", "\"\"")
-        buildConfigField("String", "GEMINI_API_KEY", "\"\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -50,6 +53,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 
     packaging {
@@ -85,6 +92,12 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation(libs.coil.compose)
+
+    // Generative AI (Gemini) SDK
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // OpenStreetMap Android SDK
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit)

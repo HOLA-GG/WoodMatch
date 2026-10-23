@@ -531,11 +531,11 @@ fun SpeciesScreen(
         var aiAnswer by remember { mutableStateOf<String?>(null) }
 
         val wasteTypes = listOf(
-            "🪵 Poda / Ramas",
-            "🌲 Tronco macizo",
-            "📦 Estibas / Tablas",
-            "🌾 Aserrín / Viruta",
-            "🌱 Árbol urbano"
+            "Poda y ramas",
+            "Tronco macizo",
+            "Estibas y tablas",
+            "Aserrín y viruta",
+            "Árbol urbano"
         )
 
         val subaSectorsList = listOf(

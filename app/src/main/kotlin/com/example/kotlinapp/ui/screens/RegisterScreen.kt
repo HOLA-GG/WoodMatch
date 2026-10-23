@@ -132,7 +132,6 @@ fun RegisterScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            PrivacyNotice()
             // Top Bar
             Row(
                 modifier = Modifier
@@ -388,9 +387,36 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.material3.Checkbox(checked = privacyAccepted, onCheckedChange = { privacyAccepted = it })
-                        Text("He leído el aviso de privacidad. Usaré datos ficticios en esta versión de prueba.")
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = privacyAccepted,
+                                onCheckedChange = { privacyAccepted = it },
+                                modifier = Modifier.testTag("register_privacy_checkbox")
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Acepto los Términos de Servicio y autorizo el Tratamiento de mis Datos Personales conforme a la Ley 1581 de 2012 de Colombia.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                PrivacyNotice(buttonText = "Ver política de datos y términos completos")
+                            }
+                        }
                     }
                     // Submit Button
                     Button(

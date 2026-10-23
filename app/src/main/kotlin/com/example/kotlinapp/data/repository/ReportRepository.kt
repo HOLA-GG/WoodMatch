@@ -128,6 +128,43 @@ object ReportRepository {
         }
     }
 
+    /**
+     * Crea un punto de residuo verificado por IA con coordenadas de Suba y estado PENDIENTE.
+     */
+    suspend fun crearPuntoResiduo(
+        coordenadas: org.osmdroid.util.GeoPoint,
+        tipo: String,
+        resumen: String,
+        userId: String = "guest",
+        userName: String = "Guardián de Suba",
+        imageUri: String? = null,
+        estado: com.example.kotlinapp.data.model.EstadoResiduo = com.example.kotlinapp.data.model.EstadoResiduo.PENDIENTE
+    ): Result<TreeReport> = withContext(Dispatchers.IO) {
+        runCatching {
+            checkNotNull(appContext) { "El almacenamiento local no está disponible" }
+            val id = "rep_ia_${UUID.randomUUID()}"
+            val now = System.currentTimeMillis()
+            val localPhoto = imageUri?.let { runCatching { savePhotoLocally(it, id) }.getOrNull() }
+            val report = TreeReport(
+                id = id,
+                userId = userId,
+                userName = userName,
+                description = resumen.trim(),
+                species = tipo,
+                condition = tipo,
+                latitude = coordenadas.latitude,
+                longitude = coordenadas.longitude,
+                imageUri = localPhoto,
+                timestamp = now,
+                formattedDate = formatDate(now),
+                expiresAt = now + REPORT_VALIDITY_MS,
+                status = estado.name
+            )
+            check(save(listOf(report) + load())) { "No se pudo registrar el punto en el mapa" }
+            report
+        }
+    }
+
     suspend fun deleteUserReports(userId: String) = withContext(Dispatchers.IO) {
         val all = load()
         val context = appContext ?: return@withContext
