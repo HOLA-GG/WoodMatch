@@ -157,7 +157,7 @@ object PlantNetService {
             Result.success(parseIdentificationJson(response.toString()))
         } catch (error: Exception) {
             if (error.message?.contains("límite", ignoreCase = true) == true) return@withContext Result.failure(Exception("Se alcanzó el límite de identificación de hoy. Puedes continuar sin identificar la especie."))
-            Result.failure(Exception("Identificación no disponible. Inicia sesión y comprueba tu conexión; puedes continuar sin identificar la especie."))
+            Result.failure(Exception(error.message ?: "Identificación no disponible. Comprueba tu conexión."))
         }
     }
 
@@ -261,7 +261,7 @@ object PlantNetService {
                 val scientific = row.optString("scientificName").takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 TreeSpecies(id = "remote_${scientific.hashCode()}", commonName = row.optString("commonName", scientific), scientificName = scientific, season = "Sin datos", co2AbsorptionPerYearKg = -1, description = "Dato consultado en Pl@ntNet; requiere revisión.", nativeRegion = "Sin datos", conservationStatus = "Sin verificar", tag = "Consulta remota")
             })
-        } catch (_: Exception) { Result.failure(Exception("Consulta remota no disponible. Puedes buscar en el catálogo local.")) }
+        } catch (error: Exception) { Result.failure(Exception(error.message ?: "Consulta remota no disponible.")) }
     }
 
     private fun getRepresentativeBotanicalImage(genus: String, scientific: String): String {
