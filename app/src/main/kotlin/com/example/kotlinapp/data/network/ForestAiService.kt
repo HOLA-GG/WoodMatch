@@ -25,6 +25,7 @@ object ForestAiService {
                             "Sugerencia Gemini · Requiere revisión humana\n\n" +
                                 cleanFormatting(text.take(3000))
                         )
+                    return@withContext Result.failure(IllegalStateException("Gemini no devolvió una respuesta válida."))
                 } catch (error: Exception) {
                     return@withContext Result.failure(
                         IllegalStateException(
