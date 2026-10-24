@@ -114,7 +114,6 @@ fun SpeciesScreen(
 
     var isQueryingRegion by remember { mutableStateOf(false) }
     var selectedSpecies by remember { mutableStateOf<TreeSpecies?>(null) }
-    var showAddDialog by remember { mutableStateOf(false) }
     var showScannerDialog by remember { mutableStateOf(false) }
     var showAiConsultantDialog by remember { mutableStateOf(false) }
 
@@ -878,163 +877,6 @@ fun SpeciesScreen(
         )
     }
 
-    // 4. REGISTRO MANUAL DE ESPECIE
-    if (showAddDialog) {
-        var commonName by remember { mutableStateOf("") }
-        var scientificName by remember { mutableStateOf("") }
-        var family by remember { mutableStateOf("") }
-        var category by remember { mutableStateOf("Árbol") }
-        var regionGroup by remember { mutableStateOf("Andina") }
-        var season by remember { mutableStateOf("Primavera") }
-        var co2Absorption by remember { mutableStateOf("25") }
-        var nativeRegion by remember { mutableStateOf("") }
-        var description by remember { mutableStateOf("") }
-        var imageUrl by remember { mutableStateOf("") }
-
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = {
-                Text("Registrar Especie Forestal", style = MaterialTheme.typography.titleLarge)
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Región Biogeográfica:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        regions.filter { it != "Todas" }.forEach { reg ->
-                            FilterChip(
-                                selected = regionGroup == reg,
-                                onClick = { regionGroup = reg },
-                                label = { Text(reg) },
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Categoría:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf("Árbol", "Arbusto", "Flor / Planta").forEach { cat ->
-                            FilterChip(
-                                selected = category == cat,
-                                onClick = { category = cat },
-                                label = { Text(cat) },
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = commonName,
-                        onValueChange = { commonName = it },
-                        label = { Text("Nombre Común (ej. Guayacán)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = scientificName,
-                        onValueChange = { scientificName = it },
-                        label = { Text("Nombre Científico (ej. Handroanthus)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = family,
-                        onValueChange = { family = it },
-                        label = { Text("Familia Botánica (ej. Bignoniaceae)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = imageUrl,
-                        onValueChange = { imageUrl = it },
-                        label = { Text("Enlace de Fotografía") },
-                        leadingIcon = { Icon(Icons.Filled.Image, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = co2Absorption,
-                        onValueChange = { co2Absorption = it },
-                        label = { Text("Fijación CO₂ (kg/año)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = nativeRegion,
-                        onValueChange = { nativeRegion = it },
-                        label = { Text("Hábitat Detallado (ej. Bosque Seco Tropical)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Descripción botánica y ecológica") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 3
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (commonName.isNotBlank() && scientificName.isNotBlank()) {
-                            val newSpecies = TreeSpecies(
-                                id = "sp_${UUID.randomUUID().toString().take(8)}",
-                                commonName = commonName.trim(),
-                                scientificName = scientificName.trim(),
-                                season = season,
-                                co2AbsorptionPerYearKg = co2Absorption.toIntOrNull() ?: 20,
-                                description = description.ifBlank { "Espécimen vegetal registrado por la comunidad." },
-                                nativeRegion = nativeRegion.ifBlank { "$regionGroup, Colombia" },
-                                conservationStatus = "Evaluación comunitaria",
-                                tag = category,
-                                category = category,
-                                imageUrl = imageUrl.trim(),
-                                family = family.trim(),
-                                regionGroup = regionGroup
-                            )
-                            coroutineScope.launch {
-                                SpeciesRepository.addSpecies(newSpecies)
-                                Toast.makeText(context, "Especie guardada en tu catálogo", Toast.LENGTH_SHORT).show()
-                                showAddDialog = false
-                            }
-                        } else {
-                            Toast.makeText(context, "Por favor completa el nombre común y científico", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                ) {
-                    Text("Guardar Especie")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
-        )
-    }
-
     Scaffold(
         topBar = {
             WoodMatchTopAppBar(
@@ -1066,14 +908,7 @@ fun SpeciesScreen(
                     Icon(Icons.Filled.CameraAlt, contentDescription = "Escanear Especie")
                 }
 
-                FloatingActionButton(
-                    onClick = { showAddDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.testTag("btn_add_species")
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Registrar Especie")
-                }
+
             }
         }
     ) { innerPadding ->
