@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "woodmatch-piloto",
+    "pilot": "woodmatch-piloto"
+  }
+}
