@@ -7,7 +7,7 @@ Esta entrega se prepara sobre `29afd17e057aa6d7f32ef7a3d0c5b5e20f19e019`. Las fe
 - 16 pruebas de dominio aprobadas: reservas concurrentes, roles, edición y revisión, conversión de hallazgos, idempotencia, pases y doble confirmación; presupuesto de fotos concurrente.
 - 5 pruebas Edge con fixtures aprobadas: tokens inválidos/vencidos/de otro proyecto/anónimos, cuentas deshabilitadas o revocadas, cuotas, validación de entradas y exclusión de datos privados de logs. No consumen servicios reales.
 - Comprobación de tipos Deno del servidor.
-- Android: APK debug compilado y 20 pruebas unitarias aprobadas; lint debug sin errores. La validación final release/AAB/lint se adjunta como informes de build.
+- Android: APK debug compilado y 20 pruebas unitarias aprobadas; lint debug sin errores. APK release ofuscado y AAB generados, lint release sin errores; los informes se adjuntan con los assets. Los binarios release todavía requieren firma de distribución.
 - Pruebas de reglas y transacciones REST listas para ejecutarse con Firestore Emulator y obligatorias en GitHub Actions. La ejecución local fue bloqueada al descargar `cloud-firestore-emulator-v1.19.8.jar`: respuesta 403 «Domain forbidden» de la política de red del entorno. No se eludió ese bloqueo.
 
 ## Comprobaciones que requieren configuración o dispositivo

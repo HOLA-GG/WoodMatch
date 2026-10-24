@@ -4,6 +4,9 @@ on:
   push:
     branches: [feat/woodmatch-free-pilot]
   workflow_dispatch:
+concurrency:
+  group: pilot-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

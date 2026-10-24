@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
@@ -568,8 +570,12 @@ fun ChoiceRow(options: List<Pair<String, String>>, value: String, onSelect: (Str
 
 @Composable
 fun CheckLine(checked: Boolean, label: String, onChange: (Boolean) -> Unit) {
-    Row {
-        Checkbox(checked = checked, onCheckedChange = onChange)
+    Row(
+        Modifier.fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChange)
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
         Text(label, modifier = Modifier.padding(top = 12.dp).weight(1f))
     }
 }
