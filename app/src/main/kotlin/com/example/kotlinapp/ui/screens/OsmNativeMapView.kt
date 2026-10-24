@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.view.MotionEvent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -96,6 +97,15 @@ fun OsmNativeMapView(
                         )
                     )
                     setMultiTouchControls(true)
+                    setOnTouchListener { view, event ->
+                        when (event.actionMasked) {
+                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
+                                view.parent?.requestDisallowInterceptTouchEvent(true)
+                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                                view.parent?.requestDisallowInterceptTouchEvent(false)
+                        }
+                        false
+                    }
                     minZoomLevel = 10.0
                     maxZoomLevel = 19.0
                     zoomController.setVisibility(
