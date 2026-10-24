@@ -283,6 +283,23 @@ fun PublicationWizard(
                     message = null
                 }
                 Text("La foto se asociará al punto que confirmes, aunque provenga de tu galería.")
+                var guiding by remember { mutableStateOf(false) }
+                OutlinedButton(
+                    enabled = !guiding,
+                    onClick = {
+                        guiding = true
+                        scope.launch {
+                            ForestAiService.guideNewUserReport(material, sector.name, description)
+                                .onSuccess { message = it }
+                                .onFailure {
+                                    message = it.message ?: "No se pudo consultar la guía. Intenta otra vez."
+                                }
+                            guiding = false
+                        }
+                    },
+                ) {
+                    Text(if (guiding) "Consultando Gemini…" else "Guía asistida del reporte")
+                }
                 OutlinedButton(
                     enabled = !locating,
                     onClick = {
