@@ -1,0 +1,9 @@
+{
+  "indexes": [
+    {"collectionGroup":"wood_wastes","queryScope":"COLLECTION","fields":[{"fieldPath":"schemaVersion","order":"ASCENDING"},{"fieldPath":"status","order":"ASCENDING"}]}
+  ],
+  "fieldOverrides": [
+    {"collectionGroup":"operations","fieldPath":"result","indexes":[]},
+    {"collectionGroup":"withdrawal_requests","fieldPath":"receipt","indexes":[]}
+  ]
+}

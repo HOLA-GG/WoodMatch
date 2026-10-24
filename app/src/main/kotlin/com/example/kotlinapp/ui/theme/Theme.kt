@@ -1,6 +1,9 @@
 package com.example.kotlinapp.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import com.example.kotlinapp.data.model.SeasonalTheme
@@ -96,6 +99,7 @@ private val SnowColorScheme = lightColorScheme(
 @Composable
 fun WoodMatchTheme(
     season: SeasonalTheme = SeasonalTheme.SUMMER,
+    appearance: String = "SYSTEM",
     content: @Composable () -> Unit
 ) {
     val colorScheme = when (season) {
@@ -105,8 +109,21 @@ fun WoodMatchTheme(
         SeasonalTheme.SNOW -> SnowColorScheme
     }
 
+    val dark = appearance == "DARK" || (appearance == "SYSTEM" && isSystemInDarkTheme())
+    val accent = when(season) {
+        SeasonalTheme.AUTUMN -> Color(0xFFFFB68A)
+        SeasonalTheme.SPRING -> Color(0xFFB3DDBD)
+        SeasonalTheme.SNOW -> Color(0xFFABD4EA)
+        else -> Color(0xFFA5D0B9)
+    }
+    val resolved = if(dark) darkColorScheme(
+        primary=accent,onPrimary=Color(0xFF15251C),primaryContainer=Color(0xFF294737),onPrimaryContainer=Color(0xFFD5EEDC),
+        secondary=accent,secondaryContainer=Color(0xFF36493C),onSecondaryContainer=Color(0xFFE3F1E4),
+        background=Color(0xFF191C18),onBackground=Color(0xFFF3EEE5),surface=Color(0xFF191C18),onSurface=Color(0xFFF3EEE5),
+        surfaceVariant=Color(0xFF30372E),onSurfaceVariant=Color(0xFFD4DCCF),outline=Color(0xFFA0AA9B)
+    ) else colorScheme.copy(background=SummerBackground,surface=SummerSurface)
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = resolved,
         typography = Typography,
         content = content
     )

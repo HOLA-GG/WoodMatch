@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-const val PRIVACY_VERSION = "2026-PRODUCCION-1.1"
+const val PRIVACY_VERSION = "2026-PILOTO-2"
 
 @Composable
 fun PrivacyNotice(
@@ -60,7 +60,7 @@ fun PrivacyNotice(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "De conformidad con la Ley Estatutaria 1581 de 2012 y el Decreto 1074 de 2015 de la República de Colombia, WoodMatch garantiza la debida protección, confidencialidad y tratamiento legítimo de tus datos personales.",
+                        text = "De conformidad con la Ley Estatutaria 1581 de 2012 y el Decreto 1074 de 2015 de la República de Colombia, este piloto ofrece controles para acceder, actualizar y eliminar tus datos. Antes de compartir información, revisa el alcance del proyecto y los canales de contacto facilitados por su responsable.",
                         style = MaterialTheme.typography.bodySmall
                     )
 
@@ -85,7 +85,7 @@ fun PrivacyNotice(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "WoodMatch no comparte en vistas públicas la dirección de tu domicilio ni tus datos de contacto privados. Las coordenadas en el mapa corresponden a la localización del residuo o incidente forestal en la localidad de Suba.",
+                        text = "WoodMatch no comparte en vistas públicas la dirección de tu domicilio ni tus datos de contacto privados. Las coordenadas exactas del hallazgo o material se comparten con la comunidad autenticada únicamente después de tu confirmación. Las fotos se procesan para reducir su tamaño y retirar metadatos. No publiques direcciones privadas sin autorización. Los comprobantes de entrega quedan privados entre las dos personas.",
                         style = MaterialTheme.typography.bodySmall
                     )
 
@@ -100,9 +100,12 @@ fun PrivacyNotice(
                                 "• Actualizar tus datos personales y teléfono en cualquier momento desde los Ajustes de tu cuenta.\n" +
                                 "• Cambiar tu rol en la economía circular (Generador o Receptor) según tu actividad.\n" +
                                 "• Solicitar la eliminación total e irreversible de tu cuenta y de tus datos desde la sección 'Eliminar cuenta y datos' en Ajustes.\n" +
-                                "• Contactar al canal oficial: privacidad@woodmatch.co.",
+                                "• Contactar al responsable del proyecto mediante el canal que te facilitó al invitarte al piloto.",
                         style = MaterialTheme.typography.bodySmall
                     )
+
+                    Text("Servicios y consultas", style = MaterialTheme.typography.labelLarge)
+                    Text("Las cuentas y publicaciones se gestionan con Firebase; las fotos y operaciones del piloto con Supabase. Si solicitas ayuda, el texto se envía a Gemini; al identificar una planta, la imagen se envía a Pl@ntNet. Sus condiciones de uso y tratamiento aplican. Las sugerencias requieren revisión humana. No incluyas información personal en las consultas. Los diagnósticos de errores son opcionales y se pueden desactivar en tu perfil.", style = MaterialTheme.typography.bodySmall)
 
                     Text(
                         text = "4. Compromiso y Responsabilidad Ambiental",
@@ -111,7 +114,7 @@ fun PrivacyNotice(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "El usuario se compromete a registrar información veraz y a publicar exclusivamente residuos leñosos sobre los cuales tenga debida autorización de gestión, promoviendo la sostenibilidad y la preservación ecológica de Suba.",
+                        text = "El usuario se compromete a registrar información veraz y a ofrecer únicamente materiales cuya entrega tenga autorizada; los hallazgos solo informan y no autorizan su retiro, promoviendo la sostenibilidad y la preservación ecológica de Suba.",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

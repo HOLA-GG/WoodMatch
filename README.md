@@ -1,30 +1,18 @@
-# WoodMatch · Android
+# WoodMatch · Piloto Android
 
-Aplicación de prueba para publicar y encontrar residuos leñosos urbanos en Suba, Bogotá, y coordinar retiros entre generadores y receptores.
+Comunidad de recuperación de madera en Suba, Bogotá: hallazgos, podas, estibas, tablas y muebles; publicaciones con foto y ubicación confirmada; retiros con QR/código y confirmación de ambas personas.
 
-Abre **esta carpeta raíz**, no `Kotlin_App` (prototipo histórico). Usa JDK 21, Android SDK 36 y el Gradle Wrapper incluido.
+Abre **esta carpeta raíz** en Android Studio. `Kotlin_App/` conserva el prototipo histórico.
 
-## Ejecutar y comprobar
+- JDK 21, SDK Android 36 y Gradle Wrapper incluido.
+- `bash gradlew --max-workers=2 assembleDebug testDebugUnitTest lintDebug`
+- `bash gradlew --max-workers=2 assembleRelease bundleRelease lintRelease`
+- APK de pruebas: `app/build/outputs/apk/debug/app-debug.apk`.
+- Identidad independiente: `com.example.kotlinapp.pilot`; puede coexistir con la app anterior.
+- Release y AAB requieren una firma custodiada antes de distribuirse como producción.
 
-```bash
-./gradlew --max-workers=2 assembleDebug testDebugUnitTest lintDebug
-./gradlew --max-workers=2 assembleRelease
-```
+El piloto utiliza Firebase **Spark** para cuentas y datos, Supabase **Free** para fotos privadas y funciones, OSM para el mapa, y las cuotas gratuitas de Gemini/Pl@ntNet. **No se activa facturación.** Las funciones de `functions/` son históricas y ya no forman parte del despliegue activo.
 
-- APK de prueba: `app/build/outputs/apk/debug/app-debug.apk`.
-- Release ofuscada con R8 y recursos reducidos: `app/build/outputs/apk/release/` (sin firma productiva).
-- Mapa R8: `app/build/outputs/mapping/release/mapping.txt`. Custodiarlo para interpretar errores; no distribuirlo públicamente.
-- Invitado: permite consultar especies; no simula una cuenta autenticada ni operaciones de retiro.
-- Publicaciones, fotografías compartidas y retiros: requieren Firebase, conexión, cuenta y backend desplegado. Una falta de configuración muestra un error; no se presenta un guardado ficticio.
+La configuración y los secretos del entorno anterior no vienen con el código. Un APK sin configuración permite explorar especies y muestra claramente las funciones comunitarias pendientes de conexión.
 
-## Conectar Firebase y servicios
-
-Coloca la configuración Android del proyecto de pruebas en `app/google-services.json` (ignorada por Git). Configura Authentication, Firestore, Storage y App Check. Las funciones de `functions/` usan Node 22. Los secretos de PlantNet y Gemini se configuran en Secret Manager; no se incorporan desde `.env` al APK.
-
-Consulta [Operación, seguridad y publicación](docs/OPERACION_Y_SEGURIDAD.md) para configuración, pruebas, QR, firma, privacidad y bloqueos pendientes. El script `scripts/deploy-firebase.sh` exige un proyecto explícito y configuración previa; no se ha ejecutado contra un proyecto remoto en esta entrega.
-
-## Privacidad y límites de la versión
-
-El aviso dentro de la app es de prueba. `Cookietech@woodmatch.org` es un contacto ficticio pendiente de sustitución. Utiliza datos ficticios hasta definir el responsable real, la política de tratamiento/retención y los canales de derechos. La app no acredita identidad física mediante QR ni certifica especies, calidad de madera o cumplimiento jurídico.
-
-El historial nuevo corresponde a publicaciones y solicitudes en el backend. Los reportes locales del prototipo anterior no se migran automáticamente. Las publicaciones antiguas sin `schemaVersion=2` quedan fuera del catálogo nuevo para evitar exponer datos que no hayan sido revisados.
+Consulta [Configuración, pruebas y operación del piloto](docs/PILOTO.md), [Validación de esta entrega](docs/VALIDACION_PILOTO.md) y [notas de la prerelease](docs/PILOT_RELEASE_NOTES.md).

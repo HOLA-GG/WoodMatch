@@ -37,7 +37,7 @@ fun AccountDataControls(onDeleted: () -> Unit) {
                     put("rol", user.role)
                     put("ciudad", user.city)
                 }
-                val file = File(context.cacheDir, "woodmatch-mis-datos.json")
+                val file = File(File(context.cacheDir, "exports").apply { mkdirs() }, "woodmatch-mis-datos.json")
                 file.writeText(data.toString(2))
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(Intent.ACTION_SEND).setType("application/json")

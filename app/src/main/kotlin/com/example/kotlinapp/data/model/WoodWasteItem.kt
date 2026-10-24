@@ -1,9 +1,10 @@
 package com.example.kotlinapp.data.model
 
 enum class WasteStatus(val displayName: String) {
+    HALLAZGO("Hallazgo"),
     DISPONIBLE("Disponible"),
-    RESERVADO("En Reserva"),
-    APROVECHADO("Aprovechado / Retirado"),
+    RESERVADO("Reservado"),
+    APROVECHADO("Recolectado"),
     INACTIVO("Inactivo / Cancelado")
 }
 
@@ -16,6 +17,12 @@ enum class WasteCategory(val displayName: String, val description: String) {
 data class WoodWasteItem(
     val id: String = "",
     val schemaVersion: Int = 2,
+    val entryType: String = "OFERTA",
+    val revision: Int = 0,
+    val locationConfirmed: Boolean = false,
+    val exactLocationConsent: Boolean = false,
+    val authorizedToOffer: Boolean = false,
+    val imagePath: String? = null,
     val title: String = "",
     val description: String = "",
     val wasteType: String = "Ramas y podas de arbolado",
@@ -55,7 +62,7 @@ data class WoodWasteItem(
         get() = try {
             WasteStatus.valueOf(status.uppercase())
         } catch (_: Exception) {
-            WasteStatus.DISPONIBLE
+            WasteStatus.INACTIVO
         }
 
     @get:com.google.firebase.firestore.Exclude

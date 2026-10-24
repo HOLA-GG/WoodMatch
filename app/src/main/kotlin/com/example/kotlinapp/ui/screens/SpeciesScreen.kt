@@ -192,7 +192,8 @@ fun SpeciesScreen(
 
     // 1. MODAL ESCÁNER BOTÁNICO
     if (showScannerDialog) {
-        var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+        var selectedImagePath by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+        val selectedImageUri = selectedImagePath?.let(Uri::parse)
         var imageUrlInput by remember { mutableStateOf("") }
         var selectedOrgan by remember { mutableStateOf("auto") }
         var isIdentifying by remember { mutableStateOf(false) }
@@ -200,43 +201,6 @@ fun SpeciesScreen(
         var errorMessage by remember { mutableStateOf<String?>(null) }
         var assignRegion by remember { mutableStateOf("Andina") }
 
-        val photoPickerLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickVisualMedia()
-        ) { uri ->
-            if (uri != null) {
-                selectedImageUri = uri
-                imageUrlInput = ""
-                identificationResult = null
-                errorMessage = null
-            }
-        }
-        var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
-        val cameraLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.TakePicture()
-        ) { captured ->
-            if (captured) {
-                selectedImageUri = pendingCameraUri
-                imageUrlInput = ""
-                identificationResult = null
-                errorMessage = null
-            }
-            pendingCameraUri = null
-        }
-
-        fun takeBotanicalPhoto() {
-            runCatching {
-                val picturesDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-                    ?: error("No se pudo preparar el almacenamiento de la cámara")
-                val file = File(picturesDir, "plant_${System.currentTimeMillis()}.jpg")
-                file.parentFile?.mkdirs()
-                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-            }.onSuccess { uri ->
-                pendingCameraUri = uri
-                cameraLauncher.launch(uri)
-            }.onFailure { error ->
-                errorMessage = error.message ?: "No se pudo abrir la cámara."
-            }
-        }
 
         AlertDialog(
             onDismissRequest = { showScannerDialog = false },
@@ -266,42 +230,12 @@ fun SpeciesScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                    OutlinedButton(
-                        onClick = {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Galería")
+                    com.example.kotlinapp.ui.components.PhotoAttachment { uri ->
+                        selectedImagePath = uri.toString()
+                        imageUrlInput = ""
+                        identificationResult = null
+                        errorMessage = null
                     }
-                    OutlinedButton(
-                        onClick = { takeBotanicalPhoto() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cámara")
-                    }
-                    }
-
-                    OutlinedTextField(
-                        value = imageUrlInput,
-                        onValueChange = {
-                            imageUrlInput = it
-                            if (it.isNotBlank()) selectedImageUri = null
-                        },
-                        label = { Text("O ingresa enlace directo de la imagen") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
 
                     // Vista previa de imagen seleccionada
                     if (selectedImageUri != null || imageUrlInput.isNotBlank()) {
@@ -1299,7 +1233,7 @@ fun SpeciesScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "¿Consultar '$searchQuery' en Pl@ntNet API?",
+                                    text = "¿Consultar '$searchQuery' en Pl@ntNet?",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Medium
@@ -1488,7 +1422,7 @@ fun SpeciesScreen(
                                             color = MaterialTheme.colorScheme.onPrimary
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Consultando Pl@ntNet API...")
+                                        Text("Consultando Pl@ntNet...")
                                     } else {
                                         Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(8.dp))

@@ -20,7 +20,7 @@ val SummerOnSurfaceVariant = Color(0xFF414844)
 val SummerOutline = Color(0xFF717973)
 
 // Autumn Palette (Otoño)
-val AutumnPrimary = Color(0xFFD84315)
+val AutumnPrimary = Color(0xFFB83C12)
 val AutumnOnPrimary = Color(0xFFFFFFFF)
 val AutumnPrimaryContainer = Color(0xFF870000)
 val AutumnOnPrimaryContainer = Color(0xFFFFDBC8)
