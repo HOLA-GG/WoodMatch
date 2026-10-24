@@ -33,12 +33,15 @@ object PhotoStorage {
             BitmapFactory.decodeFile(input.path, bounds)
             require(bounds.outWidth > 0 && bounds.outHeight > 0)
             var sample = 1
-            while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 1600) sample *= 2
+            while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 1024) sample *= 2
             val original =
                 requireNotNull(
                     BitmapFactory.decodeFile(
                         input.path,
-                        BitmapFactory.Options().apply { inSampleSize = sample },
+                        BitmapFactory.Options().apply {
+                            inSampleSize = sample
+                            inPreferredConfig = Bitmap.Config.RGB_565
+                        },
                     )
                 )
             val orientation =
