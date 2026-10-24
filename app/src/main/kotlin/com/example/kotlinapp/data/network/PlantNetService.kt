@@ -153,10 +153,10 @@ object PlantNetService {
         try {
             check(com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated) { "Inicia sesión para consultar identificación botánica." }
             require(imageBytes.size <= 3 * 1024 * 1024) { "La imagen supera 3 MB." }
-            val response = com.google.firebase.functions.FirebaseFunctions.getInstance().getHttpsCallable("identifyPlant")
-                .call(mapOf("image" to android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP), "organ" to organ)).await()
-            Result.success(parseIdentificationJson(JSONObject(response.data as Map<*, *>).toString()))
-        } catch (_: Exception) {
+            val response = PilotApi.call("identifyPlant", mapOf("image" to android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP), "organ" to organ))
+            Result.success(parseIdentificationJson(response.toString()))
+        } catch (error: Exception) {
+            if (error.message?.contains("límite", ignoreCase = true) == true) return@withContext Result.failure(Exception("Se alcanzó el límite de identificación de hoy. Puedes continuar sin identificar la especie."))
             Result.failure(Exception("Identificación no disponible. Inicia sesión y comprueba tu conexión; puedes continuar sin identificar la especie."))
         }
     }
@@ -254,13 +254,12 @@ object PlantNetService {
     ): Result<List<TreeSpecies>> = withContext(Dispatchers.IO) {
         try {
             check(com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated)
-            val response = com.google.firebase.functions.FirebaseFunctions.getInstance().getHttpsCallable("searchSpecies")
-                .call(mapOf("query" to query.take(120))).await()
-            val values = (response.data as? Map<*, *>)?.get("species") as? List<*> ?: emptyList<Any>()
-            Result.success(values.take(20).mapNotNull { value ->
-                val row = value as? Map<*, *> ?: return@mapNotNull null
-                val scientific = row["scientificName"] as? String ?: return@mapNotNull null
-                TreeSpecies(id = "remote_${scientific.hashCode()}", commonName = row["commonName"] as? String ?: scientific, scientificName = scientific, season = "Sin datos", co2AbsorptionPerYearKg = -1, description = "Dato consultado en Pl@ntNet; requiere revisión.", nativeRegion = "Sin datos", conservationStatus = "Sin verificar", tag = "Consulta remota")
+            val response = PilotApi.call("searchSpecies", mapOf("query" to query.take(120)))
+            val values = response.optJSONArray("species") ?: JSONArray()
+            Result.success((0 until values.length()).mapNotNull { index ->
+                val row = values.optJSONObject(index) ?: return@mapNotNull null
+                val scientific = row.optString("scientificName").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                TreeSpecies(id = "remote_${scientific.hashCode()}", commonName = row.optString("commonName", scientific), scientificName = scientific, season = "Sin datos", co2AbsorptionPerYearKg = -1, description = "Dato consultado en Pl@ntNet; requiere revisión.", nativeRegion = "Sin datos", conservationStatus = "Sin verificar", tag = "Consulta remota")
             })
         } catch (_: Exception) { Result.failure(Exception("Consulta remota no disponible. Puedes buscar en el catálogo local.")) }
     }

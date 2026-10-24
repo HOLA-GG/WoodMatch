@@ -9,6 +9,7 @@ plugins {
 // cuando cada entorno incorpora su propio app/google-services.json (ignorado por Git).
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 android {
@@ -19,20 +20,24 @@ android {
         applicationId = "com.example.kotlinapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "2.0.0-pilot"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
 
-        val geminiApiKey = (project.findProperty("GEMINI_API_KEY") as? String)
-            ?: System.getenv("GEMINI_API_KEY")
-            ?: ""
+        // Only public endpoint configuration belongs in the APK.
+        val endpoint = providers.gradleProperty("WOODMATCH_API_URL").orElse(providers.environmentVariable("WOODMATCH_API_URL")).getOrElse("")
+        require(endpoint.isEmpty() || endpoint.matches(Regex("https://[a-z0-9-]+\\.supabase\\.co/functions/v1/woodmatch")))
+        buildConfigField("String", "WOODMATCH_API_URL", "\"$endpoint\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"\"")
         buildConfigField("String", "PLANTNET_API_KEY", "\"\"")
-        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+
     }
+
+    defaultConfig { applicationId = "com.example.kotlinapp.pilot" }
 
     buildTypes {
         release {
@@ -85,8 +90,6 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation("com.google.firebase:firebase-storage")
-    implementation("com.google.firebase:firebase-functions")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     implementation("com.google.zxing:core:3.5.3")
@@ -94,7 +97,8 @@ dependencies {
     implementation(libs.coil.compose)
 
     // Generative AI (Gemini) SDK
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // OpenStreetMap Android SDK
     implementation("org.osmdroid:osmdroid-android:6.1.18")

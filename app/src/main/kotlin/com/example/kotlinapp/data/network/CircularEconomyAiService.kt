@@ -32,8 +32,8 @@ object CircularEconomyAiService {
         if (com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated) {
             try {
                 val prompt = "Sugiere usos prudentes de este residuo leñoso, sin certificar especie ni resistencia: tipo=${wasteType.take(120)}, estado=${materialState.take(120)}, especie reportada=${speciesName.take(160)}. Máximo 1000 caracteres."
-                val response = com.google.firebase.functions.FirebaseFunctions.getInstance().getHttpsCallable("botanicalAdvice").call(mapOf("prompt" to prompt)).await()
-                val text = ((response.data as Map<*, *>)["text"] as? String)?.take(1500)
+                val response = PilotApi.call("botanicalAdvice", mapOf("prompt" to prompt))
+                val text = (response.optString("text"))?.take(1500)
                 if (!text.isNullOrBlank()) return@withContext AiValorizationSuggestion(
                     determineFallbackCategory(wasteType, materialState), text,
                     "Categoría interna estimada localmente; recomendaciones de Gemini pendientes de tu revisión.", remote = true)

@@ -1,0 +1,84 @@
+name: WoodMatch pilot
+on:
+  pull_request:
+  push:
+    branches: [feat/woodmatch-free-pilot]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend-tests/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.6
+      - name: Domain and access rules
+        run: |
+          npm ci --prefix backend-tests --no-audit --no-fund
+          npm --prefix backend-tests test
+          npm --prefix backend-tests run test:rules
+      - name: Edge authentication and type checks
+        run: |
+          deno check supabase/functions/woodmatch/index.ts
+          deno test --allow-env backend-tests/edge.test.ts
+      - name: Optional pilot client configuration
+        if: github.event_name != 'pull_request'
+        env:
+          CLIENT_JSON: ${{ secrets.WOODMATCH_GOOGLE_SERVICES_JSON }}
+          API_URL: ${{ vars.WOODMATCH_API_URL }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, re
+          raw = os.environ.get('CLIENT_JSON', '')
+          url = os.environ.get('API_URL', '')
+          if raw:
+              data = json.loads(raw)
+              packages = [c.get('client_info', {}).get('android_client_info', {}).get('package_name') for c in data.get('client', [])]
+              assert 'com.example.kotlinapp.pilot' in packages, 'Register the pilot application ID in Firebase first'
+              pathlib.Path('app/google-services.json').write_text(raw)
+          if url:
+              assert re.fullmatch(r'https://[a-z0-9-]+\.supabase\.co/functions/v1/woodmatch', url)
+              with open(os.environ['GITHUB_ENV'], 'a') as output:
+                  output.write('WOODMATCH_API_URL=' + url + '\n')
+          PY
+      - name: Android builds, tests and lint
+        run: bash gradlew --max-workers=2 assembleDebug assembleRelease bundleRelease testDebugUnitTest lintDebug lintRelease
+      - name: Package review assets
+        run: bash scripts/package-pilot.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: woodmatch-pilot-${{ github.sha }}
+          path: release-assets/
+          retention-days: 30
+  prerelease:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/woodmatch-free-pilot'
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: woodmatch-pilot-${{ github.sha }}
+          path: release-assets
+      - name: Publish academic pilot prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="pilot-${GITHUB_SHA:0:8}"
+          gh release create "$tag" release-assets/* --target "$GITHUB_SHA" --prerelease --title "WoodMatch 2.0 · Piloto ${GITHUB_SHA:0:8}" --notes-file docs/PILOT_RELEASE_NOTES.md

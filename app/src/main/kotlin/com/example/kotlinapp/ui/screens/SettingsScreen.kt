@@ -157,7 +157,7 @@ fun SettingsScreen(
                 put("fecha_exportacion", System.currentTimeMillis())
                 put("plataforma", "WoodMatch Android - Suba")
             }
-            val cacheFile = File(context.cacheDir, "woodmatch_datos_usuario.json")
+            val cacheFile = File(File(context.cacheDir, "exports").apply { mkdirs() }, "woodmatch_datos_usuario.json")
             cacheFile.writeText(json.toString(2))
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", cacheFile)
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -267,7 +267,7 @@ fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Esta acción es definitiva e irreversible. Se eliminarán permanentemente tu perfil, publicaciones, solicitudes y credenciales de acceso de WoodMatch y Firebase.",
+                        text = "Esta acción es definitiva e irreversible. Se eliminarán permanentemente tu perfil, publicaciones, solicitudes y credenciales de acceso de WoodMatch.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(

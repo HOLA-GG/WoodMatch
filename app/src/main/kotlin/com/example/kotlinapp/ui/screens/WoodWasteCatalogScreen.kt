@@ -518,7 +518,8 @@ fun WoodWasteCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val statusColor = when (item.typedStatus) {
-                        WasteStatus.DISPONIBLE -> MaterialTheme.colorScheme.primary
+                        WasteStatus.HALLAZGO -> MaterialTheme.colorScheme.tertiary
+                    WasteStatus.DISPONIBLE -> MaterialTheme.colorScheme.primary
                         WasteStatus.RESERVADO -> MaterialTheme.colorScheme.tertiary
                         WasteStatus.APROVECHADO -> MaterialTheme.colorScheme.secondary
                         WasteStatus.INACTIVO -> MaterialTheme.colorScheme.error

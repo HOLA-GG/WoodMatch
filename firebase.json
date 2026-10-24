@@ -1,16 +1,7 @@
 {
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "woodmatch",
-      "runtime": "nodejs22"
-    }
-  ],
   "firestore": {
-    "rules": "firestore.rules"
-  },
-  "storage": {
-    "rules": "storage.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "emulators": {
     "firestore": {

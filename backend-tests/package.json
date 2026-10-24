@@ -1,0 +1,14 @@
+{
+  "name": "woodmatch-pilot-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test domain.test.mjs",
+    "test:rules": "firebase emulators:exec --config ../firebase.json --project demo-woodmatch-pilot --only firestore 'node --test rules.integration.mjs'"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.10.0",
+    "firebase-tools": "^14.17.0"
+  }
+}

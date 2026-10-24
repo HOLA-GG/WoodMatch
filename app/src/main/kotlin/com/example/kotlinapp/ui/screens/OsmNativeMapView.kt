@@ -1,267 +1,206 @@
 package com.example.kotlinapp.ui.screens
 
 import android.content.Context
-import android.graphics.Color as AndroidColor
-import android.graphics.drawable.Drawable
-import androidx.core.content.ContextCompat
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import android.content.Intent
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.kotlinapp.BuildConfig
 import com.example.kotlinapp.R
 import com.example.kotlinapp.data.model.WoodWasteItem
+import java.io.File
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.tileprovider.MapTileProviderBase
 import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polygon
-import java.io.File
-import kotlin.math.cos
-import kotlin.math.sin
 
-/**
- * Fuente de teselas OpenStreetMap optimizada mediante CARTO Voyager.
- * Resuelve al 100% el error 403 "Blocked tiles" de OpenStreetMap
- * (https://wiki.openstreetmap.org/wiki/Blocked_tiles) al utilizar la infraestructura de distribución
- * global de CARTO sobre datos oficiales de OpenStreetMap con soporte de alta densidad para móviles.
- */
-val CARTO_VOYAGER_TILE_SOURCE = XYTileSource(
-    "CartoVoyager",
-    0, 20, 256, ".png",
-    arrayOf(
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://d.basemaps.cartocdn.com/rastertiles/voyager/"
-    ),
-    "© OpenStreetMap contributors, © CARTO"
-)
-
-/**
- * Fuente secundaria para Zonas Verdes (Humanitarian OpenStreetMap Team)
- */
-val OSM_HOT_TILE_SOURCE = XYTileSource(
-    "OpenStreetMapHOT",
-    0, 19, 256, ".png",
-    arrayOf(
-        "https://a.tile.openstreetmap.fr/hot/",
-        "https://b.tile.openstreetmap.fr/hot/",
-        "https://c.tile.openstreetmap.fr/hot/"
-    ),
-    "© OpenStreetMap contributors, HOT"
-)
-
-/**
- * Componente nativo de OpenStreetMap para Android (osmdroid 6.1.18).
- * Renderizado nativo directo sobre Surface/Canvas, descarga de teselas optimizada
- * con almacenamiento en caché local, 0 dependencias de WebKit/WebView, y soporte
- * completo para Bogotá y la localidad de Suba.
- */
+/** One native map for browsing and selecting locations. No provider substitutions. */
 @Composable
 fun OsmNativeMapView(
     wasteItems: List<WoodWasteItem>,
-    ecologicalZones: List<EcologicalZone>,
-    showReserves: Boolean,
+    ecologicalZones: List<EcologicalZone> = emptyList(),
+    showReserves: Boolean = false,
     centerLat: Double,
     centerLng: Double,
     zoomLevel: Int,
     onWasteSelected: (WoodWasteItem) -> Unit,
-    onReserveSelected: (EcologicalZone) -> Unit,
-    modifier: Modifier = Modifier
+    onReserveSelected: (EcologicalZone) -> Unit = {},
+    modifier: Modifier = Modifier,
+    onPointSelected: ((Double, Double) -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
-
-    // Asegurar configuración de osmdroid (User-Agent conforme a políticas y directorio de caché local)
-    DisposableEffect(Unit) {
-        val config = Configuration.getInstance()
-        config.load(context, context.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE))
-        config.userAgentValue = "WoodMatchSubaApp/2.0 (com.example.kotlinapp; contact: privacidad@woodmatch.co)"
-        config.additionalHttpRequestProperties["Referer"] = "https://woodmatch.co/"
-        config.osmdroidBasePath = File(context.cacheDir, "osmdroid")
-        config.osmdroidTileCache = File(context.cacheDir, "osmdroid/tiles")
-        onDispose {
-            mapViewRef?.onDetach()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var failed by remember { mutableStateOf(false) }
+    var map by remember { mutableStateOf<MapView?>(null) }
+    val pointClick by rememberUpdatedState(onPointSelected)
+    val itemClick by rememberUpdatedState(onWasteSelected)
+    DisposableEffect(lifecycle, map) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> map?.onResume()
+                Lifecycle.Event.ON_PAUSE -> map?.onPause()
+                else -> Unit
+            }
         }
+        lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) map?.onResume()
+        onDispose { lifecycle.removeObserver(observer) }
     }
-
-    // Centrar suavemente al cambiar coordenadas de búsqueda o sector
-    LaunchedEffect(centerLat, centerLng, zoomLevel) {
-        mapViewRef?.let { map ->
-            val target = GeoPoint(centerLat, centerLng)
-            map.controller.animateTo(target, zoomLevel.toDouble(), 700L)
-        }
+    LaunchedEffect(centerLat, centerLng, zoomLevel, map) {
+        map?.controller?.setZoom(zoomLevel.toDouble())
+        map?.controller?.setCenter(GeoPoint(centerLat, centerLng))
     }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(18.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
-    ) {
+    Box(modifier) {
         AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag("osm_native_map_view"),
+            modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                val cfg = Configuration.getInstance()
-                cfg.load(ctx, ctx.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE))
-                cfg.userAgentValue = "WoodMatchSubaApp/2.0 (com.example.kotlinapp; contact: privacidad@woodmatch.co)"
-                cfg.additionalHttpRequestProperties["Referer"] = "https://woodmatch.co/"
-                cfg.osmdroidBasePath = File(ctx.cacheDir, "osmdroid")
-                cfg.osmdroidTileCache = File(ctx.cacheDir, "osmdroid/tiles")
-
+                Configuration.getInstance().apply {
+                    load(ctx, ctx.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE))
+                    userAgentValue =
+                        "WoodMatch/${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID}; https://github.com/HOLA-GG/WoodMatch)"
+                    additionalHttpRequestProperties.remove("Referer")
+                    osmdroidBasePath = File(ctx.filesDir, "osm")
+                    osmdroidTileCache = File(ctx.filesDir, "osm/tiles")
+                    expirationOverrideDuration = null
+                    expirationExtendedDuration = 0L
+                    // osmdroid honors Expires/Cache-Control, defaulting to 30 days when absent.
+                    tileFileSystemCacheMaxBytes = 150L * 1024 * 1024
+                    tileFileSystemCacheTrimBytes = 120L * 1024 * 1024
+                }
                 MapView(ctx).apply {
-                    mapViewRef = this
-                    // Usamos la fuente CartoVoyager para evitar bloqueos 403 de OpenStreetMap
-                    setTileSource(CARTO_VOYAGER_TILE_SOURCE)
-                    setMultiTouchControls(true)
-                    isTilesScaledToDpi = true
-                    zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-
-                    // Límites de zoom para nivel de calle y localidad en Suba
-                    minZoomLevel = 11.0
-                    maxZoomLevel = 20.0
-
-                    // Enfoque inicial en Suba Centro
-                    controller.setZoom(zoomLevel.toDouble().coerceAtLeast(13.5))
-                    controller.setCenter(GeoPoint(centerLat, centerLng))
-
-                    // Renderizar polígonos ecológicos y pines de reportes
-                    actualizarCapas(
-                        map = this,
-                        context = ctx,
-                        items = wasteItems,
-                        zones = ecologicalZones,
-                        showReserves = showReserves,
-                        onWasteClick = onWasteSelected,
-                        onZoneClick = onReserveSelected
+                    setTileSource(
+                        XYTileSource(
+                            "OpenStreetMapStandard",
+                            0,
+                            19,
+                            256,
+                            ".png",
+                            arrayOf("https://tile.openstreetmap.org/"),
+                            "© OpenStreetMap contributors",
+                        )
                     )
+                    setMultiTouchControls(true)
+                    minZoomLevel = 10.0
+                    maxZoomLevel = 19.0
+                    zoomController.setVisibility(
+                        CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT
+                    )
+                    contentDescription =
+                        "Mapa de publicaciones en Suba. También puedes consultarlas en la lista accesible."
+                    controller.setZoom(zoomLevel.toDouble())
+                    controller.setCenter(GeoPoint(centerLat, centerLng))
+                    tileProvider.tileRequestCompleteHandlers.add(
+                        Handler(Looper.getMainLooper()) { message ->
+                            if (message.what == MapTileProviderBase.MAPTILE_FAIL_ID) failed = true
+                            false
+                        }
+                    )
+                    map = this
                 }
             },
-            update = { map ->
-                actualizarCapas(
-                    map = map,
-                    context = context,
-                    items = wasteItems,
-                    zones = ecologicalZones,
-                    showReserves = showReserves,
-                    onWasteClick = onWasteSelected,
-                    onZoneClick = onReserveSelected
-                )
-            }
+            update = { view ->
+                view.overlays.clear()
+                if (pointClick != null)
+                    view.overlays.add(
+                        MapEventsOverlay(
+                            object : MapEventsReceiver {
+                                override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                                    pointClick?.invoke(p.latitude, p.longitude)
+                                    return true
+                                }
+
+                                override fun longPressHelper(p: GeoPoint): Boolean {
+                                    pointClick?.invoke(p.latitude, p.longitude)
+                                    return true
+                                }
+                            }
+                        )
+                    )
+                wasteItems.forEach { item ->
+                    val marker =
+                        Marker(view).apply {
+                            position = GeoPoint(item.exactLatitude, item.exactLongitude)
+                            title = item.title
+                            snippet = "${item.subaSector} · ${item.typedStatus.displayName}"
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            icon =
+                                androidx.core.content.ContextCompat.getDrawable(
+                                        context,
+                                        if (
+                                            item.status == "RESERVADO" ||
+                                                item.entryType == "HALLAZGO"
+                                        )
+                                            R.drawable.ic_map_pin_orange
+                                        else R.drawable.ic_map_pin_green,
+                                    )
+                                    ?.mutate()
+                            setOnMarkerClickListener { _, _ ->
+                                itemClick(item)
+                                true
+                            }
+                        }
+                    view.overlays.add(marker)
+                }
+                view.invalidate()
+            },
+            onRelease = { view ->
+                view.tileProvider.tileRequestCompleteHandlers.forEach {
+                    it?.removeCallbacksAndMessages(null)
+                }
+                view.onPause()
+                view.onDetach()
+            },
         )
-
-        // Botón flotante para recentrar rápidamente en el corazón de Suba
-        SmallFloatingActionButton(
-            onClick = {
-                mapViewRef?.controller?.animateTo(GeoPoint(4.7450, -74.0850), 14.0, 600L)
-            },
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-            contentColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(14.dp)
-                .size(42.dp)
-                .testTag("recenter_suba_button")
+        if (failed)
+            Card(Modifier.align(Alignment.TopCenter).padding(8.dp)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        "No se pudo cargar parte del mapa. Los puntos guardados siguen disponibles."
+                    )
+                    TextButton(
+                        onClick = {
+                            failed = false
+                            map?.invalidate()
+                        }
+                    ) {
+                        Text("Reintentar")
+                    }
+                }
+            }
+        Surface(
+            Modifier.align(Alignment.BottomStart).padding(4.dp),
+            color = MaterialTheme.colorScheme.surface,
         ) {
-            Icon(
-                imageVector = Icons.Filled.MyLocation,
-                contentDescription = "Centrar en Suba",
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-/**
- * Actualiza las capas de polígonos ecológicos y marcadores de reporte en el mapa OpenStreetMap.
- */
-private fun actualizarCapas(
-    map: MapView,
-    context: Context,
-    items: List<WoodWasteItem>,
-    zones: List<EcologicalZone>,
-    showReserves: Boolean,
-    onWasteClick: (WoodWasteItem) -> Unit,
-    onZoneClick: (EcologicalZone) -> Unit
-) {
-    map.overlays.clear()
-
-    // 1. Zonas ecológicas de Suba con delimitación geográfica real (La Conejera, Van der Hammen, Juan Amarillo, Córdoba, etc.)
-    if (showReserves) {
-        zones.forEach { zone ->
-            val polygon = Polygon(map).apply {
-                val points = mutableListOf<GeoPoint>()
-                val numPoints = 28
-                for (i in 0 until numPoints) {
-                    val angle = 2.0 * Math.PI * i / numPoints
-                    val dLat = zone.radiusHeightKm * sin(angle)
-                    val dLng = zone.radiusWidthKm * cos(angle)
-                    points.add(GeoPoint(zone.centerLat + dLat, zone.centerLng + dLng))
+            TextButton(
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.openstreetmap.org/copyright"),
+                            )
+                        )
+                    }
                 }
-                actualPoints.clear()
-                actualPoints.addAll(points)
-                fillPaint.color = AndroidColor.argb(55, 46, 125, 50) // Verde bosque translúcido
-                outlinePaint.color = AndroidColor.argb(220, 27, 94, 32)
-                outlinePaint.strokeWidth = 3.5f
-                title = zone.name
-                snippet = "${zone.type}: ${zone.description}"
-                setOnClickListener { _, _, _ ->
-                    onZoneClick(zone)
-                    true
-                }
-            }
-            map.overlays.add(polygon)
-        }
-    }
-
-    // 2. Marcadores de reportes con colores condicionados a verificación GPS
-    val orangePin = ContextCompat.getDrawable(context, R.drawable.ic_map_pin_orange)
-    val greenPin = ContextCompat.getDrawable(context, R.drawable.ic_map_pin_green)
-
-    items.forEach { item ->
-        val marker = Marker(map).apply {
-            position = GeoPoint(item.exactLatitude, item.exactLongitude)
-            title = item.title
-            snippet = "${item.subaSector} · ${item.materialState}"
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-
-            // Pin naranja vibrante para reportes en estado PENDIENTE (sin verificación GPS confirmada)
-            // Pin verde para reportes con ubicación confirmada o activos
-            val isPending = item.status.equals("PENDIENTE", ignoreCase = true)
-            icon = if (isPending) orangePin else greenPin
-
-            setOnMarkerClickListener { _, _ ->
-                onWasteClick(item)
-                true
+            ) {
+                Text("© OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall)
             }
         }
-        map.overlays.add(marker)
     }
-
-    map.invalidate()
 }

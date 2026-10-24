@@ -3,57 +3,70 @@ package com.example.kotlinapp
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.fragment.app.FragmentActivity
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import com.example.kotlinapp.data.repository.WoodWasteRepository
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import com.example.kotlinapp.data.model.SeasonalTheme
-import com.example.kotlinapp.data.repository.AuthRepository
-import com.example.kotlinapp.data.repository.ReportRepository
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.navigation.NavType
+import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import com.example.kotlinapp.data.model.*
+import com.example.kotlinapp.data.repository.*
 import com.example.kotlinapp.ui.components.WoodMatchBottomNav
-import com.example.kotlinapp.ui.navigation.Screen
-import com.example.kotlinapp.ui.screens.AdminUsersScreen
-import com.example.kotlinapp.ui.screens.DashboardScreen
-import com.example.kotlinapp.ui.screens.ForgotPasswordScreen
-import com.example.kotlinapp.ui.screens.LoginScreen
-import com.example.kotlinapp.ui.screens.MyActivityScreen
-import com.example.kotlinapp.ui.screens.ProfileScreen
-import com.example.kotlinapp.ui.screens.RegisterScreen
-import com.example.kotlinapp.ui.screens.ReportTreeScreen
-import com.example.kotlinapp.ui.screens.SettingsScreen
-import com.example.kotlinapp.ui.screens.SpeciesScreen
-import com.example.kotlinapp.ui.screens.SplashScreen
-import com.example.kotlinapp.ui.screens.TreeMapScreen
-import com.example.kotlinapp.ui.screens.ViewReportsScreen
+import com.example.kotlinapp.ui.pilot.*
+import com.example.kotlinapp.ui.screens.*
 import com.example.kotlinapp.ui.theme.WoodMatchTheme
+import com.google.firebase.FirebaseApp
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        if (com.google.firebase.FirebaseApp.getApps(this).isNotEmpty()) AppIntegrity.initialize()
         ReportRepository.init(applicationContext)
-
+        WoodWasteRepository.init(applicationContext)
+        if (FirebaseApp.getApps(this).isNotEmpty()) {
+            // Diagnostics are off until the user opts in. Pilot sideloads do not depend on Play
+            // Integrity.
+            com.example.kotlinapp.data.network.PilotTelemetry.enabled =
+                PilotPreferences.store(this).getBoolean("diagnostics", false)
+            FirebaseCrashlytics.getInstance()
+                .setCrashlyticsCollectionEnabled(
+                    com.example.kotlinapp.data.network.PilotTelemetry.enabled
+                )
+        }
         setContent {
-            var currentSeason by remember { mutableStateOf(SeasonalTheme.SUMMER) }
-
-            WoodMatchTheme(season = currentSeason) {
+            val prefs = remember { PilotPreferences.store(this) }
+            var mode by remember { mutableStateOf(prefs.getString("season", "AUTO")!!) }
+            var appearance by remember { mutableStateOf(prefs.getString("appearance", "SYSTEM")!!) }
+            var season by remember { mutableStateOf(PilotPreferences.resolvedSeason(mode)) }
+            val lifecycle = LocalLifecycleOwner.current.lifecycle
+            DisposableEffect(lifecycle, mode) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME)
+                        season = PilotPreferences.resolvedSeason(mode)
+                }
+                lifecycle.addObserver(observer)
+                onDispose { lifecycle.removeObserver(observer) }
+            }
+            WoodMatchTheme(season = season, appearance = appearance) {
                 WoodMatchApp(
-                    currentSeason = currentSeason,
-                    onSeasonChange = { newSeason -> currentSeason = newSeason }
+                    mode,
+                    appearance,
+                    onSeason = {
+                        mode = it
+                        season = PilotPreferences.resolvedSeason(it)
+                        prefs.edit().putString("season", it).apply()
+                    },
+                    onAppearance = {
+                        appearance = it
+                        prefs.edit().putString("appearance", it).apply()
+                    },
                 )
             }
         }
@@ -62,189 +75,150 @@ class MainActivity : FragmentActivity() {
 
 @Composable
 fun WoodMatchApp(
-    currentSeason: SeasonalTheme,
-    onSeasonChange: (SeasonalTheme) -> Unit
+    seasonMode: String,
+    appearance: String,
+    onSeason: (String) -> Unit,
+    onAppearance: (String) -> Unit,
 ) {
-    val activeUser by AuthRepository.currentUser.collectAsState()
-    LaunchedEffect(activeUser?.uid) { WoodWasteRepository.refreshSession() }
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Splash.route
-
-    val bottomNavRoutes = listOf(
-        Screen.Dashboard.route,
-        Screen.TreeMap.route,
-        Screen.ViewReports.route,
-        Screen.Profile.route
-    )
-
-    val showBottomBar = currentRoute in bottomNavRoutes
-
+    val user by AuthRepository.currentUser.collectAsState()
+    LaunchedEffect(user?.uid) { WoodWasteRepository.refreshSession() }
+    val nav = rememberNavController()
+    val back by nav.currentBackStackEntryAsState()
+    val route = back?.destination?.route.orEmpty()
+    val tabs = listOf("dashboard", "tree_map", "report_tree", "my_activity", "profile")
+    val items by WoodWasteRepository.items.collectAsState()
+    var importJson by rememberSaveable { mutableStateOf<String?>(null) }
+    fun go(target: String) {
+        nav.navigate(target) { launchSingleTop = true }
+    }
+    fun edit(item: WoodWasteItem) {
+        go("edit/${item.id}")
+    }
+    fun logout() {
+        nav.navigate("login") { popUpTo(0) { inclusive = true } }
+    }
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (showBottomBar) {
-                WoodMatchBottomNav(
-                    currentRoute = currentRoute,
-                    onNavigate = { targetRoute ->
-                        navController.navigate(targetRoute) {
-                            popUpTo(Screen.Dashboard.route) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+            if (route in tabs)
+                WoodMatchBottomNav(route) { target ->
+                    nav.navigate(target) {
+                        popUpTo("dashboard") { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
-                )
-            }
+                }
         }
-    ) { innerPadding ->
+    ) { padding ->
         NavHost(
-            navController = navController,
-            startDestination = Screen.Splash.route,
-            modifier = Modifier.padding(innerPadding)
+            navController = nav,
+            startDestination = "splash",
+            modifier = Modifier.padding(padding),
         ) {
-            // Splash Screen
-            composable(Screen.Splash.route) {
+            composable("splash") {
                 SplashScreen(
                     onNavigateToDashboard = {
-                        navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(Screen.Splash.route) { inclusive = true }
-                        }
+                        nav.navigate("dashboard") { popUpTo("splash") { inclusive = true } }
                     },
                     onNavigateToLogin = {
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(Screen.Splash.route) { inclusive = true }
-                        }
-                    }
+                        nav.navigate("login") { popUpTo("splash") { inclusive = true } }
+                    },
                 )
             }
-
-            // Auth Screens
-            composable(Screen.Login.route) {
+            composable("login") {
                 LoginScreen(
                     onLoginSuccess = {
-                        navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
-                        }
+                        nav.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                     },
-                    onNavigateToRegister = {
-                        navController.navigate(Screen.Register.route)
-                    },
-                    onNavigateToForgotPassword = {
-                        navController.navigate(Screen.ForgotPassword.route)
-                    }
+                    onNavigateToRegister = { go("register") },
+                    onNavigateToForgotPassword = { go("forgot_password") },
                 )
             }
-
-            composable(Screen.Register.route) {
+            composable("register") {
                 RegisterScreen(
                     onRegisterSuccess = {
-                        navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(Screen.Register.route) { inclusive = true }
-                        }
+                        nav.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                     },
-                    onNavigateBackToLogin = {
-                        navController.popBackStack()
+                    onNavigateBackToLogin = { nav.popBackStack() },
+                )
+            }
+            composable("forgot_password") {
+                ForgotPasswordScreen(onNavigateBack = { nav.popBackStack() })
+            }
+            composable("dashboard") {
+                PilotHome(
+                    onMap = { go("tree_map") },
+                    onCreate = { go("report_tree") },
+                    onSpecies = { go("species") },
+                    onCatalog = { go("view_reports") },
+                )
+            }
+            composable("tree_map") {
+                CommunityScreen(mapFirst = true, onCreate = { go("report_tree") }, onEdit = ::edit)
+            }
+            composable("view_reports") {
+                CommunityScreen(onCreate = { go("report_tree") }, onEdit = ::edit)
+            }
+            composable("report_tree") {
+                PublicationWizard(onDone = { go("my_activity") }, onBack = { nav.popBackStack() })
+            }
+            composable(
+                "edit/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.StringType }),
+            ) { entry ->
+                val item = items.find { it.id == entry.arguments?.getString("id") }
+                if (item != null && item.authorId == user?.uid)
+                    PublicationWizard(
+                        existing = item,
+                        onDone = { nav.popBackStack() },
+                        onBack = { nav.popBackStack() },
+                    )
+                else
+                    AccessMessage("La publicación no está disponible para editar.") {
+                        nav.popBackStack()
                     }
-                )
             }
-
-            composable(Screen.ForgotPassword.route) {
-                ForgotPasswordScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
+            composable(
+                "import/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.StringType }),
+            ) { entry ->
+                val report =
+                    importJson
+                        ?.let { LegacyReports.decode(it) }
+                        ?.takeIf { it.id == entry.arguments?.getString("id") }
+                if (report != null)
+                    PublicationWizard(
+                        imported = report,
+                        onDone = { nav.popBackStack() },
+                        onBack = { nav.popBackStack() },
+                    )
+                else
+                    AccessMessage("Vuelve a seleccionar el reporte que quieres importar.") {
+                        nav.popBackStack()
                     }
+            }
+            composable("my_activity") {
+                MyActivityScreen(
+                    onExplore = { go("view_reports") },
+                    onEdit = ::edit,
+                    onImport = {
+                        importJson = LegacyReports.encode(it)
+                        go("import/${it.id}")
+                    },
                 )
             }
-
-            // Main Tabs & Dashboard
-            composable(Screen.Dashboard.route) {
-                DashboardScreen(
-                    currentSeason = currentSeason,
-                    onNavigateToReportTree = { navController.navigate(Screen.ReportTree.route) },
-                    onNavigateToViewReports = { navController.navigate(Screen.ViewReports.route) },
-                    onNavigateToSpecies = { navController.navigate(Screen.Species.route) },
-                    onNavigateToMap = { navController.navigate(Screen.TreeMap.route) },
-                    onNavigateToAdminUsers = { navController.navigate(Screen.AdminUsers.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
-                )
+            composable("profile") {
+                PilotProfile(seasonMode, appearance, onSeason, onAppearance, ::logout)
             }
-
-            composable(Screen.Species.route) {
+            composable("settings") {
+                PilotProfile(seasonMode, appearance, onSeason, onAppearance, ::logout)
+            }
+            composable("species") {
                 SpeciesScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToCreateReport = { navController.navigate(Screen.ReportTree.route) }
+                    onNavigateBack = { nav.popBackStack() },
+                    onNavigateToCreateReport = { go("report_tree") },
                 )
             }
-
-            composable(Screen.TreeMap.route) {
-                TreeMapScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Screen.ViewReports.route) {
-                ViewReportsScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToCreateReport = { navController.navigate(Screen.ReportTree.route) }
-                )
-            }
-
-            composable(Screen.MyActivity.route) {
-                MyActivityScreen(onExplore = { navController.navigate(Screen.ViewReports.route) })
-            }
-
-            composable(Screen.Profile.route) {
-                ProfileScreen(
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                    onLogout = {
-                        AuthRepository.logout()
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            // Settings Screen
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    currentSeason = currentSeason,
-                    onSeasonChange = onSeasonChange,
-                    onNavigateBack = { navController.popBackStack() },
-                    onLogout = {
-                        AuthRepository.logout()
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            // Report / Publish Wood Waste Screen
-            composable(Screen.ReportTree.route) {
-                ReportTreeScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToReports = {
-                        navController.navigate(Screen.ViewReports.route) {
-                            popUpTo(Screen.Dashboard.route)
-                        }
-                    },
-                    onNavigateToMap = {
-                        navController.navigate(Screen.TreeMap.route) {
-                            popUpTo(Screen.Dashboard.route)
-                        }
-                    }
-                )
-            }
-
-            // Admin Users Management
-            composable(Screen.AdminUsers.route) {
-                AdminUsersScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
+            composable("admin_users") { AdminUsersScreen(onNavigateBack = { nav.popBackStack() }) }
         }
     }
 }

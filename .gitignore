@@ -35,3 +35,7 @@ functions/.env*
 .kotlin/
 
 functions/.secret.local
+
+supabase/functions/.env*
+!supabase/functions/.env.example
+release-assets/

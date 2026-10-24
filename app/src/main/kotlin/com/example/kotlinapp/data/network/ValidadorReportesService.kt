@@ -3,9 +3,6 @@ package com.example.kotlinapp.data.network
 import android.util.Log
 import com.example.kotlinapp.BuildConfig
 import com.example.kotlinapp.data.model.SubaSectors
-import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.content
-import com.google.ai.client.generativeai.type.generationConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -52,21 +49,6 @@ class ValidadorReportesService(
 
     private val effectiveApiKey: String = apiKeyProvider().trim()
 
-    // Configuración del modelo optimizado para ahorrar recursos (temperatura baja = precisión)
-    private val config = generationConfig {
-        responseMimeType = "application/json"
-        temperature = 0.1f
-    }
-
-    private fun buildGenerativeModel(modelName: String): GenerativeModel {
-        return GenerativeModel(
-            modelName = modelName,
-            apiKey = effectiveApiKey,
-            generationConfig = config,
-            systemInstruction = content { text(SYSTEM_INSTRUCTION_TEXT) }
-        )
-    }
-
     /**
      * Procesa el reporte del ciudadano gastando el mínimo de tokens.
      * Retorna mediante callback según el contrato solicitado por el usuario.
@@ -97,39 +79,9 @@ class ValidadorReportesService(
             )
         }
 
-        // Si no hay API key configurada, utilizamos el extractor geográfico local experto para no bloquear al usuario
-        if (effectiveApiKey.isBlank()) {
-            Log.w(TAG, "No se encontró GEMINI_API_KEY. Usando extractor heurístico local de Suba.")
-            return@withContext procesarHeuristicaLocalSuba(textoLimpio)
-        }
-
-        // 2. Intentar llamada con Gemini 2.5 Flash
-        try {
-            val model = buildGenerativeModel(MODEL_PRIMARY)
-            val response = model.generateContent(textoLimpio)
-            val rawJson = response.text ?: ""
-            parsearRespuestaJson(rawJson)
-        } catch (e: Exception) {
-            Log.w(TAG, "Fallo en modelo primario $MODEL_PRIMARY: ${e.message}. Probando fallback.")
-            try {
-                val fallbackModel = buildGenerativeModel(MODEL_FALLBACK)
-                val response = fallbackModel.generateContent(textoLimpio)
-                val rawJson = response.text ?: ""
-                parsearRespuestaJson(rawJson)
-            } catch (fallbackError: Exception) {
-                Log.e(TAG, "Fallo en llamada IA: ${fallbackError.message}. Recurriendo a extracción local.")
-                // Extraer de forma local para garantizar resiliencia total
-                val fallbackLocal = procesarHeuristicaLocalSuba(textoLimpio)
-                if (fallbackLocal.valido) {
-                    fallbackLocal
-                } else {
-                    ResultadoValidacion(
-                        valido = false,
-                        error = "Error al procesar con IA: ${fallbackError.localizedMessage ?: fallbackError.message}"
-                    )
-                }
-            }
-        }
+        // Legacy location suggestions are estimates only. The publication wizard always
+        // requires a real GPS fix or a user-selected point and explicit confirmation.
+        procesarHeuristicaLocalSuba(textoLimpio)
     }
 
     private fun parsearRespuestaJson(rawJson: String): ResultadoValidacion {
