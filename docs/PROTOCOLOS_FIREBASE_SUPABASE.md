@@ -8,13 +8,13 @@
 | --- | --- | --- |
 | Firebase Authentication | Identidad por correo y contraseña; emite ID tokens | Proyecto Firebase y proveedor todavía no verificados en este entorno. |
 | Cloud Firestore | Perfiles, publicaciones, solicitudes, operaciones y cuotas; lecturas Android regidas por `firestore.rules` | Reglas e índices están en Git; no se verificó su despliegue remoto. |
-| Supabase Edge Function `woodmatch` | Verifica el token de Firebase y la cuenta; ejecuta todas las operaciones de escritura, IA y fotos | Activa, versión 1, en el proyecto `usdbewyttzuudundxyvk`; falta una prueba autenticada de extremo a extremo. |
-| Supabase Storage | Bucket privado `woodmatch-photos`, JPEG de hasta 1 MiB, accesible mediante la función | Bucket creado, `public=false`, límite de 1 048 576 bytes. |
+| Supabase Edge Function `woodmatch` | Verifica el token de Firebase y la cuenta; ejecuta todas las operaciones de escritura, IA y fotos | Activa, versión 1, en el proyecto `usdbewyttzuudundxyvk`; sus cuatro archivos desplegados coinciden con `main`. Falta una prueba autenticada de extremo a extremo. |
+| Supabase Storage | Bucket privado `woodmatch-photos`, JPEG de hasta 1 MiB, accesible mediante la función | Bucket creado, `public=false`, límite de 1 048 576 bytes y MIME permitido `image/jpeg`. |
 | Android | Lee Firestore con reglas; llama a la Edge Function; configura Firebase con `google-services.json` | El código usa `applicationId=com.example.kotlinapp.pilot`; no se verificó un APK conectado a estos servicios. |
 
 URL de la función: `https://usdbewyttzuudundxyvk.supabase.co/functions/v1/woodmatch`. Es configuración pública del cliente, **no** una clave secreta.
 
-En Supabase consta la migración remota `20261024015210_create_private_woodmatch_photos_bucket`. El repositorio contiene `supabase/migrations/202610230001_private_photos.sql`. **No ejecutar `supabase db push` sin conciliar este desfase**: podría aplicar de nuevo la definición del bucket o dejar dos historiales para una misma intención. El bucket remoto tiene los atributos principales esperados, pero se debe comprobar también `allowed_mime_types` antes de dar por cerrada la conciliación.
+En Supabase consta la migración remota `20261024015210_create_private_woodmatch_photos_bucket`. El repositorio contiene `supabase/migrations/202610230001_private_photos.sql`. **No ejecutar `supabase db push` sin conciliar este desfase**: podría aplicar de nuevo la definición del bucket o dejar dos historiales para una misma intención. El bucket remoto tiene los atributos esperados, incluido `allowed_mime_types=['image/jpeg']`; falta conciliar formalmente el historial de migraciones.
 
 ## 2. Protocolo Firebase
 
@@ -41,7 +41,7 @@ En Supabase consta la migración remota `20261024015210_create_private_woodmatch
 
 1. Confirmar que el proyecto `usdbewyttzuudundxyvk` pertenece al equipo y seguirá en Free.
 2. Comparar la migración remota `20261024015210_create_private_woodmatch_photos_bucket` con `supabase/migrations/202610230001_private_photos.sql`. Verificar id, `public=false`, límite de 1 MiB y `allowed_mime_types=['image/jpeg']`. Registrar cuál migración será la fuente de verdad del repositorio; **no borrar ni reescribir el historial remoto sin una decisión de mantenimiento explícita**.
-3. Inspeccionar la versión desplegada de `woodmatch` y compararla con los cuatro archivos de `supabase/functions/woodmatch/`. La versión activa por sí sola no demuestra que el código desplegado sea idéntico a `main`.
+3. Se compararon los cuatro archivos desplegados de `woodmatch` con `supabase/functions/woodmatch/` en `main`: coinciden. Repetir esta comparación si cambia el repositorio antes de desplegar.
 4. Mantener `verify_jwt=false` en el gateway **porque el código de la función verifica por sí mismo los JWT RS256 de Firebase, su emisor, audiencia, proveedor y estado de cuenta**. Esta excepción no habilita acceso anónimo a las operaciones. Probar que las peticiones sin token, con token inválido y con token de otro proyecto obtienen 401.
 
 ### 3.2 Secretos y despliegue
