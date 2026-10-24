@@ -206,7 +206,7 @@ fun CommunityScreen(
                 Icon(Icons.Default.Tune, "Mostrar u ocultar filtros")
             }
         }
-        OutlinedTextField(
+        if (!showMap || filters) OutlinedTextField(
             value = query,
             onValueChange = { query = it },
             placeholder = { Text("Buscar madera, muebles, estibas…") },
@@ -264,7 +264,7 @@ fun CommunityScreen(
                 "Mostrando datos guardados. Las acciones necesitan conexión.",
                 style = MaterialTheme.typography.labelMedium,
             )
-        Text(
+        if (!showMap || filters) Text(
             "${visible.size} publicaciones · Hasta 100 publicaciones comunitarias por vista",
             style = MaterialTheme.typography.labelMedium,
         )
@@ -277,7 +277,7 @@ fun CommunityScreen(
                 onWasteSelected = { selectedId = it.id },
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
-            Text(
+            if (filters) Text(
                 "Verde: disponible · Naranja: hallazgo o reservado. Toca un punto para ver el estado.",
                 style = MaterialTheme.typography.labelSmall,
             )
