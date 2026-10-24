@@ -64,6 +64,21 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       ? Response.json({ fields: encode({ count: quotaCount }).mapValue.fields })
       : new Response("{}", { status: 404 });
   }
+  if (url.endsWith(":batchGet")) {
+    const body = JSON.parse(String(init?.body));
+    return Response.json(
+      body.documents.map((name: string) =>
+        quotaCount
+          ? {
+            found: {
+              name,
+              fields: encode({ count: quotaCount }).mapValue.fields,
+            },
+          }
+          : { missing: name }
+      ),
+    );
+  }
   if (url.endsWith(":beginTransaction")) {
     return Response.json({ transaction: "test-transaction" });
   }

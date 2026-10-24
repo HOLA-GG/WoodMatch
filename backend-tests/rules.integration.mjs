@@ -182,6 +182,16 @@ test("REST adapter and domain retry concurrent transactions against Firestore", 
       })
     ),
   );
-  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(
+    results.filter((r) => r.status === "fulfilled").length,
+    1,
+    JSON.stringify(
+      results.map((r) =>
+        r.status === "fulfilled"
+          ? "ok"
+          : { status: r.reason.status, message: r.reason.message }
+      ),
+    ),
+  );
   assert.equal((await db.get("wood_wastes/concurrent")).status, "RESERVADO");
 });

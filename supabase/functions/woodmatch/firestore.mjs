@@ -42,6 +42,7 @@ export class Firestore {
   async request(path, body, method = "POST") {
     const res = await fetch(`${this.url}/${path}`, {
       method,
+      signal: AbortSignal.timeout(20000),
       headers: {
         Authorization: `Bearer ${await this.accessToken()}`,
         "Content-Type": "application/json",
@@ -58,14 +59,17 @@ export class Firestore {
     return result;
   }
   async get(path, transaction) {
-    const suffix = transaction
-      ? `?transaction=${encodeURIComponent(transaction)}`
-      : "";
-    const doc = await this.request(
-      `${this.root}/${path}${suffix}`,
-      undefined,
-      "GET",
-    );
+    let doc;
+    if (transaction) {
+      const rows = await this.request(`${this.root}:batchGet`, {
+        documents: [`${this.root}/${path}`],
+        transaction,
+      });
+      doc = (Array.isArray(rows) ? rows : [rows]).find((row) => row?.found)
+        ?.found;
+    } else {
+      doc = await this.request(`${this.root}/${path}`, undefined, "GET");
+    }
     return doc ? decode({ mapValue: { fields: doc.fields } }) : null;
   }
   async set(path, value) {
@@ -130,7 +134,12 @@ export class Firestore {
           () => {},
         );
         if (error.status !== "ABORTED" || attempt === 4) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
+        await new Promise((resolve) =>
+          setTimeout(
+            resolve,
+            Math.min(1500, 100 * 2 ** attempt) * (0.5 + Math.random()),
+          )
+        );
       }
     }
   }
