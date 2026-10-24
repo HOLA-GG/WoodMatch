@@ -26,21 +26,15 @@ object ForestAiService {
                                 cleanFormatting(text.take(3000))
                         )
                 } catch (error: Exception) {
-                    val notice =
-                        if (error.message?.contains("límite", ignoreCase = true) == true)
-                            "Se alcanzó el límite de consultas de hoy."
-                        else "El asistente no está disponible en este momento."
-                    return@withContext Result.success(
-                        notice + "\n\nOrientación local:\n" + getExpertFallbackResponse(userPrompt)
+                    return@withContext Result.failure(
+                        IllegalStateException(
+                            error.message ?: "No se pudo consultar Gemini. Comprueba la conexión e inténtalo de nuevo.",
+                            error,
+                        )
                     )
                 }
             }
-            Result.success(
-                cleanFormatting(
-                    "Orientación local · Sin consulta a IA remota\n\n" +
-                        getExpertFallbackResponse(userPrompt)
-                )
-            )
+            Result.failure(IllegalStateException("Inicia sesión para consultar Gemini."))
         }
 
     /**
