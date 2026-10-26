@@ -20,8 +20,8 @@ android {
         applicationId = "com.example.kotlinapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "2.0.0-pilot"
+        versionCode = 4
+        versionName = "2.0.1-pilot"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
