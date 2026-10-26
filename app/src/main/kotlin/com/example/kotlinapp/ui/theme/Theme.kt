@@ -6,6 +6,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Shapes
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import android.app.Activity
 import com.example.kotlinapp.data.model.SeasonalTheme
 
 private val SummerColorScheme = lightColorScheme(
@@ -121,10 +128,29 @@ fun WoodMatchTheme(
         secondary=accent,secondaryContainer=Color(0xFF36493C),onSecondaryContainer=Color(0xFFE3F1E4),
         background=Color(0xFF191C18),onBackground=Color(0xFFF3EEE5),surface=Color(0xFF191C18),onSurface=Color(0xFFF3EEE5),
         surfaceVariant=Color(0xFF30372E),onSurfaceVariant=Color(0xFFD4DCCF),outline=Color(0xFFA0AA9B)
-    ) else colorScheme.copy(background=SummerBackground,surface=SummerSurface)
+    ) else colorScheme
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val activity = view.context as? Activity
+            activity?.window?.let { window ->
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
+        }
+    }
     MaterialTheme(
         colorScheme = resolved,
         typography = Typography,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(8.dp),
+            small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(18.dp),
+            large = RoundedCornerShape(24.dp),
+            extraLarge = RoundedCornerShape(30.dp),
+        ),
         content = content
     )
 }
