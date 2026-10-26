@@ -362,6 +362,9 @@ private fun EntryDetail(
     val user by AuthRepository.currentUser.collectAsState()
     val scope = rememberCoroutineScope()
     var image by remember(item.id, item.imagePath) { mutableStateOf<String?>(null) }
+    var photoLoading by remember(item.id, item.imagePath) { mutableStateOf(false) }
+    var photoError by remember(item.id, item.imagePath) { mutableStateOf(false) }
+    var photoRetry by remember(item.id, item.imagePath) { mutableIntStateOf(0) }
     var message by remember(item.id) { mutableStateOf<String?>(null) }
     var requesting by rememberSaveable(item.id) { mutableStateOf(false) }
     var use by rememberSaveable(item.id) { mutableStateOf("") }
@@ -371,7 +374,6 @@ private fun EntryDetail(
     var busy by remember { mutableStateOf(false) }
     val op = rememberSaveable(item.id, use, date, quantity, note) { PilotApi.operationId() }
     LaunchedEffect(item.id, item.imagePath, photoRetry) {
-        if (item.imagePath.isNullOrBlank()) return@LaunchedEffect
         photoLoading = true
         photoError = false
         try {
