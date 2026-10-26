@@ -32,6 +32,9 @@ object WoodWasteRepository {
     val error = _error.asStateFlow()
     private val _fromCache = MutableStateFlow(false)
     val fromCache = _fromCache.asStateFlow()
+    private val _loading = MutableStateFlow(false)
+    val loading = _loading.asStateFlow()
+    private var sessionGeneration = 0
     private val listeners = mutableListOf<ListenerRegistration>()
     private var context: Context? = null
 
@@ -85,6 +88,9 @@ object WoodWasteRepository {
     }
 
     fun refreshSession() {
+        val generation = ++sessionGeneration
+        _loading.value = false
+        _fromCache.value = false
         listeners.forEach { it.remove() }
         listeners.clear()
         _items.value = emptyList()
@@ -93,6 +99,12 @@ object WoodWasteRepository {
         if (!AuthRepository.isAuthenticated) return
         val user = AuthRepository.currentUser.value ?: return
         _requests.value = cachedReceipts(user.uid)
+        _loading.value = true
+        val pending = mutableSetOf("community", "owned", "authorId", "requesterId")
+        fun received(key: String) {
+            pending.remove(key)
+            _loading.value = pending.isNotEmpty()
+        }
         val db = FirebaseFirestore.getInstance()
         val community = mutableMapOf<String, WoodWasteItem>()
         val owned = mutableMapOf<String, WoodWasteItem>()
@@ -108,7 +120,8 @@ object WoodWasteRepository {
             activeQuery.addSnapshotListener(
                 com.google.firebase.firestore.MetadataChanges.INCLUDE
             ) { snapshot, failure ->
-                if (AuthRepository.currentUser.value?.uid != user.uid) return@addSnapshotListener
+                if (generation != sessionGeneration || AuthRepository.currentUser.value?.uid != user.uid) return@addSnapshotListener
+                received("community")
                 if (failure != null) {
                     _error.value = "No se pudo actualizar la comunidad. Comprueba tu conexión."
                     return@addSnapshotListener
@@ -128,8 +141,9 @@ object WoodWasteRepository {
                 .whereEqualTo("authorId", user.uid)
                 .limit(100)
                 .addSnapshotListener { snapshot, failure ->
-                    if (AuthRepository.currentUser.value?.uid != user.uid)
+                    if (generation != sessionGeneration || AuthRepository.currentUser.value?.uid != user.uid)
                         return@addSnapshotListener
+                    received("owned")
                     if (failure != null) {
                         _error.value = "No se pudieron cargar tus publicaciones."
                         return@addSnapshotListener
@@ -150,8 +164,9 @@ object WoodWasteRepository {
                     .whereEqualTo(field, user.uid)
                     .limit(100)
                     .addSnapshotListener { snapshot, failure ->
-                        if (AuthRepository.currentUser.value?.uid != user.uid)
+                        if (generation != sessionGeneration || AuthRepository.currentUser.value?.uid != user.uid)
                             return@addSnapshotListener
+                        received(field)
                         if (failure != null) {
                             _error.value = "No se pudieron actualizar tus solicitudes."
                             return@addSnapshotListener
