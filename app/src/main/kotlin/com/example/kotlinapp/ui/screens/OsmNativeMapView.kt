@@ -7,6 +7,13 @@ import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import kotlinx.coroutines.delay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,6 +54,7 @@ fun OsmNativeMapView(
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var loadingTiles by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
     var map by remember { mutableStateOf<MapView?>(null) }
     val pointClick by rememberUpdatedState(onPointSelected)
@@ -63,13 +71,29 @@ fun OsmNativeMapView(
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) map?.onResume()
         onDispose { lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(centerLat, centerLng, zoomLevel, map) {
+    // Keep the user's zoom while choosing another point; coordinate changes only recenter.
+    LaunchedEffect(zoomLevel, map) {
         map?.controller?.setZoom(zoomLevel.toDouble())
+    }
+    LaunchedEffect(centerLat, centerLng, map) {
         map?.controller?.setCenter(GeoPoint(centerLat, centerLng))
     }
-    Box(modifier) {
+    LaunchedEffect(map) {
+        if (map != null) {
+            delay(8000)
+            loadingTiles = false // A cached map may not emit download callbacks.
+        }
+    }
+    val tileHandler = remember {
+        Handler(Looper.getMainLooper()) { message ->
+            loadingTiles = false
+            if (message.what == MapTileProviderBase.MAPTILE_FAIL_ID) failed = true
+            false
+        }
+    }
+    Box(modifier.clip(RoundedCornerShape(24.dp)).clipToBounds()) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().clipToBounds(),
             factory = { ctx ->
                 Configuration.getInstance().apply {
                     load(ctx, ctx.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE))
@@ -85,6 +109,8 @@ fun OsmNativeMapView(
                     tileFileSystemCacheTrimBytes = 120L * 1024 * 1024
                 }
                 MapView(ctx).apply {
+                    clipChildren = true
+                    clipToPadding = true
                     setTileSource(
                         XYTileSource(
                             "OpenStreetMapStandard",
@@ -109,18 +135,13 @@ fun OsmNativeMapView(
                     minZoomLevel = 10.0
                     maxZoomLevel = 19.0
                     zoomController.setVisibility(
-                        CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT
+                        CustomZoomButtonsController.Visibility.NEVER
                     )
                     contentDescription =
                         "Mapa de publicaciones en Suba. También puedes consultarlas en la lista accesible."
                     controller.setZoom(zoomLevel.toDouble())
                     controller.setCenter(GeoPoint(centerLat, centerLng))
-                    tileProvider.tileRequestCompleteHandlers.add(
-                        Handler(Looper.getMainLooper()) { message ->
-                            if (message.what == MapTileProviderBase.MAPTILE_FAIL_ID) failed = true
-                            false
-                        }
-                    )
+                    tileProvider.tileRequestCompleteHandlers.add(tileHandler)
                     map = this
                 }
             },
@@ -170,13 +191,46 @@ fun OsmNativeMapView(
                 view.invalidate()
             },
             onRelease = { view ->
-                view.tileProvider.tileRequestCompleteHandlers.forEach {
-                    it?.removeCallbacksAndMessages(null)
-                }
+                view.parent?.requestDisallowInterceptTouchEvent(false)
+                view.tileProvider.tileRequestCompleteHandlers.remove(tileHandler)
+                tileHandler.removeCallbacksAndMessages(null)
+                view.setOnTouchListener(null)
                 view.onPause()
                 view.onDetach()
             },
         )
+        if (loadingTiles && !failed)
+            Surface(
+                Modifier.align(Alignment.TopCenter).padding(12.dp),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 2.dp,
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Text("Cargando mapa…", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        Surface(
+            Modifier.align(Alignment.CenterEnd).padding(12.dp),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 3.dp,
+        ) {
+            Column {
+                IconButton(onClick = { map?.controller?.zoomIn() }) {
+                    Icon(Icons.Default.Add, contentDescription = "Acercar mapa")
+                }
+                HorizontalDivider(Modifier.width(48.dp))
+                IconButton(onClick = { map?.controller?.zoomOut() }) {
+                    Icon(Icons.Default.Remove, contentDescription = "Alejar mapa")
+                }
+            }
+        }
         if (failed)
             Card(Modifier.align(Alignment.TopCenter).padding(8.dp)) {
                 Column(Modifier.padding(12.dp)) {
@@ -214,3 +268,4 @@ fun OsmNativeMapView(
         }
     }
 }
+
