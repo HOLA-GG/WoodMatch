@@ -142,20 +142,117 @@ async function quota(uid: string, service: string) {
     tx.set(b, { count: (all?.count || 0) + 1, day });
   });
 }
-async function remote(url: string, options: RequestInit = {}) {
-  const res = await fetch(url, {
-    ...options,
-    signal: AbortSignal.timeout(45000),
-  });
-  requireThat(
-    res.ok,
-    res.status === 429 ? 429 : 503,
-    "provider",
-    res.status === 429
-      ? "Se alcanzó el límite de consultas. Intenta más tarde."
-      : "La consulta no está disponible. Puedes continuar manualmente.",
-  );
-  return res.json();
+type Provider = "gemini" | "plantnet";
+const providerStatuses = new Set([
+  "INVALID_ARGUMENT",
+  "FAILED_PRECONDITION",
+  "PERMISSION_DENIED",
+  "UNAUTHENTICATED",
+  "NOT_FOUND",
+  "RESOURCE_EXHAUSTED",
+  "UNAVAILABLE",
+  "INTERNAL",
+]);
+class ProviderFault extends Fault {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    readonly provider: Provider,
+    readonly upstreamStatus: number,
+    readonly upstreamCode: string,
+  ) {
+    super(status, code, message);
+  }
+}
+async function remote(provider: Provider, url: string, options: RequestInit = {}) {
+  const label = provider === "gemini" ? "Gemini" : "Pl@ntNet";
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      signal: AbortSignal.timeout(45000),
+    });
+  } catch (error) {
+    const timeout = error instanceof DOMException &&
+      (error.name === "TimeoutError" || error.name === "AbortError");
+    throw new ProviderFault(
+      timeout ? 504 : 503,
+      timeout ? "provider_timeout" : "provider_network",
+      timeout
+        ? `${label} tardó demasiado en responder. Intenta más tarde.`
+        : `No se pudo conectar con ${label}. Intenta más tarde.`,
+      provider,
+      0,
+      timeout ? "TIMEOUT" : "NETWORK",
+    );
+  }
+  if (!res.ok) {
+    // Only allowlisted error enums leave the upstream response. Never log its body,
+    // URL (Pl@ntNet carries a key in its query), headers, key, prompt or exception.
+    let upstreamCode = "UNKNOWN";
+    try {
+      const body = await res.json();
+      const code = body?.error?.status;
+      if (typeof code === "string" && providerStatuses.has(code)) upstreamCode = code;
+    } catch {
+      // Provider errors are not guaranteed to contain JSON.
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new ProviderFault(
+        503,
+        "provider_credentials",
+        `${label} rechazó la configuración de acceso del servidor. El responsable debe revisarla.`,
+        provider,
+        res.status,
+        upstreamCode,
+      );
+    }
+    if (res.status === 404) {
+      throw new ProviderFault(
+        503,
+        provider === "gemini" ? "provider_model" : "provider_not_found",
+        provider === "gemini"
+          ? "El modelo configurado de Gemini no está disponible. El responsable debe revisar la configuración."
+          : "La consulta de Pl@ntNet no está disponible para este recurso.",
+        provider,
+        res.status,
+        upstreamCode,
+      );
+    }
+    if (res.status === 429) {
+      throw new ProviderFault(
+        429,
+        "provider_quota",
+        `${label} alcanzó su límite de consultas. Intenta más tarde.`,
+        provider,
+        res.status,
+        upstreamCode,
+      );
+    }
+    throw new ProviderFault(
+      503,
+      res.status === 400 ? "provider_configuration" : "provider_unavailable",
+      res.status === 400
+        ? `${label} no aceptó la configuración de la consulta. El responsable debe revisarla.`
+        : `${label} no está disponible temporalmente. Intenta más tarde.`,
+      provider,
+      res.status,
+      upstreamCode,
+    );
+  }
+  try {
+    return await res.json();
+  } catch {
+    throw new ProviderFault(
+      503,
+      "provider_response",
+      `${label} devolvió una respuesta que no se pudo interpretar. Intenta más tarde.`,
+      provider,
+      res.status,
+      "INVALID_RESPONSE",
+    );
+  }
 }
 async function handle(
   actor: { uid: string; authTime: number },
@@ -275,6 +372,7 @@ async function handle(
       "Asistente no disponible.",
     );
     const body = await remote(
+      "gemini",
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
@@ -338,6 +436,7 @@ async function handle(
         : "auto";
       form.set("organs", organ);
       const result = await remote(
+        "plantnet",
         `https://my-api.plantnet.org/v2/identify/all?api-key=${
           encodeURIComponent(env("PLANTNET_SERVER_KEY"))
         }&lang=es`,
@@ -356,6 +455,7 @@ async function handle(
       "Escribe un nombre.",
     );
     const result = await remote(
+      "plantnet",
       `https://my-api.plantnet.org/v2/species?api-key=${
         encodeURIComponent(env("PLANTNET_SERVER_KEY"))
       }&lang=es&prefix=${encodeURIComponent(data.query)}&pageSize=20`,
@@ -420,6 +520,7 @@ async function handle(
 Deno.serve(async (request) => {
   const correlationId = crypto.randomUUID(), start = Date.now();
   let operation = "unknown", status = 200;
+  let providerFailure: ProviderFault | null = null;
   try {
     requireThat(
       request.method === "POST",
@@ -515,6 +616,7 @@ Deno.serve(async (request) => {
     );
     return Response.json({ data, correlationId });
   } catch (error) {
+    if (error instanceof ProviderFault) providerFailure = error;
     status = error instanceof Fault ? error.status : 503;
     const message = error instanceof Fault
       ? error.message
@@ -534,7 +636,15 @@ Deno.serve(async (request) => {
         correlationId,
         status,
         durationMs: Date.now() - start,
+        ...(providerFailure
+          ? {
+            provider: providerFailure.provider,
+            providerStatus: providerFailure.upstreamStatus,
+            providerCode: providerFailure.upstreamCode,
+          }
+          : {}),
       }),
     );
   }
 });
+

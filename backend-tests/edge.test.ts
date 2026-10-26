@@ -31,6 +31,9 @@ const realLog = console.log;
 console.log = (value) => logs.push(String(value));
 const realFetch = globalThis.fetch;
 let disabled = false, revoked = false, providerQuota = false;
+let providerStatus = 200;
+let providerErrorCode = "UNKNOWN";
+let providerFailure = "";
 let quotaCount = 0;
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
@@ -86,6 +89,12 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     return Response.json({});
   }
   if (url.includes("generativelanguage.googleapis.com")) {
+    if (providerFailure === "timeout") throw new DOMException("fixture-key", "TimeoutError");
+    if (providerFailure === "network") throw new Error("fixture-key/private-personal-query");
+    if (providerFailure === "invalid-response") return new Response("fixture-key");
+    if (providerStatus !== 200) {
+      return Response.json({ error: { status: providerErrorCode, message: "fixture-key/private-personal-query" } }, { status: providerStatus });
+    }
     if (providerQuota) return Response.json({ error: "rate" }, { status: 429 });
     const body = JSON.parse(String(init?.body));
     if (!body.systemInstruction) throw new Error("Missing instruction");
@@ -219,3 +228,57 @@ Deno.test("payload validation rejects oversized advice and invalid photos before
     400,
   );
 });
+
+Deno.test("provider errors expose safe actionable codes without upstream private content", async () => {
+  const auth = await token();
+  const cases = [
+    [401, "UNAUTHENTICATED", "provider_credentials", 503],
+    [403, "PERMISSION_DENIED", "provider_credentials", 503],
+    [404, "NOT_FOUND", "provider_model", 503],
+    [429, "RESOURCE_EXHAUSTED", "provider_quota", 429],
+    [400, "INVALID_ARGUMENT", "provider_configuration", 503],
+    [503, "UNAVAILABLE", "provider_unavailable", 503],
+    [400, "fixture-key", "provider_configuration", 503],
+  ] as const;
+  try {
+    for (const [httpStatus, upstreamCode, expectedCode, expectedStatus] of cases) {
+      providerStatus = httpStatus;
+      providerErrorCode = upstreamCode;
+      const response = await call("botanicalAdvice", { prompt: "consulta" }, auth);
+      equal(response.status, expectedStatus);
+      const body = await response.json();
+      equal(body.error.code, expectedCode);
+      const lastLog = JSON.parse(logs.at(-1)!);
+      equal(lastLog.provider, "gemini");
+      equal(lastLog.providerStatus, httpStatus);
+      equal(lastLog.providerCode, upstreamCode === "fixture-key" ? "UNKNOWN" : upstreamCode);
+      if (JSON.stringify(body).includes("fixture-key")) throw new Error("Provider body leaked");
+    }
+  } finally {
+    providerStatus = 200;
+    providerErrorCode = "UNKNOWN";
+  }
+  for (const log of logs) {
+    if (log.includes("fixture-key") || log.includes("private-personal-query") ||
+      log.includes("generativelanguage.googleapis.com")) throw new Error("Sensitive provider log");
+  }
+});
+Deno.test("provider network, timeout and invalid JSON responses are classified safely", async () => {
+  const auth = await token();
+  try {
+    for (const [failure, expectedCode, expectedStatus] of [
+      ["network", "provider_network", 503],
+      ["timeout", "provider_timeout", 504],
+      ["invalid-response", "provider_response", 503],
+    ] as const) {
+      providerFailure = failure;
+      const response = await call("botanicalAdvice", { prompt: "consulta" }, auth);
+      equal(response.status, expectedStatus);
+      equal((await response.json()).error.code, expectedCode);
+    }
+  } finally {
+    providerFailure = "";
+  }
+});
+
+
