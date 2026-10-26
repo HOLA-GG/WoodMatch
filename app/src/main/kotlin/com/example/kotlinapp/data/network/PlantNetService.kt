@@ -31,17 +31,18 @@ data class PlantNetCandidate(
     val scorePercentage: Int get() = (score * 100).toInt().coerceIn(0, 100)
     val primaryCommonName: String get() = commonNames.firstOrNull()?.replaceFirstChar { it.uppercase() } ?: scientificName
 
-    fun toTreeSpecies(regionGroup: String = "Andina"): TreeSpecies {
+    fun toTreeSpecies(regionGroup: String = "Sin verificar"): TreeSpecies {
         return TreeSpecies(
             id = "pn_${UUID.randomUUID().toString().take(8)}",
             commonName = primaryCommonName,
             scientificName = scientificName,
             season = "Sin datos",
             co2AbsorptionPerYearKg = -1,
-            description = "Candidato botánico con puntuación del servicio de ${(score * 100).toInt()}%; no es una identificación confirmada. Perteneciente a la familia $family.",
+            description = "Candidato de Pl@ntNet con coincidencia del $scorePercentage%; no es una identificación confirmada. " +
+                if (family.isBlank()) "Familia no disponible en la respuesta." else "Familia indicada por el servicio: $family.",
             nativeRegion = "Sin datos",
             conservationStatus = "Sin verificar",
-            tag = "Reconocimiento Inteligente",
+            tag = "Candidato Pl@ntNet",
             category = "Sin verificar",
             imageUrl = imageUrl,
             family = family,
@@ -54,7 +55,7 @@ data class PlantNetIdentificationResult(
     val bestMatch: String,
     val candidates: List<PlantNetCandidate>,
     val remainingRequests: Int? = null,
-    val project: String = "Flora Andina y Neotropical"
+    val project: String = "Pl@ntNet"
 )
 
 object PlantNetService {
@@ -193,11 +194,11 @@ object PlantNetService {
 
                 // Imagen de referencia provista por Pl@ntNet
                 var imageUrl = ""
-                var detectedOrgan = "leaf"
+                var detectedOrgan = ""
                 val imagesArr = item.optJSONArray("images")
                 if (imagesArr != null && imagesArr.length() > 0) {
                     val firstImg = imagesArr.getJSONObject(0)
-                    detectedOrgan = firstImg.optString("organ", "leaf")
+                    detectedOrgan = firstImg.optString("organ", "")
                     val urlObj = firstImg.optJSONObject("url")
                     imageUrl = urlObj?.optString("m")
                         ?: urlObj?.optString("s")
@@ -289,3 +290,4 @@ object PlantNetService {
         }
     }
 }
+

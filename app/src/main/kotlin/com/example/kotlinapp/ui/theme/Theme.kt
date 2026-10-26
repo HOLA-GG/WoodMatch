@@ -7,6 +7,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -108,6 +111,7 @@ private val SnowColorScheme = lightColorScheme(
 fun WoodMatchTheme(
     season: SeasonalTheme = SeasonalTheme.SUMMER,
     appearance: String = "SYSTEM",
+    textScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when (season) {
@@ -151,6 +155,12 @@ fun WoodMatchTheme(
             }
         }
     }
+    val systemDensity = LocalDensity.current
+    val multiplier = textScale.takeIf { it.isFinite() }?.coerceIn(1f, 1.3f) ?: 1f
+    // User preference adds to, and never replaces or reduces, Android accessibility font scaling.
+    CompositionLocalProvider(
+        LocalDensity provides Density(systemDensity.density, systemDensity.fontScale * multiplier)
+    ) {
     MaterialTheme(
         colorScheme = surfaces,
         typography = Typography,
@@ -163,4 +173,6 @@ fun WoodMatchTheme(
         ),
         content = content
     )
+    }
 }
+

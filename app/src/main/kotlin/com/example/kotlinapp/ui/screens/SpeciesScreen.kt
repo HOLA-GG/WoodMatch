@@ -198,7 +198,6 @@ fun SpeciesScreen(
         var isIdentifying by remember { mutableStateOf(false) }
         var identificationResult by remember { mutableStateOf<PlantNetIdentificationResult?>(null) }
         var errorMessage by remember { mutableStateOf<String?>(null) }
-        var assignRegion by remember { mutableStateOf("Andina") }
 
 
         AlertDialog(
@@ -325,7 +324,7 @@ fun SpeciesScreen(
                         } else {
                             Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Identificar Especie")
+                            Text("Buscar coincidencias")
                         }
                     }
 
@@ -353,13 +352,12 @@ fun SpeciesScreen(
                                 modifier = Modifier.padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = "Especie Reconocida",
+                                        text = "Candidato de Pl@ntNet",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold
@@ -372,7 +370,7 @@ fun SpeciesScreen(
                                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = "${it.scorePercentage}% Precisión",
+                                                text = "Coincidencia: ${it.scorePercentage}%",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onPrimary,
                                                 fontWeight = FontWeight.Bold
@@ -382,6 +380,13 @@ fun SpeciesScreen(
                                 }
 
                                 if (bestCandidate != null) {
+                                    Text(
+                                        text = if (bestCandidate.score < 0.5)
+                                            "La coincidencia es baja. Prueba una foto más clara de una hoja, flor o corteza y compara los candidatos; no confirma la especie."
+                                        else "La puntuación ordena coincidencias del servicio; no certifica la identidad ni es una probabilidad de acierto.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     Text(
                                         text = bestCandidate.primaryCommonName,
                                         style = MaterialTheme.typography.titleMedium,
@@ -404,40 +409,50 @@ fun SpeciesScreen(
                                     }
 
                                     Text(
-                                        text = "Región de registro:",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold
+                                        text = "Parte consultada: " + when (selectedOrgan) {
+                                            "leaf" -> "Hoja"
+                                            "flower" -> "Flor"
+                                            "fruit" -> "Fruto"
+                                            "bark" -> "Corteza"
+                                            else -> "Selección automática"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall
                                     )
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        regions.filter { it != "Todas" }.forEach { reg ->
-                                            FilterChip(
-                                                selected = assignRegion == reg,
-                                                onClick = { assignRegion = reg },
-                                                label = { Text(reg) },
-                                                shape = RoundedCornerShape(16.dp)
-                                            )
-                                        }
-                                    }
-
+                                    Text(
+                                        text = "Colores, tallo, apariencia y cuidados no vienen incluidos en esta identificación. Puedes pedir orientación de Gemini en la ficha del candidato.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     Button(
                                         onClick = {
-                                            val newTree = bestCandidate.toTreeSpecies(assignRegion)
-                                            coroutineScope.launch {
-                                                SpeciesRepository.addSpecies(newTree)
-                                                Toast.makeText(context, "¡${newTree.commonName} guardada en tu catálogo!", Toast.LENGTH_LONG).show()
-                                                showScannerDialog = false
-                                            }
+                                            selectedSpecies = bestCandidate.toTreeSpecies("Sin verificar")
+                                            showScannerDialog = false
                                         },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Filled.LocalFlorist, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Guardar en Catálogo Forestal")
+                                        Text("Ver ficha del candidato")
+                                    }
+                                    if (res.candidates.size > 1) {
+                                        Text("Otros candidatos", style = MaterialTheme.typography.titleSmall)
+                                        res.candidates.drop(1).forEach { candidate ->
+                                            OutlinedButton(
+                                                onClick = {
+                                                    selectedSpecies = candidate.toTreeSpecies("Sin verificar")
+                                                    showScannerDialog = false
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Column(Modifier.fillMaxWidth()) {
+                                                    Text(candidate.primaryCommonName)
+                                                    Text(
+                                                        "${candidate.scientificName} · Coincidencia ${candidate.scorePercentage}%",
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 } else {
                                     Text("No se obtuvieron coincidencias concluyentes. Intenta con otra foto.")
@@ -667,8 +682,9 @@ fun SpeciesScreen(
     // 3. MODAL DE DETALLE BOTÁNICO
     if (selectedSpecies != null) {
         val sp = selectedSpecies!!
-        var isGeneratingCareGuide by remember { mutableStateOf(false) }
-        var careGuideText by remember { mutableStateOf<String?>(null) }
+        var isGeneratingCareGuide by remember(sp.id) { mutableStateOf(false) }
+        var careGuideText by remember(sp.id) { mutableStateOf<String?>(null) }
+        var careGuideError by remember(sp.id) { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = { selectedSpecies = null },
@@ -693,6 +709,13 @@ fun SpeciesScreen(
                                 .clip(RoundedCornerShape(16.dp)),
                             contentScale = ContentScale.Crop
                         )
+                        if (sp.id.startsWith("pn_")) {
+                            Text(
+                                "Imagen de referencia de Pl@ntNet; no es tu fotografía.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     } else {
                         Box(
                             modifier = Modifier
@@ -743,9 +766,9 @@ fun SpeciesScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
 
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -819,15 +842,33 @@ fun SpeciesScreen(
                         )
                     }
 
-                    // BOTÓN PARA CONSULTAR GUÍA DE CUIDADOS INTELIGENTE
+                    Text(
+                        "Apariencia, colores, tallo y cuidados",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        "Estos datos no están incluidos en la respuesta de Pl@ntNet. Gemini puede ofrecer una descripción general del candidato; no observa ni verifica la planta de tu foto.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    careGuideError?.let { problem ->
+                        Text(problem, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    // Gemini remains explicitly separate from the provider's identification data.
                     if (careGuideText == null) {
                         OutlinedButton(
                             onClick = {
                                 isGeneratingCareGuide = true
+                                careGuideError = null
                                 coroutineScope.launch {
-                                    val guide = ForestAiService.getCareGuide(sp.commonName, sp.regionGroup)
-                                    careGuideText = guide.getOrNull() ?: "Guía disponible próximamente."
-                                    isGeneratingCareGuide = false
+                                    try {
+                                        ForestAiService.getCareGuide(sp.scientificName, "Suba, Bogotá")
+                                            .onSuccess { careGuideText = it }
+                                            .onFailure { careGuideError = it.message ?: "No se pudo consultar Gemini. Intenta otra vez." }
+                                    } finally {
+                                        isGeneratingCareGuide = false
+                                    }
                                 }
                             },
                             enabled = !isGeneratingCareGuide,
@@ -836,11 +877,11 @@ fun SpeciesScreen(
                             if (isGeneratingCareGuide) {
                                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Generando guía de cuidados...")
+                                Text("Consultando Gemini…")
                             } else {
                                 Icon(Icons.Filled.Spa, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Guía de Siembra y Cuidados")
+                                Text(if (careGuideError != null) "Reintentar orientación Gemini" else "Consultar ficha orientativa · Gemini")
                             }
                         }
                     } else {
@@ -853,7 +894,7 @@ fun SpeciesScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    text = "Recomendaciones de Siembra y Cuidado:",
+                                    text = "Orientación generada · Requiere revisión",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -880,7 +921,7 @@ fun SpeciesScreen(
     Scaffold(
         topBar = {
             WoodMatchTopAppBar(
-                title = "Catálogo Forestal",
+                title = "Guía botánica",
                 showBackButton = true,
                 onBackClick = onNavigateBack
             )
@@ -1424,3 +1465,4 @@ fun SpeciesScreen(
         }
     }
 }
+

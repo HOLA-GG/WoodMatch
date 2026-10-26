@@ -33,8 +33,11 @@ fun PilotHome(
     onCreate: () -> Unit,
     onSpecies: () -> Unit,
     onCatalog: () -> Unit,
+    onEntities: () -> Unit = {},
 ) {
     val user by AuthRepository.currentUser.collectAsState()
+    val receiver = user?.typedRole == UserRole.RECEPTOR
+    val mixed = user?.typedRole == UserRole.MIXTO
     val all by WoodWasteRepository.items.collectAsState()
     val available = all.count { it.isAvailable }
     val found = all.count { it.entryType == "HALLAZGO" && it.status == "HALLAZGO" }
@@ -80,13 +83,32 @@ fun PilotHome(
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Text(
-                        "Conecta hallazgos, materiales y personas. Desde una poda hasta una estiba o un mueble recuperable.",
+                        if (receiver) "Encuentra materiales en Suba, solicita lo que puedes aprovechar y coordina su recolección. No necesitas publicar para recibir."
+                        else "Conecta hallazgos, materiales y personas. Desde una poda hasta una estiba o un mueble recuperable.",
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
-                    Button(onClick = onCreate) {
-                        Icon(Icons.Default.Add, null)
+                    Button(
+                        onClick = if (receiver) onCatalog else onCreate,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    ) {
+                        Icon(if (receiver) Icons.Default.Search else Icons.Default.Add, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Crear publicación")
+                        Text(if (receiver) "Buscar materiales" else "Crear publicación")
+                    }
+                    if (mixed) {
+                        OutlinedButton(
+                            onClick = onCatalog,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        ) {
+                            Icon(Icons.Default.Search, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Buscar materiales")
+                        }
+                    }
+                    if (receiver) {
+                        TextButton(onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+                            Text("Reportar un hallazgo (opcional)")
+                        }
                     }
                 }
             }
@@ -112,6 +134,14 @@ fun PilotHome(
                 "Estibas, tablas, muebles, podas y más",
                 Icons.Default.Inventory2,
                 onCatalog,
+            )
+        }
+        item {
+            ActionCard(
+                "Entidades de Suba",
+                "Conoce negocios locales y consulta sus condiciones directamente",
+                Icons.Default.Business,
+                onEntities,
             )
         }
         item {
@@ -162,6 +192,7 @@ fun CommunityScreen(
     mapFirst: Boolean = false,
     onCreate: () -> Unit,
     onEdit: (WoodWasteItem) -> Unit,
+    onEntities: () -> Unit = {},
 ) {
     val all by WoodWasteRepository.items.collectAsState()
     val error by WoodWasteRepository.error.collectAsState()
@@ -209,6 +240,13 @@ fun CommunityScreen(
             }
             IconButton(onClick = { filters = !filters }) {
                 Icon(Icons.Default.Tune, "Mostrar u ocultar filtros")
+            }
+        }
+        if (!showMap) {
+            OutlinedButton(onClick = onEntities, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Icon(Icons.Default.Business, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Entidades de Suba")
             }
         }
         if (!showMap || filters) OutlinedTextField(
@@ -479,4 +517,5 @@ private fun EntryDetail(
         }
     }
 }
+
 

@@ -48,6 +48,7 @@ class MainActivity : FragmentActivity() {
             var mode by remember { mutableStateOf(prefs.getString("season", "AUTO")!!) }
             var appearance by remember { mutableStateOf(prefs.getString("appearance", "SYSTEM")!!) }
             var season by remember { mutableStateOf(PilotPreferences.resolvedSeason(mode)) }
+            var textScale by remember { mutableFloatStateOf(PilotPreferences.normalizedTextScale(prefs.getFloat("text_scale", 1f))) }
             val lifecycle = LocalLifecycleOwner.current.lifecycle
             DisposableEffect(lifecycle, mode) {
                 val observer = LifecycleEventObserver { _, event ->
@@ -57,10 +58,11 @@ class MainActivity : FragmentActivity() {
                 lifecycle.addObserver(observer)
                 onDispose { lifecycle.removeObserver(observer) }
             }
-            WoodMatchTheme(season = season, appearance = appearance) {
+            WoodMatchTheme(season = season, appearance = appearance, textScale = textScale) {
                 WoodMatchApp(
-                    mode,
-                    appearance,
+                    seasonMode = mode,
+                    appearance = appearance,
+                    textScale = textScale,
                     onSeason = {
                         mode = it
                         season = PilotPreferences.resolvedSeason(it)
@@ -69,6 +71,10 @@ class MainActivity : FragmentActivity() {
                     onAppearance = {
                         appearance = it
                         prefs.edit().putString("appearance", it).apply()
+                    },
+                    onTextScale = {
+                        textScale = PilotPreferences.normalizedTextScale(it)
+                        prefs.edit().putFloat("text_scale", textScale).apply()
                     },
                 )
             }
@@ -82,13 +88,15 @@ fun WoodMatchApp(
     appearance: String,
     onSeason: (String) -> Unit,
     onAppearance: (String) -> Unit,
+    textScale: Float = 1f,
+    onTextScale: (Float) -> Unit = {},
 ) {
     val user by AuthRepository.currentUser.collectAsState()
     LaunchedEffect(user?.uid) { WoodWasteRepository.refreshSession() }
     val nav = rememberNavController()
     val back by nav.currentBackStackEntryAsState()
     val route = back?.destination?.route.orEmpty()
-    val tabs = listOf("dashboard", "tree_map", "report_tree", "my_activity", "profile")
+    val tabs = listOf("dashboard", "tree_map", "report_tree", "view_reports", "my_activity", "profile")
     val items by WoodWasteRepository.items.collectAsState()
     var importJson by rememberSaveable { mutableStateOf<String?>(null) }
     fun go(target: String) {
@@ -103,7 +111,7 @@ fun WoodMatchApp(
     Scaffold(
         bottomBar = {
             if (route in tabs)
-                WoodMatchBottomNav(route) { target ->
+                WoodMatchBottomNav(route, user?.role.orEmpty()) { target ->
                     nav.navigate(target) {
                         popUpTo("dashboard") { saveState = true }
                         launchSingleTop = true
@@ -157,13 +165,19 @@ fun WoodMatchApp(
                     onCreate = { go("report_tree") },
                     onSpecies = { go("species") },
                     onCatalog = { go("view_reports") },
+                    onEntities = { go("entities") },
                 )
             }
             composable("tree_map") {
-                CommunityScreen(mapFirst = true, onCreate = { go("report_tree") }, onEdit = ::edit)
+                CommunityScreen(mapFirst = true, onCreate = { go("report_tree") }, onEdit = ::edit,
+                    onEntities = { go("entities") })
             }
             composable("view_reports") {
-                CommunityScreen(onCreate = { go("report_tree") }, onEdit = ::edit)
+                CommunityScreen(onCreate = { go("report_tree") }, onEdit = ::edit,
+                    onEntities = { go("entities") })
+            }
+            composable("entities") {
+                EntityDirectoryScreen(onBack = { nav.popBackStack() })
             }
             composable("report_tree") {
                 PublicationWizard(onDone = { go("my_activity") }, onBack = { nav.popBackStack() })
@@ -214,10 +228,39 @@ fun WoodMatchApp(
                 )
             }
             composable("profile") {
-                PilotProfile(seasonMode, appearance, onSeason, onAppearance, ::logout)
+                PilotProfile(
+                    seasonMode = seasonMode,
+                    appearance = appearance,
+                    textScale = textScale,
+                    onSeason = onSeason,
+                    onAppearance = onAppearance,
+                    onTextScale = onTextScale,
+                    onEditProfile = { go("edit_profile") },
+                    onChangePassword = { go("change_password") },
+                    onLogout = ::logout,
+                )
             }
             composable("settings") {
-                PilotProfile(seasonMode, appearance, onSeason, onAppearance, ::logout)
+                PilotProfile(
+                    seasonMode = seasonMode,
+                    appearance = appearance,
+                    textScale = textScale,
+                    onSeason = onSeason,
+                    onAppearance = onAppearance,
+                    onTextScale = onTextScale,
+                    onEditProfile = { go("edit_profile") },
+                    onChangePassword = { go("change_password") },
+                    onLogout = ::logout,
+                )
+            }
+            composable("edit_profile") {
+                EditProfileScreen(onBack = { nav.popBackStack() })
+            }
+            composable("change_password") {
+                ChangePasswordScreen(
+                    onNavigateBack = { nav.popBackStack() },
+                    onRecoverPassword = { go("forgot_password") },
+                )
             }
             composable("species") {
                 SpeciesScreen(
@@ -229,3 +272,4 @@ fun WoodMatchApp(
         }
     }
 }
+

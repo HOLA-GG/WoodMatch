@@ -5,13 +5,9 @@ import kotlinx.coroutines.withContext
 
 object ForestAiService {
 
-    private const val MODEL_NAME = "gemini-3.5-flash-lite"
-    private const val FALLBACK_MODEL_NAME = "gemini-3.5-flash"
-    private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-
     /**
      * Consulta al Consultor Botánico Inteligente sobre especies, cuidados o aprovechamiento.
-     * Restringido a máximo 3 puntos clave y enfocado en la localidad de Suba, Bogotá.
+     * Orientación remota enfocada en la localidad de Suba, Bogotá.
      */
     suspend fun askBotanicalConsultant(userPrompt: String): Result<String> =
         withContext(Dispatchers.IO) {
@@ -61,15 +57,20 @@ object ForestAiService {
             askBotanicalConsultant(prompt)
         }
 
-    /** Genera una guía de siembra y cuidados para una especie específica en máximo 3 puntos. */
+    /** General candidate description; never presented as observations of the user's photograph. */
     suspend fun getCareGuide(speciesName: String, region: String): Result<String> =
         withContext(Dispatchers.IO) {
             val prompt =
-                "Guía botánica para '$speciesName' en $region (Suba, Bogotá). " +
-                    "Genera EXACTAMENTE 3 puntos numerados: " +
-                    "1. Suelo y exposición solar. " +
-                    "2. Riego y prevención de plagas. " +
-                    "3. Beneficio ecológico y captura de CO2. Breve, directo y sin asteriscos."
+                "Ficha botánica orientativa del candidato '$speciesName' para una persona en $region. " +
+                    "La identificación es incierta y no has recibido la fotografía. No describas su ejemplar concreto. " +
+                    "Responde brevemente en español con 4 apartados: " +
+                    "1. Apariencia general y rasgos para comparar. " +
+                    "2. Colores habituales y variaciones de hojas o flores; no deduzcas el color de la foto. " +
+                    "3. Tallo o corteza y rasgos típicos, si se conocen. " +
+                    "4. Cuidados generales: luz, suelo y riego, considerando Suba. " +
+                    "Si el nombre solo identifica un género o hay variedades, indica esa limitación. " +
+                    "Para cualquier dato desconocido escribe 'No disponible'; no inventes cifras de CO2, " +
+                    "propiedades medicinales ni afirmes que la planta es comestible o segura. Sin asteriscos."
 
             askBotanicalConsultant(prompt)
         }
@@ -78,13 +79,5 @@ object ForestAiService {
         return text.replace("**", "").replace("*", "")
     }
 
-    private fun getExpertFallbackResponse(query: String): String {
-        if (query.contains("co2", ignoreCase = true) || query.contains("carbon", ignoreCase = true))
-            return "1. El carbono almacenado depende de la especie, tamaño y condiciones del árbol.\n" +
-                "2. La app no dispone de mediciones para ordenar las especies de Suba por captura de CO₂.\n" +
-                "3. Puedes explorar la guía local; para una orientación específica, vuelve a consultar al asistente cuando esté disponible."
-        return "1. Añade una foto clara y elige el punto real del hallazgo o material.\n" +
-            "2. Describe su condición y, si lo ofreces, la cantidad aproximada. Una foto no confirma especie, resistencia ni autorización para retirarlo.\n" +
-            "3. Revisa la ubicación antes de publicar. No quemes madera pintada o tratada; prioriza su reutilización cuando sea adecuada."
-    }
 }
+

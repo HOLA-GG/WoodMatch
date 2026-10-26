@@ -185,6 +185,11 @@ fun RegisterScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
+                    Text(
+                        "Elige cómo participarás: generar, recibir o ambas. Este rol se conserva en tu cuenta; el perfil mixto permite crear y buscar material.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
                             Triple(UserRole.GENERADOR.name, "Generador de Residuos", "Poda de árboles, jardinería o descartes de madera"),
@@ -212,7 +217,7 @@ fun RegisterScreen(
                                         tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = title,
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
@@ -471,3 +476,4 @@ fun RegisterScreen(
         }
     }
 }
+

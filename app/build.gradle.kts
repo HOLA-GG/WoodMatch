@@ -20,8 +20,8 @@ android {
         applicationId = "com.example.kotlinapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "2.0.1-pilot"
+        versionCode = 5
+        versionName = "2.0.2-pilot"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     // FragmentActivity must support ActivityResultRegistry request codes (Fragment >= 1.3).
     implementation("androidx.fragment:fragment-ktx:1.8.6")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
