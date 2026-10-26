@@ -3,6 +3,9 @@ package com.example.kotlinapp
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -112,6 +115,10 @@ fun WoodMatchApp(
         NavHost(
             navController = nav,
             startDestination = "splash",
+            enterTransition = { fadeIn(tween(180)) },
+            exitTransition = { fadeOut(tween(120)) },
+            popEnterTransition = { fadeIn(tween(180)) },
+            popExitTransition = { fadeOut(tween(120)) },
             modifier = Modifier.padding(padding),
         ) {
             composable("splash") {
