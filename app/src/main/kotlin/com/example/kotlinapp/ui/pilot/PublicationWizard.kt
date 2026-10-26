@@ -6,15 +6,23 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Eco
+import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -236,11 +244,11 @@ fun PublicationWizard(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(enabled = !busy, onClick = { leave = true }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver y conservar borrador")
             }
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     if (existing != null) "Editar publicación"
                     else "Comparte una nueva oportunidad",
@@ -252,7 +260,37 @@ fun PublicationWizard(
                 )
             }
         }
-        LinearProgressIndicator(progress = { (step + 1) / 3f }, modifier = Modifier.fillMaxWidth())
+        Column(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)
+                .background(Brush.linearGradient(listOf(
+                    MaterialTheme.colorScheme.primaryContainer,
+                    MaterialTheme.colorScheme.secondaryContainer,
+                ))).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Outlined.Eco, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text("Dale una nueva oportunidad", modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Text("Observa, ubica y comparte. Tu borrador se guarda mientras avanzas.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Evidencia", "Detalles", "Revisión").forEachIndexed { index, label ->
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LinearProgressIndicator(
+                        progress = { if (index <= step) 1f else 0f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("${index + 1}. $label", style = MaterialTheme.typography.labelMedium,
+                        color = if (index == step) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         message?.let { StatusMessage(it) }
         when (step) {
             0 -> {
@@ -276,7 +314,8 @@ fun PublicationWizard(
                     AsyncImage(
                         model = photo.ifBlank { remotePhoto.orEmpty() },
                         contentDescription = "Fotografía de la publicación",
-                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(200.dp).clip(MaterialTheme.shapes.large),
                     )
                 PhotoAttachment { uri ->
                     photo = uri.toString()
@@ -285,6 +324,7 @@ fun PublicationWizard(
                 Text("La foto se asociará al punto que confirmes, aunque provenga de tu galería.")
                 var guiding by remember { mutableStateOf(false) }
                 OutlinedButton(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     enabled = !guiding,
                     onClick = {
                         guiding = true
@@ -298,9 +338,13 @@ fun PublicationWizard(
                         }
                     },
                 ) {
+                    if (guiding) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(if (guiding) "Consultando Gemini…" else "Guía asistida del reporte")
                 }
                 OutlinedButton(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     enabled = !locating,
                     onClick = {
                         permission.launch(
@@ -311,8 +355,14 @@ fun PublicationWizard(
                         )
                     },
                 ) {
+                    if (locating) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Outlined.MyLocation, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(if (locating) "Buscando ubicación…" else "Usar mi ubicación")
                 }
+                if (locating) Text("Obteniendo el punto GPS. Puede tardar hasta 15 segundos.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     if (selectedPoint) "Punto elegido · ${sector.name}"
                     else
@@ -480,7 +530,10 @@ fun PublicationWizard(
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (step > 0) OutlinedButton(enabled = !busy, onClick = { step-- }) { Text("Anterior") }
+            if (step > 0) OutlinedButton(
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                enabled = !busy, onClick = { step-- },
+            ) { Text("Anterior") }
             Button(
                 enabled = !busy,
                 onClick = {
@@ -553,11 +606,19 @@ fun PublicationWizard(
                         }
                     }
                 },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
             ) {
+                if (busy) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary)
+                    Spacer(Modifier.width(8.dp))
+                }
                 Text(if (busy) "Guardando…" else if (step < 2) "Continuar" else "Publicar")
             }
         }
+        if (busy) Text("Enviando la foto y tu publicación. Mantén esta pantalla abierta.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
     }
     if (leave)
@@ -618,3 +679,4 @@ fun StatusMessage(message: String) {
         )
     }
 }
+
