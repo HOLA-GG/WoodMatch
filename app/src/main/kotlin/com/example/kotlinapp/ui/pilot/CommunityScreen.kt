@@ -1,5 +1,6 @@
 package com.example.kotlinapp.ui.pilot
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -164,6 +166,7 @@ fun CommunityScreen(
     val all by WoodWasteRepository.items.collectAsState()
     val error by WoodWasteRepository.error.collectAsState()
     val cached by WoodWasteRepository.fromCache.collectAsState()
+    val loading by WoodWasteRepository.loading.collectAsState()
     var showMap by rememberSaveable(mapFirst) { mutableStateOf(mapFirst) }
     var filters by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -186,6 +189,8 @@ fun CommunityScreen(
                 (material == "TODOS" || it.wasteType == material)
         }
     val selected = all.find { it.id == selectedId }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val filterMaxHeight = (maxHeight * 0.30f).coerceIn(96.dp, 220.dp)
     Column(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -214,8 +219,12 @@ fun CommunityScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-        if (filters)
-            Column(Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState())) {
+        AnimatedVisibility(visible = filters) {
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = filterMaxHeight)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 ChoiceRow(
                     listOf("TODOS" to "Todos", "HALLAZGO" to "Hallazgos", "OFERTA" to "Ofertas"),
                     kind,
@@ -253,6 +262,11 @@ fun CommunityScreen(
                     sector = it
                 }
             }
+        }
+        if (loading) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text("Sincronizando la comunidad…", style = MaterialTheme.typography.labelMedium)
+        }
         if (!AuthRepository.isAuthenticated)
             Text("Inicia sesión para ver la comunidad y compartir material.")
         error?.let {
@@ -275,7 +289,7 @@ fun CommunityScreen(
                 centerLng = -74.085,
                 zoomLevel = 13,
                 onWasteSelected = { selectedId = it.id },
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f).clipToBounds(),
             )
             if (filters) Text(
                 "Verde: disponible · Naranja: hallazgo o reservado. Toca un punto para ver el estado.",
@@ -287,13 +301,14 @@ fun CommunityScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 16.dp),
             ) {
-                if (visible.isEmpty())
+                if (visible.isEmpty() && !loading)
                     item {
                         Text("Aún no hay publicaciones con estos filtros.")
                         TextButton(onClick = onCreate) { Text("Compartir un hallazgo o material") }
                     }
                 items(visible, key = { it.id }) { item -> EntryCard(item) { selectedId = item.id } }
             }
+    }
     }
     if (selected != null)
         EntryDetail(
@@ -355,8 +370,17 @@ private fun EntryDetail(
     var note by rememberSaveable(item.id) { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val op = rememberSaveable(item.id, use, date, quantity, note) { PilotApi.operationId() }
-    LaunchedEffect(item.id, item.imagePath) {
-        runCatching { WoodWasteRepository.photoUrl(item) }.onSuccess { image = it }
+    LaunchedEffect(item.id, item.imagePath, photoRetry) {
+        if (item.imagePath.isNullOrBlank()) return@LaunchedEffect
+        photoLoading = true
+        photoError = false
+        try {
+            runCatching { WoodWasteRepository.photoUrl(item) }
+                .onSuccess { image = it }
+                .onFailure { photoError = true }
+        } finally {
+            photoLoading = false
+        }
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -369,6 +393,14 @@ private fun EntryDetail(
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(item.title, style = MaterialTheme.typography.headlineMedium)
+            if (photoLoading) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                Text("Preparando fotografía…", style = MaterialTheme.typography.labelMedium)
+            }
+            if (photoError) {
+                Text("No se pudo cargar la fotografía.", color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { photoRetry++ }) { Text("Reintentar fotografía") }
+            }
             image?.let {
                 AsyncImage(
                     model = it,
@@ -445,3 +477,4 @@ private fun EntryDetail(
         }
     }
 }
+
