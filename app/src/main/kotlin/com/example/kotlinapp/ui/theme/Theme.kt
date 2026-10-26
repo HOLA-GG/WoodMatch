@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -129,6 +130,15 @@ fun WoodMatchTheme(
         background=Color(0xFF191C18),onBackground=Color(0xFFF3EEE5),surface=Color(0xFF191C18),onSurface=Color(0xFFF3EEE5),
         surfaceVariant=Color(0xFF30372E),onSurfaceVariant=Color(0xFFD4DCCF),outline=Color(0xFFA0AA9B)
     ) else colorScheme
+    // Derive every surface role from the seasonal palette, avoiding Material's default lilac cards.
+    val surfaces = resolved.copy(
+        surfaceContainerLowest = resolved.surface,
+        surfaceContainerLow = lerp(resolved.surface, resolved.primaryContainer, 0.08f),
+        surfaceContainer = lerp(resolved.surface, resolved.primaryContainer, 0.14f),
+        surfaceContainerHigh = lerp(resolved.surface, resolved.primaryContainer, 0.22f),
+        surfaceContainerHighest = resolved.surfaceVariant,
+        outlineVariant = lerp(resolved.surface, resolved.onSurface, 0.20f),
+    )
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -142,7 +152,7 @@ fun WoodMatchTheme(
         }
     }
     MaterialTheme(
-        colorScheme = resolved,
+        colorScheme = surfaces,
         typography = Typography,
         shapes = Shapes(
             extraSmall = RoundedCornerShape(8.dp),
