@@ -180,7 +180,15 @@ fun WoodMatchApp(
                 EntityDirectoryScreen(onBack = { nav.popBackStack() })
             }
             composable("report_tree") {
-                PublicationWizard(onDone = { go("my_activity") }, onBack = { nav.popBackStack() })
+                PublicationWizard(
+                    onDone = {
+                        nav.navigate("my_activity") {
+                            popUpTo("report_tree") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onBack = { nav.popBackStack() },
+                )
             }
             composable(
                 "edit/{id}",

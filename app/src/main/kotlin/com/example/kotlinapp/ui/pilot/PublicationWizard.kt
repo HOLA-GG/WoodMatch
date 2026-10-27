@@ -628,7 +628,13 @@ fun PublicationWizard(
             text = { Text("Puedes retomarlo al volver a Crear.") },
             confirmButton = { TextButton(onClick = onBack) { Text("Guardar y salir") } },
             dismissButton = {
-                TextButton(onClick = { leave = false }) { Text("Continuar editando") }
+                Row {
+                    TextButton(onClick = {
+                        prefs.edit().remove(draftKey).apply()
+                        onBack()
+                    }) { Text("Descartar y cerrar") }
+                    TextButton(onClick = { leave = false }) { Text("Continuar editando") }
+                }
             },
         )
 }
