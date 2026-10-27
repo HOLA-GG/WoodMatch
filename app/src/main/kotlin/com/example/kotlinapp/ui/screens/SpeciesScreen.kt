@@ -973,7 +973,7 @@ fun SpeciesScreen(
                     label = "Región",
                     selected = selectedRegion,
                     options = regions,
-                    onSelect = onSelectRegion,
+                    onSelect = { onSelectRegion(it) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(
@@ -995,6 +995,7 @@ fun SpeciesScreen(
                         modifier = Modifier.weight(1f),
                     )
                 }
+            }
 
             // Conteo de especies
             item {
