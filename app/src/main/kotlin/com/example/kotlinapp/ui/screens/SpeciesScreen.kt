@@ -76,6 +76,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,6 +100,47 @@ import com.example.kotlinapp.ui.components.WoodMatchTopAppBar
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.io.File
+
+@Composable
+private fun SpeciesFilterMenu(
+    label: String,
+    selected: String,
+    options: List<String>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable(label) { mutableStateOf(false) }
+    Box(modifier) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                Text(label, style = MaterialTheme.typography.labelSmall)
+                Text(
+                    selected,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 fun SpeciesScreen(
@@ -1207,43 +1249,3 @@ fun SpeciesScreen(
 }
 
 
-
-@Composable
-private fun SpeciesFilterMenu(
-    label: String,
-    selected: String,
-    options: List<String>,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by rememberSaveable(label) { mutableStateOf(false) }
-    Box(modifier) {
-        OutlinedButton(
-            onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) {
-            Column(Modifier.fillMaxWidth()) {
-                Text(label, style = MaterialTheme.typography.labelSmall)
-                Text(
-                    selected,
-                    maxLines = 1,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        onSelect(option)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
-}
