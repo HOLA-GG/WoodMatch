@@ -1,5 +1,9 @@
 package com.example.kotlinapp.data.network
 
+import android.content.Context
+import android.net.Uri
+import android.util.Base64
+import com.example.kotlinapp.data.image.PhotoStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -18,20 +22,20 @@ object ForestAiService {
                     val text = response.optString("text")
                     if (!text.isNullOrBlank())
                         return@withContext Result.success(
-                            "Sugerencia Gemini · Requiere revisión humana\n\n" +
+                            "Orientación botánica · Requiere revisión humana\n\n" +
                                 cleanFormatting(text.take(3000))
                         )
-                    return@withContext Result.failure(IllegalStateException("Gemini no devolvió una respuesta válida."))
+                    return@withContext Result.failure(IllegalStateException("El asistente botánico no devolvió una respuesta válida."))
                 } catch (error: Exception) {
                     return@withContext Result.failure(
                         IllegalStateException(
-                            error.message ?: "No se pudo consultar Gemini. Comprueba la conexión e inténtalo de nuevo.",
+                            error.message ?: "No se pudo consultar el asistente botánico. Comprueba la conexión e inténtalo de nuevo.",
                             error,
                         )
                     )
                 }
             }
-            Result.failure(IllegalStateException("Inicia sesión para consultar Gemini."))
+            Result.failure(IllegalStateException("Inicia sesión para consultar el asistente botánico."))
         }
 
     /**
@@ -75,9 +79,60 @@ object ForestAiService {
             askBotanicalConsultant(prompt)
         }
 
+    /**
+     * Reads the locally selected image only long enough to request optional,
+     * reviewable report suggestions. The image never becomes a client-side log.
+     */
+    suspend fun suggestReportFromEvidence(
+        context: Context,
+        uri: Uri,
+    ): Result<ReportEvidenceSuggestion> = withContext(Dispatchers.IO) {
+        try {
+            check(com.example.kotlinapp.data.repository.AuthRepository.isAuthenticated) {
+                "Inicia sesión para consultar la evidencia."
+            }
+            val local = PhotoStorage.importPhoto(context, uri)
+            val file = java.io.File(requireNotNull(local.path))
+            val bytes = try {
+                file.readBytes().also { require(it.size in 4..(1024 * 1024)) }
+            } finally {
+                file.delete()
+            }
+            val result = PilotApi.call(
+                "analyzeEvidence",
+                mapOf("image" to Base64.encodeToString(bytes, Base64.NO_WRAP)),
+            )
+            Result.success(
+                ReportEvidenceSuggestion(
+                    title = result.optString("title").take(120),
+                    material = result.optString("material"),
+                    condition = result.optString("condition").take(120),
+                    description = result.optString("description").take(300),
+                    quantityValue = if (result.has("quantityValue") && !result.isNull("quantityValue"))
+                        result.optDouble("quantityValue") else null,
+                    quantityUnit = result.optString("quantityUnit"),
+                    confidence = result.optString("confidence", "baja"),
+                ),
+            )
+        } catch (error: Exception) {
+            Result.failure(Exception(error.message ?: "No se pudo analizar la evidencia."))
+        }
+    }
+
     private fun cleanFormatting(text: String): String {
         return text.replace("**", "").replace("*", "")
     }
 
 }
 
+
+/** Suggestions are estimates; the author reviews them before any field is changed. */
+data class ReportEvidenceSuggestion(
+    val title: String,
+    val material: String,
+    val condition: String,
+    val description: String,
+    val quantityValue: Double?,
+    val quantityUnit: String,
+    val confidence: String,
+)

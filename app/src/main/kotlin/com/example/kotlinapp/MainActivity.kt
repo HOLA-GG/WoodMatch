@@ -96,11 +96,18 @@ fun WoodMatchApp(
     val nav = rememberNavController()
     val back by nav.currentBackStackEntryAsState()
     val route = back?.destination?.route.orEmpty()
-    val tabs = listOf("dashboard", "tree_map", "report_tree", "view_reports", "my_activity", "profile")
+    val tabs = listOf("dashboard", "tree_map", "report_tree", "view_reports", "my_activity", "profile", "entities", "species")
     val items by WoodWasteRepository.items.collectAsState()
     var importJson by rememberSaveable { mutableStateOf<String?>(null) }
     fun go(target: String) {
         nav.navigate(target) { launchSingleTop = true }
+    }
+    fun navigateTopLevel(target: String) {
+        nav.navigate(target) {
+            popUpTo("dashboard") { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
     fun edit(item: WoodWasteItem) {
         go("edit/${item.id}")
@@ -111,13 +118,7 @@ fun WoodMatchApp(
     Scaffold(
         bottomBar = {
             if (route in tabs)
-                WoodMatchBottomNav(route, user?.role.orEmpty()) { target ->
-                    nav.navigate(target) {
-                        popUpTo("dashboard") { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
+                WoodMatchBottomNav(route, user?.role.orEmpty(), ::navigateTopLevel)
         }
     ) { padding ->
         NavHost(
@@ -161,20 +162,20 @@ fun WoodMatchApp(
             }
             composable("dashboard") {
                 PilotHome(
-                    onMap = { go("tree_map") },
+                    onMap = { navigateTopLevel("tree_map") },
                     onCreate = { go("report_tree") },
-                    onSpecies = { go("species") },
-                    onCatalog = { go("view_reports") },
-                    onEntities = { go("entities") },
+                    onSpecies = { navigateTopLevel("species") },
+                    onCatalog = { navigateTopLevel("view_reports") },
+                    onEntities = { navigateTopLevel("entities") },
                 )
             }
             composable("tree_map") {
                 CommunityScreen(mapFirst = true, onCreate = { go("report_tree") }, onEdit = ::edit,
-                    onEntities = { go("entities") })
+                    onEntities = { navigateTopLevel("entities") })
             }
             composable("view_reports") {
                 CommunityScreen(onCreate = { go("report_tree") }, onEdit = ::edit,
-                    onEntities = { go("entities") })
+                    onEntities = { navigateTopLevel("entities") })
             }
             composable("entities") {
                 EntityDirectoryScreen(onBack = { nav.popBackStack() })
@@ -271,10 +272,7 @@ fun WoodMatchApp(
                 )
             }
             composable("species") {
-                SpeciesScreen(
-                    onNavigateBack = { nav.popBackStack() },
-                    onNavigateToCreateReport = { go("report_tree") },
-                )
+                SpeciesScreen(onNavigateBack = { nav.popBackStack() })
             }
             composable("admin_users") { AdminUsersScreen(onNavigateBack = { nav.popBackStack() }) }
         }

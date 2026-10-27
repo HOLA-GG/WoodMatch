@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -41,6 +43,8 @@ fun PilotHome(
     val all by WoodWasteRepository.items.collectAsState()
     val available = all.count { it.isAvailable }
     val found = all.count { it.entryType == "HALLAZGO" && it.status == "HALLAZGO" }
+    val myContributions = all.count { it.authorId == user?.uid }
+    val myCompleted = all.count { it.authorId == user?.uid && it.status == "APROVECHADO" }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -63,22 +67,47 @@ fun PilotHome(
             }
         }
         item {
-            Card(
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                shape = MaterialTheme.shapes.extraLarge,
-            ) {
-                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Icon(
-                        Icons.Default.Eco,
-                        null,
-                        Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+            Card(shape = MaterialTheme.shapes.extraLarge) {
+                Column(
+                    Modifier.fillMaxWidth().background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.secondaryContainer,
+                            ),
+                        ),
+                    ).padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier.size(62.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ) {
+                            Column(
+                                Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Text("\${myContributions}", style = MaterialTheme.typography.titleLarge)
+                                Text("aportes", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                            Text("Tu huella circular", style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(
+                                if (myContributions == 0) "Tu primer hallazgo puede abrir una nueva ruta de aprovechamiento."
+                                else "\${myCompleted} aportes ya cerraron su ciclo en la comunidad.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
                     Text(
-                        "La madera merece\notra oportunidad.",
+                        "La madera merece\\notra oportunidad.",
                         style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
@@ -175,13 +204,23 @@ private fun ActionCard(
     onClick: () -> Unit,
 ) {
     Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.large) {
-        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-            Column(Modifier.weight(1f).padding(horizontal = 16.dp)) {
-                Text(title, style = MaterialTheme.typography.titleLarge)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, Modifier.size(25.dp))
+                }
             }
-            Icon(Icons.Default.ChevronRight, null)
+            Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.primary)
         }
     }
 }

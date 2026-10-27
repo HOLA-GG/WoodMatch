@@ -99,7 +99,23 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body));
     if (!body.systemInstruction) throw new Error("Missing instruction");
     return Response.json({
-      candidates: [{ content: { parts: [{ text: "Orientación de prueba" }] } }],
+      candidates: [{
+        content: {
+          parts: [{
+            text: body.generationConfig?.responseMimeType === "application/json"
+              ? JSON.stringify({
+                title: "Tablas recuperables",
+                material: "Tablas",
+                condition: "Secas, requieren revisión",
+                description: "Madera recuperable visible.",
+                quantityValue: 2,
+                quantityUnit: "unidades",
+                confidence: "media",
+              })
+              : "Orientación de prueba",
+          }],
+        },
+      }],
     });
   }
   throw new Error("Unexpected fixture endpoint");
@@ -188,7 +204,7 @@ Deno.test("server advice requires authentication and maps quota errors to useful
   const res = await call("botanicalAdvice", { prompt: "consulta" }, auth);
   equal(res.status, 200);
   equal((await res.json()).data.text, "Orientación de prueba");
-  quotaCount = 5;
+  quotaCount = 6;
   equal(
     (await call("botanicalAdvice", { prompt: "consulta" }, auth)).status,
     429,
@@ -225,6 +241,21 @@ Deno.test("payload validation rejects oversized advice and invalid photos before
       operationId: "upload",
       image: btoa("not-a-jpeg"),
     }, auth)).status,
+    400,
+  );
+});
+
+Deno.test("evidence analysis accepts only a bounded JPG and returns bounded suggestions", async () => {
+  const auth = await token();
+  const jpg = btoa("\u00ff\u00d8\u00ff\u0000evidence");
+  const response = await call("analyzeEvidence", { image: jpg }, auth);
+  equal(response.status, 200);
+  const payload = await response.json();
+  equal(payload.data.material, "Tablas");
+  equal(payload.data.quantityUnit, "unidades");
+  equal(payload.data.quantityValue, 2);
+  equal(
+    (await call("analyzeEvidence", { image: btoa("not-a-jpeg") }, auth)).status,
     400,
   );
 });

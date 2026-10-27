@@ -1,6 +1,7 @@
 package com.example.kotlinapp.ui.pilot
 
 import android.Manifest
+import android.net.Uri
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,6 +31,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.example.kotlinapp.data.model.*
 import com.example.kotlinapp.data.network.ForestAiService
+import com.example.kotlinapp.data.network.ReportEvidenceSuggestion
 import com.example.kotlinapp.data.network.PilotApi
 import com.example.kotlinapp.data.repository.*
 import com.example.kotlinapp.ui.components.PhotoAttachment
@@ -164,6 +166,8 @@ fun PublicationWizard(
     var message by remember { mutableStateOf<String?>(null) }
     var leave by remember { mutableStateOf(false) }
     var remotePhoto by remember(existing?.id) { mutableStateOf<String?>(null) }
+    var evidenceSuggestion by remember(photo) { mutableStateOf<ReportEvidenceSuggestion?>(null) }
+    var analyzingEvidence by remember(photo) { mutableStateOf(false) }
     LaunchedEffect(existing?.imagePath) {
         if (existing != null)
             runCatching { WoodWasteRepository.photoUrl(existing) }.onSuccess { remotePhoto = it }
@@ -319,9 +323,74 @@ fun PublicationWizard(
                     )
                 PhotoAttachment { uri ->
                     photo = uri.toString()
+                    evidenceSuggestion = null
                     message = null
                 }
                 Text("La foto se asociará al punto que confirmes, aunque provenga de tu galería.")
+                if (photo.isNotBlank()) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        enabled = !analyzingEvidence,
+                        onClick = {
+                            analyzingEvidence = true
+                            scope.launch {
+                                ForestAiService.suggestReportFromEvidence(context, Uri.parse(photo))
+                                    .onSuccess { evidenceSuggestion = it }
+                                    .onFailure {
+                                        message = it.message ?: "No se pudo revisar la evidencia."
+                                    }
+                                analyzingEvidence = false
+                            }
+                        },
+                    ) {
+                        if (analyzingEvidence) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (analyzingEvidence) "Revisando evidencia…" else "Sugerir datos desde la evidencia")
+                    }
+                }
+                evidenceSuggestion?.let { suggestion ->
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f),
+                        ),
+                    ) {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text("Lectura orientativa de la evidencia", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                buildString {
+                                    if (suggestion.material.isNotBlank()) append("Material: \${suggestion.material}\n")
+                                    if (suggestion.condition.isNotBlank()) append("Estado: \${suggestion.condition}\n")
+                                    if (suggestion.quantityValue != null) append("Cantidad visible aprox.: \${suggestion.quantityValue} \${suggestion.quantityUnit}\n")
+                                    if (suggestion.description.isNotBlank()) append(suggestion.description)
+                                }.trim(),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Text(
+                                "Revísalo antes de aplicarlo. No confirma especie, peso, propiedad ni estado estructural.",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                            Button(
+                                onClick = {
+                                    if (suggestion.title.isNotBlank()) title = suggestion.title
+                                    if (suggestion.material in MaterialKinds) material = suggestion.material
+                                    if (suggestion.condition.isNotBlank()) condition = suggestion.condition
+                                    if (suggestion.description.isNotBlank()) description = suggestion.description
+                                    if (suggestion.quantityValue != null) quantity = suggestion.quantityValue.toString()
+                                    if (suggestion.quantityUnit in listOf("unidades", "bultos", "kg", "m³")) unit = suggestion.quantityUnit
+                                    message = "Sugerencias aplicadas. Revísalas antes de publicar."
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("Aplicar al formulario") }
+                        }
+                    }
+                }
                 var guiding by remember { mutableStateOf(false) }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -341,7 +410,7 @@ fun PublicationWizard(
                     if (guiding) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if (guiding) "Consultando Gemini…" else "Guía asistida del reporte")
+                    Text(if (guiding) "Preparando orientación…" else "Orientación para este reporte")
                 }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -479,21 +548,6 @@ fun PublicationWizard(
                     label = { Text("Especie, si la conoces (opcional)") },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                var asking by remember { mutableStateOf(false) }
-                OutlinedButton(
-                    enabled = !asking,
-                    onClick = {
-                        asking = true
-                        scope.launch {
-                            ForestAiService.guideNewUserReport(material, sector.name, description)
-                                .onSuccess { message = it }
-                                .onFailure { message = it.message }
-                            asking = false
-                        }
-                    },
-                ) {
-                    Text(if (asking) "Consultando…" else "Ayúdame a describirlo")
-                }
             }
             else -> {
                 Text("Revisa antes de compartir", style = MaterialTheme.typography.headlineMedium)
