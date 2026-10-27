@@ -451,7 +451,7 @@ async function handle(
       "El asistente todavía no está disponible. Puedes continuar manualmente.",
     );
     await quota(actor.uid, "gemini");
-    const model = env("GEMINI_MODEL") || "gemini-2.5-flash";
+    const model = env("GEMINI_MODEL") || "gemini-3.5-flash-lite";
     requireThat(
       /^[a-z0-9.-]+$/.test(model),
       503,
