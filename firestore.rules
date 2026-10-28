@@ -1,3 +1,13 @@
+// Assumed private profile model (prototype; validate with Emulator before deployment):
+// users/{uid}: uid/name/role required; UID and role immutable.
+// Optional private fields: email<=254, Colombian phone +57 plus 10 digits,
+// dob<=32, city/sectorSuba<=120, gender<=40, privacyVersion<=40,
+// privacyAcceptedAt/updatedAt timestamps, deleting bool set by server.
+// Only name, phone and server updatedAt are client-editable.
+// Original owner-or-trusted-admin-claim profile reads are preserved.
+// wood_wastes: active schema 2/3 community reads, author/completedBy private reads.
+// withdrawal_requests/events: participants only. Business writes and every
+// unlisted collection (passes, quotas, tombstones, photo budgets) remain denied.
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
@@ -10,18 +20,46 @@ service cloud.firestore {
   }
   function owner(uid) { return signedIn() && request.auth.uid == uid; }
   function admin() { return signedIn() && request.auth.token.admin == true; }
+  function optionalText(data, key, maxLength) {
+   return !(key in data) || (data[key] is string && data[key].size() <= maxLength);
+  }
+  function optionalTimestamp(data, key) {
+   return !(key in data) || data[key] is timestamp;
+  }
+  // Used for BOTH create and update, including minimal legacy uid/name/role documents.
+  function isValidUser(data) {
+   return data.keys().hasAll(['uid','name','role'])
+    && data.keys().hasOnly(['uid','name','email','phone','dob','city','gender','role','sectorSuba','privacyVersion','privacyAcceptedAt','updatedAt','deleting'])
+    && data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128
+    && data.name is string && data.name.size() > 0 && data.name.size() <= 120
+    && data.role is string && data.role.size() > 0 && data.role.size() <= 32
+    && data.role in ['GENERADOR','RECEPTOR','MIXTO','ADMIN','admin','user']
+    && (!('email' in data) || (data.email is string && data.email.size() > 0 && data.email.size() <= 254
+        && data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+[.][a-zA-Z]{2,}$')))
+    && (!('phone' in data) || (data.phone is string && data.phone.size() == 13
+        && data.phone.matches('^[+]57[0-9]{10}$')))
+    && optionalText(data, 'dob', 32)
+    && optionalText(data, 'city', 120)
+    && optionalText(data, 'gender', 40)
+    && optionalText(data, 'sectorSuba', 120)
+    && optionalText(data, 'privacyVersion', 40)
+    && optionalTimestamp(data, 'privacyAcceptedAt')
+    && optionalTimestamp(data, 'updatedAt')
+    && (!('deleting' in data) || data.deleting is bool);
+  }
   match /users/{uid} {
    allow read: if owner(uid) || admin();
-   allow create: if owner(uid) && request.resource.data.uid == uid
-    && request.resource.data.keys().hasOnly(['uid','name','email','phone','dob','city','gender','role','sectorSuba','privacyVersion','privacyAcceptedAt'])
+   allow create: if owner(uid) && isValidUser(request.resource.data)
+    && request.resource.data.uid == uid
     && request.resource.data.role in ['GENERADOR','RECEPTOR','MIXTO']
-    && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120
+    && !('updatedAt' in request.resource.data) && !('deleting' in request.resource.data)
     && request.resource.data.privacyVersion == '2026-PILOTO-2'
     && request.resource.data.privacyAcceptedAt == request.time;
-   allow update: if owner(uid)
-    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','city','sectorSuba','role','updatedAt'])
-    && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120
-    && (request.resource.data.role in ['GENERADOR','RECEPTOR','MIXTO'] || request.resource.data.role == resource.data.role)
+   allow update: if owner(uid) && isValidUser(request.resource.data)
+    && request.resource.data.uid == uid && request.resource.data.uid == resource.data.uid
+    && request.resource.data.role == resource.data.role
+    && (!('phone' in resource.data) || 'phone' in request.resource.data)
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','updatedAt'])
     && request.resource.data.updatedAt == request.time;
    allow delete: if false;
   }
@@ -29,7 +67,7 @@ service cloud.firestore {
    allow read: if signedIn() && (
     (resource.data.schemaVersion in [2,3] && resource.data.status in ['HALLAZGO','DISPONIBLE','RESERVADO'])
     || resource.data.authorId == request.auth.uid || resource.data.completedBy == request.auth.uid);
-   // All mutations are authorized and validated in the Edge Function; the Admin REST adapter bypasses rules.
+   // Business mutations are validated by Edge Functions and use trusted Admin REST.
    allow write: if false;
    match /events/{eventId} {
     allow read: if owner(get(/databases/$(database)/documents/wood_wastes/$(id)).data.authorId);

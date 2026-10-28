@@ -1,20 +1,29 @@
 package com.example.kotlinapp.ui.pilot
 
 import android.Manifest
+import android.net.Uri
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Eco
+import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -22,6 +31,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.example.kotlinapp.data.model.*
 import com.example.kotlinapp.data.network.ForestAiService
+import com.example.kotlinapp.data.network.ReportEvidenceSuggestion
 import com.example.kotlinapp.data.network.PilotApi
 import com.example.kotlinapp.data.repository.*
 import com.example.kotlinapp.ui.components.PhotoAttachment
@@ -156,6 +166,8 @@ fun PublicationWizard(
     var message by remember { mutableStateOf<String?>(null) }
     var leave by remember { mutableStateOf(false) }
     var remotePhoto by remember(existing?.id) { mutableStateOf<String?>(null) }
+    var evidenceSuggestion by remember(photo) { mutableStateOf<ReportEvidenceSuggestion?>(null) }
+    var analyzingEvidence by remember(photo) { mutableStateOf(false) }
     LaunchedEffect(existing?.imagePath) {
         if (existing != null)
             runCatching { WoodWasteRepository.photoUrl(existing) }.onSuccess { remotePhoto = it }
@@ -236,11 +248,11 @@ fun PublicationWizard(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(enabled = !busy, onClick = { leave = true }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver y conservar borrador")
             }
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     if (existing != null) "Editar publicación"
                     else "Comparte una nueva oportunidad",
@@ -252,7 +264,37 @@ fun PublicationWizard(
                 )
             }
         }
-        LinearProgressIndicator(progress = { (step + 1) / 3f }, modifier = Modifier.fillMaxWidth())
+        Column(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)
+                .background(Brush.linearGradient(listOf(
+                    MaterialTheme.colorScheme.primaryContainer,
+                    MaterialTheme.colorScheme.secondaryContainer,
+                ))).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Outlined.Eco, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text("Dale una nueva oportunidad", modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Text("Observa, ubica y comparte. Tu borrador se guarda mientras avanzas.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Evidencia", "Detalles", "Revisión").forEachIndexed { index, label ->
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LinearProgressIndicator(
+                        progress = { if (index <= step) 1f else 0f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("${index + 1}. $label", style = MaterialTheme.typography.labelMedium,
+                        color = if (index == step) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         message?.let { StatusMessage(it) }
         when (step) {
             0 -> {
@@ -276,14 +318,102 @@ fun PublicationWizard(
                     AsyncImage(
                         model = photo.ifBlank { remotePhoto.orEmpty() },
                         contentDescription = "Fotografía de la publicación",
-                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(200.dp).clip(MaterialTheme.shapes.large),
                     )
                 PhotoAttachment { uri ->
                     photo = uri.toString()
+                    evidenceSuggestion = null
                     message = null
                 }
                 Text("La foto se asociará al punto que confirmes, aunque provenga de tu galería.")
+                if (photo.isNotBlank()) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        enabled = !analyzingEvidence,
+                        onClick = {
+                            analyzingEvidence = true
+                            scope.launch {
+                                ForestAiService.suggestReportFromEvidence(context, Uri.parse(photo))
+                                    .onSuccess { evidenceSuggestion = it }
+                                    .onFailure {
+                                        message = it.message ?: "No se pudo revisar la evidencia."
+                                    }
+                                analyzingEvidence = false
+                            }
+                        },
+                    ) {
+                        if (analyzingEvidence) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (analyzingEvidence) "Revisando evidencia…" else "Sugerir datos desde la evidencia")
+                    }
+                }
+                evidenceSuggestion?.let { suggestion ->
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f),
+                        ),
+                    ) {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text("Lectura orientativa de la evidencia", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                buildString {
+                                    if (suggestion.material.isNotBlank()) append("Material: ${suggestion.material}\n")
+                                    if (suggestion.condition.isNotBlank()) append("Estado: ${suggestion.condition}\n")
+                                    if (suggestion.quantityValue != null) append("Cantidad visible aprox.: ${suggestion.quantityValue} ${suggestion.quantityUnit}\n")
+                                    if (suggestion.description.isNotBlank()) append(suggestion.description)
+                                }.trim(),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Text(
+                                "Revísalo antes de aplicarlo. No confirma especie, peso, propiedad ni estado estructural.",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                            Button(
+                                onClick = {
+                                    if (suggestion.title.isNotBlank()) title = suggestion.title
+                                    if (suggestion.material in MaterialKinds) material = suggestion.material
+                                    if (suggestion.condition.isNotBlank()) condition = suggestion.condition
+                                    if (suggestion.description.isNotBlank()) description = suggestion.description
+                                    if (suggestion.quantityValue != null) quantity = suggestion.quantityValue.toString()
+                                    if (suggestion.quantityUnit in listOf("unidades", "bultos", "kg", "m³")) unit = suggestion.quantityUnit
+                                    message = "Sugerencias aplicadas. Revísalas antes de publicar."
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("Aplicar al formulario") }
+                        }
+                    }
+                }
+                var guiding by remember { mutableStateOf(false) }
                 OutlinedButton(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    enabled = !guiding,
+                    onClick = {
+                        guiding = true
+                        scope.launch {
+                            ForestAiService.guideNewUserReport(material, sector.name, description)
+                                .onSuccess { message = it }
+                                .onFailure {
+                                    message = it.message ?: "No se pudo consultar la guía. Intenta otra vez."
+                                }
+                            guiding = false
+                        }
+                    },
+                ) {
+                    if (guiding) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (guiding) "Preparando orientación…" else "Orientación para este reporte")
+                }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     enabled = !locating,
                     onClick = {
                         permission.launch(
@@ -294,8 +424,14 @@ fun PublicationWizard(
                         )
                     },
                 ) {
+                    if (locating) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Outlined.MyLocation, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(if (locating) "Buscando ubicación…" else "Usar mi ubicación")
                 }
+                if (locating) Text("Obteniendo el punto GPS. Puede tardar hasta 15 segundos.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     if (selectedPoint) "Punto elegido · ${sector.name}"
                     else
@@ -412,21 +548,6 @@ fun PublicationWizard(
                     label = { Text("Especie, si la conoces (opcional)") },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                var asking by remember { mutableStateOf(false) }
-                OutlinedButton(
-                    enabled = !asking,
-                    onClick = {
-                        asking = true
-                        scope.launch {
-                            ForestAiService.guideNewUserReport(material, sector.name, description)
-                                .onSuccess { message = it }
-                                .onFailure { message = it.message }
-                            asking = false
-                        }
-                    },
-                ) {
-                    Text(if (asking) "Consultando…" else "Ayúdame a describirlo")
-                }
             }
             else -> {
                 Text("Revisa antes de compartir", style = MaterialTheme.typography.headlineMedium)
@@ -463,7 +584,10 @@ fun PublicationWizard(
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (step > 0) OutlinedButton(enabled = !busy, onClick = { step-- }) { Text("Anterior") }
+            if (step > 0) OutlinedButton(
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                enabled = !busy, onClick = { step-- },
+            ) { Text("Anterior") }
             Button(
                 enabled = !busy,
                 onClick = {
@@ -536,23 +660,54 @@ fun PublicationWizard(
                         }
                     }
                 },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
             ) {
+                if (busy) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary)
+                    Spacer(Modifier.width(8.dp))
+                }
                 Text(if (busy) "Guardando…" else if (step < 2) "Continuar" else "Publicar")
             }
         }
+        if (busy) Text("Enviando la foto y tu publicación. Mantén esta pantalla abierta.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
     }
-    if (leave)
+    if (leave) {
         AlertDialog(
             onDismissRequest = { leave = false },
             title = { Text("Tu borrador está guardado") },
             text = { Text("Puedes retomarlo al volver a Crear.") },
-            confirmButton = { TextButton(onClick = onBack) { Text("Guardar y salir") } },
-            dismissButton = {
-                TextButton(onClick = { leave = false }) { Text("Continuar editando") }
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Guardar y salir") }
+                    OutlinedButton(
+                        onClick = {
+                            prefs.edit().remove(draftKey).apply()
+                            onBack()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                    ) { Text("Descartar y cerrar") }
+                    TextButton(
+                        onClick = { leave = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Continuar editando") }
+                }
             },
+            dismissButton = {},
         )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -601,3 +756,4 @@ fun StatusMessage(message: String) {
         )
     }
 }
+

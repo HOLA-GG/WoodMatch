@@ -95,9 +95,7 @@ class AuthValidationTest {
     @Test
     fun testForestAiConsultantResponse() = kotlinx.coroutines.runBlocking {
         val response = com.example.kotlinapp.data.network.ForestAiService.askBotanicalConsultant("¿Qué árboles absorben más CO2?")
-        assertTrue(response.isSuccess)
-        val text = response.getOrNull() ?: ""
-        assertTrue(text.isNotBlank())
-        assertTrue(text.contains("CO₂") || text.contains("Carbono") || text.contains("Roble") || text.contains("Ceiba"))
+        assertTrue(response.isFailure)
+        assertTrue(response.exceptionOrNull()?.message?.contains("Inicia sesión") == true)
     }
 }

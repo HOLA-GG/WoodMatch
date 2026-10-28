@@ -5,6 +5,12 @@ import com.example.kotlinapp.data.model.SeasonalTheme
 import java.util.Calendar
 
 object PilotPreferences {
+    const val TEXT_SCALE_KEY = "text_scale"
+
+    /** App scaling is additive to Android accessibility settings, never a replacement. */
+    fun normalizedTextScale(value: Float): Float =
+        if (value.isFinite()) value.coerceIn(1f, 1.3f) else 1f
+
     fun seasonForMonth(month: Int): SeasonalTheme =
         when (month) {
             in 3..5 -> SeasonalTheme.SPRING

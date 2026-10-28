@@ -125,37 +125,147 @@ async function storage(
   return res.status === 204 ? {} : res.json();
 }
 async function quota(uid: string, service: string) {
-  const day = new Date().toISOString().slice(0, 10);
-  const perUser = service === "gemini" ? 5 : 10,
-    global = service === "gemini" ? 20 : 100;
+  const now = new Date(), day = now.toISOString().slice(0, 10);
+  // Pilot capacity: enough for a small presentation without exhausting the free project.
+  const perUser = service === "gemini" ? 6 : 10,
+    global = service === "gemini" ? 50 : 100,
+    minute = now.toISOString().slice(0, 16);
   await db.atomic(async (tx: Tx) => {
     const a = `ai_quotas/${service}_${day}_${uid}`,
-      b = `ai_quotas/${service}_${day}_global`;
+      b = `ai_quotas/${service}_${day}_global`,
+      c = `ai_quotas/${service}_${minute}_minute_global`;
     const user = await tx.get(a), all = await tx.get(b);
     requireThat(
       (user?.count || 0) < perUser && (all?.count || 0) < global,
       429,
       "quota",
-      "Se alcanzó el límite de consultas de hoy. Puedes continuar manualmente.",
+      "Se alcanzó el límite diario de orientación. Puedes completar el reporte manualmente.",
     );
+    if (service === "gemini") {
+      const recent = await tx.get(c);
+      requireThat(
+        (recent?.count || 0) < 1,
+        429,
+        "quota_rate",
+        "El asistente está atendiendo otra consulta. Intenta de nuevo en un minuto.",
+      );
+      tx.set(c, { count: (recent?.count || 0) + 1, minute });
+    }
     tx.set(a, { uid, count: (user?.count || 0) + 1, day });
     tx.set(b, { count: (all?.count || 0) + 1, day });
   });
 }
-async function remote(url: string, options: RequestInit = {}) {
-  const res = await fetch(url, {
-    ...options,
-    signal: AbortSignal.timeout(45000),
-  });
-  requireThat(
-    res.ok,
-    res.status === 429 ? 429 : 503,
-    "provider",
-    res.status === 429
-      ? "Se alcanzó el límite de consultas. Intenta más tarde."
-      : "La consulta no está disponible. Puedes continuar manualmente.",
-  );
-  return res.json();
+type Provider = "gemini" | "plantnet";
+const providerStatuses = new Set([
+  "INVALID_ARGUMENT",
+  "FAILED_PRECONDITION",
+  "PERMISSION_DENIED",
+  "UNAUTHENTICATED",
+  "NOT_FOUND",
+  "RESOURCE_EXHAUSTED",
+  "UNAVAILABLE",
+  "INTERNAL",
+]);
+class ProviderFault extends Fault {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    readonly provider: Provider,
+    readonly upstreamStatus: number,
+    readonly upstreamCode: string,
+  ) {
+    super(status, code, message);
+  }
+}
+async function remote(provider: Provider, url: string, options: RequestInit = {}) {
+  const label = provider === "gemini" ? "el asistente botánico" : "Pl@ntNet";
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      signal: AbortSignal.timeout(45000),
+    });
+  } catch (error) {
+    const timeout = error instanceof DOMException &&
+      (error.name === "TimeoutError" || error.name === "AbortError");
+    throw new ProviderFault(
+      timeout ? 504 : 503,
+      timeout ? "provider_timeout" : "provider_network",
+      timeout
+        ? `${label} tardó demasiado en responder. Intenta más tarde.`
+        : `No se pudo conectar con ${label}. Intenta más tarde.`,
+      provider,
+      0,
+      timeout ? "TIMEOUT" : "NETWORK",
+    );
+  }
+  if (!res.ok) {
+    // Only allowlisted error enums leave the upstream response. Never log its body,
+    // URL (Pl@ntNet carries a key in its query), headers, key, prompt or exception.
+    let upstreamCode = "UNKNOWN";
+    try {
+      const body = await res.json();
+      const code = body?.error?.status;
+      if (typeof code === "string" && providerStatuses.has(code)) upstreamCode = code;
+    } catch {
+      // Provider errors are not guaranteed to contain JSON.
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new ProviderFault(
+        503,
+        "provider_credentials",
+        `${label} rechazó la configuración de acceso del servidor. El responsable debe revisarla.`,
+        provider,
+        res.status,
+        upstreamCode,
+      );
+    }
+    if (res.status === 404) {
+      throw new ProviderFault(
+        503,
+        provider === "gemini" ? "provider_model" : "provider_not_found",
+        provider === "gemini"
+          ? "El modelo configurado del asistente botánico no está disponible. El responsable debe revisar la configuración."
+          : "La consulta de Pl@ntNet no está disponible para este recurso.",
+        provider,
+        res.status,
+        upstreamCode,
+      );
+    }
+    if (res.status === 429) {
+      throw new ProviderFault(
+        429,
+        "provider_quota",
+        `${label} alcanzó su límite de consultas. Intenta más tarde.`,
+        provider,
+        res.status,
+        upstreamCode,
+      );
+    }
+    throw new ProviderFault(
+      503,
+      res.status === 400 ? "provider_configuration" : "provider_unavailable",
+      res.status === 400
+        ? `${label} no aceptó la configuración de la consulta. El responsable debe revisarla.`
+        : `${label} no está disponible temporalmente. Intenta más tarde.`,
+      provider,
+      res.status,
+      upstreamCode,
+    );
+  }
+  try {
+    return await res.json();
+  } catch {
+    throw new ProviderFault(
+      503,
+      "provider_response",
+      `${label} devolvió una respuesta que no se pudo interpretar. Intenta más tarde.`,
+      provider,
+      res.status,
+      "INVALID_RESPONSE",
+    );
+  }
 }
 async function handle(
   actor: { uid: string; authTime: number },
@@ -252,6 +362,80 @@ async function handle(
     );
     return { url: `${env("SUPABASE_URL")}/storage/v1${result.signedURL}` };
   }
+  if (operation === "analyzeEvidence") {
+    requireThat(
+      typeof data.image === "string" && data.image.length <= 1400000,
+      400,
+      "photo",
+      "Selecciona una fotografía JPG de máximo 1 MB.",
+    );
+    const bytes = Uint8Array.from(atob(data.image), (c) => c.charCodeAt(0));
+    requireThat(
+      bytes.length > 3 && bytes.length <= 1024 * 1024 && bytes[0] === 255 &&
+        bytes[1] === 216 && bytes[2] === 255,
+      400,
+      "photo",
+      "Selecciona una fotografía JPG válida.",
+    );
+    requireThat(
+      env("GEMINI_SERVER_KEY"),
+      503,
+      "setup",
+      "El asistente botánico todavía no está disponible.",
+    );
+    await quota(actor.uid, "gemini");
+    const model = env("GEMINI_MODEL") || "gemini-3.5-flash-lite";
+    requireThat(/^[a-z0-9.-]+$/.test(model), 503, "setup", "Asistente no disponible.");
+    const body = await remote(
+      "gemini",
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": env("GEMINI_SERVER_KEY"),
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: "Analiza solo la evidencia visual de madera o material vegetal para un reporte circular en Suba. No certifiques especie, peso, propiedad, resistencia, seguridad ni permisos. Devuelve JSON válido y breve con title, material, condition, description, quantityValue, quantityUnit y confidence. material debe ser uno de: Árbol, Podas y ramas, Troncos, Estibas, Tablas, Muebles, Madera recuperable. quantityValue solo es una estimación visible o null; nunca inventes peso. quantityUnit debe ser unidades, bultos, kg, m³ o null. confidence debe ser baja, media o alta.",
+            }],
+          },
+          contents: [{
+            parts: [{ inlineData: { mimeType: "image/jpeg", data: data.image } }],
+          }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 320,
+          },
+        }),
+      },
+    );
+    const text = body.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("");
+    let row: any;
+    try {
+      row = JSON.parse(text);
+    } catch {
+      throw new Fault(503, "answer", "No se pudo interpretar la orientación de la evidencia.");
+    }
+    const materials = ["Árbol", "Podas y ramas", "Troncos", "Estibas", "Tablas", "Muebles", "Madera recuperable"];
+    const units = ["unidades", "bultos", "kg", "m³"];
+    const cleanText = (value: unknown, max: number) =>
+      typeof value === "string" ? value.trim().replace(/[<>]/g, "").slice(0, max) : "";
+    const quantity = typeof row.quantityValue === "number" && Number.isFinite(row.quantityValue) &&
+        row.quantityValue >= 0 && row.quantityValue <= 10000
+      ? Math.round(row.quantityValue * 10) / 10
+      : null;
+    return {
+      title: cleanText(row.title, 120),
+      material: materials.includes(row.material) ? row.material : "",
+      condition: cleanText(row.condition, 120),
+      description: cleanText(row.description, 300),
+      quantityValue: quantity,
+      quantityUnit: quantity !== null && units.includes(row.quantityUnit) ? row.quantityUnit : "",
+      confidence: ["baja", "media", "alta"].includes(row.confidence) ? row.confidence : "baja",
+    };
+  }
   if (operation === "botanicalAdvice" || operation === "reportAdvice") {
     requireThat(
       typeof data.prompt === "string" && data.prompt.trim() &&
@@ -267,7 +451,7 @@ async function handle(
       "El asistente todavía no está disponible. Puedes continuar manualmente.",
     );
     await quota(actor.uid, "gemini");
-    const model = env("GEMINI_MODEL") || "gemini-2.5-flash";
+    const model = env("GEMINI_MODEL") || "gemini-3.5-flash-lite";
     requireThat(
       /^[a-z0-9.-]+$/.test(model),
       503,
@@ -275,6 +459,7 @@ async function handle(
       "Asistente no disponible.",
     );
     const body = await remote(
+      "gemini",
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
@@ -338,6 +523,7 @@ async function handle(
         : "auto";
       form.set("organs", organ);
       const result = await remote(
+        "plantnet",
         `https://my-api.plantnet.org/v2/identify/all?api-key=${
           encodeURIComponent(env("PLANTNET_SERVER_KEY"))
         }&lang=es`,
@@ -356,6 +542,7 @@ async function handle(
       "Escribe un nombre.",
     );
     const result = await remote(
+      "plantnet",
       `https://my-api.plantnet.org/v2/species?api-key=${
         encodeURIComponent(env("PLANTNET_SERVER_KEY"))
       }&lang=es&prefix=${encodeURIComponent(data.query)}&pageSize=20`,
@@ -420,6 +607,7 @@ async function handle(
 Deno.serve(async (request) => {
   const correlationId = crypto.randomUUID(), start = Date.now();
   let operation = "unknown", status = 200;
+  let providerFailure: ProviderFault | null = null;
   try {
     requireThat(
       request.method === "POST",
@@ -489,6 +677,7 @@ Deno.serve(async (request) => {
       "photoUrl",
       "botanicalAdvice",
       "reportAdvice",
+      "analyzeEvidence",
       "identifyPlant",
       "searchSpecies",
       "exportAccount",
@@ -515,6 +704,7 @@ Deno.serve(async (request) => {
     );
     return Response.json({ data, correlationId });
   } catch (error) {
+    if (error instanceof ProviderFault) providerFailure = error;
     status = error instanceof Fault ? error.status : 503;
     const message = error instanceof Fault
       ? error.message
@@ -534,7 +724,15 @@ Deno.serve(async (request) => {
         correlationId,
         status,
         durationMs: Date.now() - start,
+        ...(providerFailure
+          ? {
+            provider: providerFailure.provider,
+            providerStatus: providerFailure.upstreamStatus,
+            providerCode: providerFailure.upstreamCode,
+          }
+          : {}),
       }),
     );
   }
 });
+

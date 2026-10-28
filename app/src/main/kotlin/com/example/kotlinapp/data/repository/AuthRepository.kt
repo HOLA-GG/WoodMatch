@@ -4,6 +4,12 @@ import com.example.kotlinapp.data.model.User
 import com.example.kotlinapp.BuildConfig
 import com.example.kotlinapp.data.model.UserRole
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.EmailAuthProvider
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.FirebaseTooManyRequestsException
+import kotlinx.coroutines.CancellationException
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -146,7 +152,7 @@ object AuthRepository {
         val trimmedEmail = email.trim()
         val trimmedPhone = phone.trim()
 
-        if (trimmedName.isBlank()) return Result.failure(Exception("El nombre es requerido."))
+        if (trimmedName.isBlank() || trimmedName.length > 120) return Result.failure(Exception("El nombre debe tener entre 1 y 120 caracteres."))
         if (!validateEmail(trimmedEmail)) return Result.failure(Exception("Correo electrónico inválido."))
         if (!validatePhone(trimmedPhone)) return Result.failure(Exception("El teléfono debe comenzar con +57 y tener 10 dígitos."))
         if (city.isBlank()) return Result.failure(Exception("La ciudad o municipio es requerida."))
@@ -241,21 +247,65 @@ object AuthRepository {
         )
     }
 
-    suspend fun forgotPassword(email: String, phone: String, gender: String): Result<String> {
+    /** Does not disclose whether a mailbox has an account. */
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun forgotPassword(email: String, phone: String = "", gender: String = ""): Result<String> {
         val trimmedEmail = email.trim()
-        if (!validateEmail(trimmedEmail)) return Result.failure(Exception("Correo no válido."))
-
-        auth?.let { firebaseAuth ->
-            try {
-                firebaseAuth.sendPasswordResetEmail(trimmedEmail).await()
-                return Result.success("Se ha enviado un correo con instrucciones de restablecimiento.")
-            } catch (e: Exception) {
-                android.util.Log.w("AuthRepository", "Firebase reset pass fallback: ${e.message}")
-            }
+        if (!validateEmail(trimmedEmail)) return Result.failure(Exception("Escribe un correo válido."))
+        val firebaseAuth = auth ?: return Result.failure(Exception("La recuperación no está disponible en esta instalación."))
+        val neutralMessage = "Si este correo tiene una cuenta, recibirás un enlace para restablecer tu contraseña. Revisa también Spam o Correo no deseado."
+        return try {
+            firebaseAuth.setLanguageCode("es")
+            firebaseAuth.sendPasswordResetEmail(trimmedEmail).await()
+            Result.success(neutralMessage)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: FirebaseAuthInvalidUserException) {
+            Result.success(neutralMessage)
+        } catch (error: Exception) {
+            Result.failure(Exception(authenticationMessage(error, recovery = true)))
         }
-
-        return Result.failure(Exception("No se pudo enviar el correo. Comprueba la configuración del servicio y tu conexión."))
     }
+
+    suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> {
+        if (!isAuthenticated) return Result.failure(Exception("Inicia sesión para cambiar tu contraseña."))
+        if (currentPassword.isBlank()) return Result.failure(Exception("Escribe tu contraseña actual."))
+        if (!validatePassword(newPassword)) return Result.failure(Exception("Usa al menos 8 caracteres, una mayúscula, una minúscula y un número."))
+        if (currentPassword == newPassword) return Result.failure(Exception("Elige una contraseña diferente a la actual."))
+        val firebaseUser = auth?.currentUser ?: return Result.failure(Exception("Vuelve a iniciar sesión para continuar."))
+        val email = firebaseUser.email ?: return Result.failure(Exception("Esta cuenta no tiene un correo disponible para confirmar tu identidad."))
+        if (firebaseUser.providerData.none { it.providerId == EmailAuthProvider.PROVIDER_ID })
+            return Result.failure(Exception("Esta cuenta administra su contraseña con su proveedor de acceso."))
+        return try {
+            firebaseUser.reauthenticate(EmailAuthProvider.getCredential(email, currentPassword)).await()
+            firebaseUser.updatePassword(newPassword).await()
+            Result.success(Unit)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Result.failure(Exception(authenticationMessage(error)))
+        }
+    }
+
+    private fun authenticationMessage(error: Exception, recovery: Boolean = false): String =
+        when (error) {
+            is FirebaseNetworkException -> "No hay conexión con Firebase. Comprueba Internet e inténtalo de nuevo."
+            is FirebaseTooManyRequestsException -> "Hay demasiados intentos. Espera unos minutos antes de volver a intentar."
+            is FirebaseAuthException -> when (error.errorCode) {
+                "ERROR_WRONG_PASSWORD", "ERROR_INVALID_CREDENTIAL", "ERROR_INVALID_LOGIN_CREDENTIALS" ->
+                    if (recovery) "No se pudo procesar la solicitud. Inténtalo de nuevo."
+                    else "No se pudo confirmar tu contraseña actual. Revísala e inténtalo de nuevo."
+                "ERROR_WEAK_PASSWORD" -> "La contraseña no cumple la política de seguridad de la cuenta."
+                "ERROR_REQUIRES_RECENT_LOGIN", "ERROR_USER_TOKEN_EXPIRED", "ERROR_INVALID_USER_TOKEN" ->
+                    "Tu sesión necesita renovarse. Vuelve a iniciar sesión."
+                "ERROR_USER_DISABLED" -> "Esta cuenta no está disponible. Consulta con el responsable del piloto."
+                "ERROR_OPERATION_NOT_ALLOWED" -> "El servicio de contraseñas no está habilitado. Contacta al responsable del piloto."
+                else -> if (recovery) "No se pudo solicitar el correo. Inténtalo más tarde."
+                    else "No se pudo cambiar la contraseña. Inténtalo de nuevo."
+            }
+            else -> if (recovery) "No se pudo solicitar el correo. Comprueba la conexión e inténtalo de nuevo."
+                else "No se pudo cambiar la contraseña. Comprueba la conexión e inténtalo de nuevo."
+        }
 
     fun logout() {
         try {
@@ -292,67 +342,41 @@ object AuthRepository {
         return emptyList()
     }
 
-    suspend fun updateCurrentUserProfile(
-        name: String,
-        phone: String,
-        sectorSuba: String,
-        role: String
-    ): Result<User> {
+    /** Older call sites keep this signature; role and region remain the registered values. */
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun updateCurrentUserProfile(name: String, phone: String, sectorSuba: String, role: String): Result<User> {
         val current = _currentUser.value ?: return Result.failure(Exception("No hay una sesión activa."))
+        if (!isAuthenticated) return Result.failure(Exception("Inicia sesión para editar tu perfil."))
         val trimmedName = name.trim()
         val trimmedPhone = phone.trim()
-
-        if (trimmedName.isBlank()) return Result.failure(Exception("El nombre no puede estar vacío."))
-        if (!validatePhone(trimmedPhone)) return Result.failure(Exception("El teléfono debe comenzar con +57 y tener 10 dígitos (ej: +573101234567)."))
-
-        val targetRole = when {
-            current.isAdmin -> UserRole.ADMIN.name
-            role.uppercase() == UserRole.RECEPTOR.name -> UserRole.RECEPTOR.name
-            role.uppercase() == UserRole.MIXTO.name -> UserRole.MIXTO.name
-            else -> UserRole.GENERADOR.name
+        if (trimmedName.isBlank() || trimmedName.length > 120)
+            return Result.failure(Exception("El nombre debe tener entre 1 y 120 caracteres."))
+        if (!validatePhone(trimmedPhone))
+            return Result.failure(Exception("El teléfono debe comenzar con +57 y tener 10 dígitos."))
+        if (role != current.role)
+            return Result.failure(Exception("El rol se elige al registrarte y no se cambia desde el perfil."))
+        val db = firestore ?: return Result.failure(Exception("No se puede guardar el perfil en esta instalación."))
+        return try {
+            db.collection("users").document(current.uid).update(
+                mapOf(
+                    "name" to trimmedName,
+                    "phone" to trimmedPhone,
+                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                )
+            ).await()
+            val updated = current.copy(name = trimmedName, phone = trimmedPhone)
+            _currentUser.value = updated
+            Result.success(updated)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            Result.failure(Exception("No se pudo guardar el perfil. Comprueba tu conexión e inténtalo de nuevo."))
         }
+    }
 
-        val updatedUser = current.copy(
-            name = trimmedName,
-            phone = trimmedPhone,
-            sectorSuba = sectorSuba.ifBlank { "Suba Centro" },
-            role = targetRole
-        )
-
-        firestore?.let { db ->
-            try {
-                db.collection("users").document(current.uid).update(
-                    mapOf(
-                        "name" to updatedUser.name,
-                        "phone" to updatedUser.phone,
-                        "sectorSuba" to updatedUser.sectorSuba,
-                        "role" to updatedUser.role,
-                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                    )
-                ).await()
-            } catch (_: Exception) {
-                try {
-                    db.collection("users").document(current.uid).set(
-                        mapOf(
-                            "uid" to updatedUser.uid,
-                            "name" to updatedUser.name,
-                            "email" to updatedUser.email,
-                            "phone" to updatedUser.phone,
-                            "city" to updatedUser.city,
-                            "sectorSuba" to updatedUser.sectorSuba,
-                            "role" to updatedUser.role,
-                            "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                        ),
-                        com.google.firebase.firestore.SetOptions.merge()
-                    ).await()
-                } catch (err: Exception) {
-                    return Result.failure(Exception("Error al guardar en el servidor: ${err.localizedMessage ?: err.message}"))
-                }
-            }
-        }
-
-        _currentUser.value = updatedUser
-        return Result.success(updatedUser)
+    suspend fun updateProfile(name: String, phone: String): Result<User> {
+        val current = _currentUser.value ?: return Result.failure(Exception("No hay una sesión activa."))
+        return updateCurrentUserProfile(name, phone, current.sectorSuba, current.role)
     }
 
     suspend fun deleteCurrentAccount(): Result<Unit> = runCatching {
@@ -363,15 +387,9 @@ object AuthRepository {
         logout()
     }
 
-    suspend fun updateUserRole(uid: String, newRole: String): Result<Unit> {
-        if (uid != _currentUser.value?.uid) return Result.failure(Exception("La gestión de otras cuentas no está disponible en el piloto."))
-        return updateCurrentUserProfile(
-            name = _currentUser.value?.name ?: "",
-            phone = _currentUser.value?.phone ?: "",
-            sectorSuba = _currentUser.value?.sectorSuba ?: "Suba Centro",
-            role = newRole
-        ).map { }
-    }
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun updateUserRole(uid: String, newRole: String): Result<Unit> =
+        Result.failure(Exception("El rol se elige al registrarte y no se cambia desde el perfil."))
 
     private suspend fun fetchUserProfile(uid: String): User? {
         return try {
@@ -397,3 +415,4 @@ object AuthRepository {
         }
     }
 }
+
