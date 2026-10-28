@@ -675,23 +675,39 @@ fun PublicationWizard(
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
     }
-    if (leave)
+    if (leave) {
         AlertDialog(
             onDismissRequest = { leave = false },
             title = { Text("Tu borrador está guardado") },
             text = { Text("Puedes retomarlo al volver a Crear.") },
-            confirmButton = { Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Guardar y salir") } },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = {
-                        prefs.edit().remove(draftKey).apply()
-                        onBack()
-                    }) { Text("Descartar y cerrar") }
-                    TextButton(onClick = { leave = false }) { Text("Continuar editando") }
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Guardar y salir") }
+                    OutlinedButton(
+                        onClick = {
+                            prefs.edit().remove(draftKey).apply()
+                            onBack()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                    ) { Text("Descartar y cerrar") }
+                    TextButton(
+                        onClick = { leave = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Continuar editando") }
                 }
             },
+            dismissButton = {},
         )
-}
+    }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

@@ -108,7 +108,7 @@ fun PilotHome(
                         }
                     }
                     Text(
-                        "La madera merece\\notra oportunidad.",
+                        "La madera merece\notra oportunidad.",
                         style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
