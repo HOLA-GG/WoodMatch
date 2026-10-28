@@ -101,7 +101,7 @@ fun PilotHome(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(
                                 if (myContributions == 0) "Tu primer hallazgo puede abrir una nueva ruta de aprovechamiento."
-                                else "\${myCompleted} aportes ya cerraron su ciclo en la comunidad.",
+                                else "${myCompleted} aportes ya cerraron su ciclo en la comunidad.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
