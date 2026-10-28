@@ -708,6 +708,7 @@ fun PublicationWizard(
             dismissButton = {},
         )
     }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
