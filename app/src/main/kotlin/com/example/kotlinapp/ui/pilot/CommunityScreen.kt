@@ -92,7 +92,7 @@ fun PilotHome(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                Text("\${myContributions}", style = MaterialTheme.typography.titleLarge)
+                                Text("$"+"{myContributions}", style = MaterialTheme.typography.titleLarge)
                                 Text("aportes", style = MaterialTheme.typography.labelSmall)
                             }
                         }

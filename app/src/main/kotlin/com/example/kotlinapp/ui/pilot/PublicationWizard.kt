@@ -365,9 +365,9 @@ fun PublicationWizard(
                             Text("Lectura orientativa de la evidencia", style = MaterialTheme.typography.titleSmall)
                             Text(
                                 buildString {
-                                    if (suggestion.material.isNotBlank()) append("Material: \${suggestion.material}\n")
-                                    if (suggestion.condition.isNotBlank()) append("Estado: \${suggestion.condition}\n")
-                                    if (suggestion.quantityValue != null) append("Cantidad visible aprox.: \${suggestion.quantityValue} \${suggestion.quantityUnit}\n")
+                                    if (suggestion.material.isNotBlank()) append("Material: ${suggestion.material}\n")
+                                    if (suggestion.condition.isNotBlank()) append("Estado: ${suggestion.condition}\n")
+                                    if (suggestion.quantityValue != null) append("Cantidad visible aprox.: ${suggestion.quantityValue} ${suggestion.quantityUnit}\n")
                                     if (suggestion.description.isNotBlank()) append(suggestion.description)
                                 }.trim(),
                                 style = MaterialTheme.typography.bodySmall,
@@ -680,7 +680,7 @@ fun PublicationWizard(
             onDismissRequest = { leave = false },
             title = { Text("Tu borrador está guardado") },
             text = { Text("Puedes retomarlo al volver a Crear.") },
-            confirmButton = { TextButton(onClick = onBack) { Text("Guardar y salir") } },
+            confirmButton = { Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Guardar y salir") } },
             dismissButton = {
                 Row {
                     TextButton(onClick = {
