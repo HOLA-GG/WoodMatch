@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -91,12 +92,13 @@ fun WoodMatchApp(
     textScale: Float = 1f,
     onTextScale: (Float) -> Unit = {},
 ) {
+    val context = LocalContext.current
     val user by AuthRepository.currentUser.collectAsState()
     LaunchedEffect(user?.uid) { WoodWasteRepository.refreshSession() }
     val nav = rememberNavController()
     val back by nav.currentBackStackEntryAsState()
     val route = back?.destination?.route.orEmpty()
-    val tabs = listOf("dashboard", "tree_map", "report_tree", "view_reports", "my_activity", "profile", "entities", "species")
+    val tabs = listOf("dashboard", "tree_map", "report_tree", "view_reports", "my_activity", "profile", "entities", "species", "guest", "guest_map")
     val items by WoodWasteRepository.items.collectAsState()
     var importJson by rememberSaveable { mutableStateOf<String?>(null) }
     fun go(target: String) {
@@ -114,6 +116,10 @@ fun WoodMatchApp(
     }
     fun logout() {
         nav.navigate("login") { popUpTo(0) { inclusive = true } }
+    }
+    fun enterGuest() {
+        AuthRepository.loginAsGuest()
+        nav.navigate("guest") { popUpTo(0) { inclusive = true } }
     }
     Scaffold(
         bottomBar = {
@@ -137,6 +143,25 @@ fun WoodMatchApp(
                     },
                     onNavigateToLogin = {
                         nav.navigate("login") { popUpTo("splash") { inclusive = true } }
+                    },
+                    onNavigateToOnboarding = {
+                        nav.navigate("onboarding") { popUpTo("splash") { inclusive = true } }
+                    },
+                )
+            }
+            composable("onboarding") {
+                OnboardingScreen(
+                    onFinish = {
+                        PilotPreferences.completeOnboarding(context)
+                        nav.navigate("login") { popUpTo("onboarding") { inclusive = true } }
+                    },
+                    onLogin = {
+                        PilotPreferences.completeOnboarding(context)
+                        nav.navigate("login") { popUpTo("onboarding") { inclusive = true } }
+                    },
+                    onExplore = {
+                        PilotPreferences.completeOnboarding(context)
+                        enterGuest()
                     },
                 )
             }
@@ -168,6 +193,16 @@ fun WoodMatchApp(
                     onCatalog = { navigateTopLevel("view_reports") },
                     onEntities = { navigateTopLevel("entities") },
                 )
+            }
+            composable("guest") {
+                GuestExploreScreen(
+                    onRegister = { go("register") },
+                    onLogin = { go("login") },
+                    onMap = { navigateTopLevel("guest_map") },
+                )
+            }
+            composable("guest_map") {
+                GuestMapScreen(onRegister = { go("register") })
             }
             composable("tree_map") {
                 CommunityScreen(mapFirst = true, onCreate = { go("report_tree") }, onEdit = ::edit,
@@ -246,6 +281,7 @@ fun WoodMatchApp(
                     onTextScale = onTextScale,
                     onEditProfile = { go("edit_profile") },
                     onChangePassword = { go("change_password") },
+                    onSupport = { go("support") },
                     onLogout = ::logout,
                 )
             }
@@ -259,6 +295,7 @@ fun WoodMatchApp(
                     onTextScale = onTextScale,
                     onEditProfile = { go("edit_profile") },
                     onChangePassword = { go("change_password") },
+                    onSupport = { go("support") },
                     onLogout = ::logout,
                 )
             }
@@ -271,6 +308,7 @@ fun WoodMatchApp(
                     onRecoverPassword = { go("forgot_password") },
                 )
             }
+            composable("support") { SupportScreen(onBack = { nav.popBackStack() }) }
             composable("species") {
                 SpeciesScreen(onNavigateBack = { nav.popBackStack() })
             }
