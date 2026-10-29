@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test domain.test.mjs",
+    "test": "node --test domain.test.mjs support.test.mjs",
     "test:rules": "firebase emulators:exec --config ../firebase.json --project demo-woodmatch-pilot --only firestore 'node --test rules.integration.mjs'"
   },
   "devDependencies": {
