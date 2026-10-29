@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.testTag
@@ -35,13 +36,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kotlinapp.R
 import com.example.kotlinapp.data.repository.AuthRepository
+import com.example.kotlinapp.data.repository.PilotPreferences
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
     onNavigateToDashboard: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onNavigateToOnboarding: () -> Unit,
 ) {
+    val context = LocalContext.current
     val scale = remember { Animatable(0.85f) }
 
     LaunchedEffect(Unit) {
@@ -60,6 +64,8 @@ fun SplashScreen(
         val user = AuthRepository.currentUser.value
         if (user != null) {
             onNavigateToDashboard()
+        } else if (!PilotPreferences.hasCompletedOnboarding(context)) {
+            onNavigateToOnboarding()
         } else {
             onNavigateToLogin()
         }
