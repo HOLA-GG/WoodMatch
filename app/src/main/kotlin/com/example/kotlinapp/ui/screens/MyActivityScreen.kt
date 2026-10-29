@@ -1,6 +1,5 @@
 package com.example.kotlinapp.ui.screens
 
-import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -19,16 +18,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import com.example.kotlinapp.data.model.*
 import com.example.kotlinapp.data.repository.*
-import com.example.kotlinapp.ui.components.WithdrawalPassActions
+import com.example.kotlinapp.ui.components.ActivityRequestCard
 import com.example.kotlinapp.ui.pilot.StatusMessage
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -73,8 +69,12 @@ fun MyActivityScreen(
     var local by remember { mutableStateOf<List<TreeReport>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
     var pending by remember { mutableStateOf<Pair<WithdrawalRequest, String>?>(null) }
+    var transitionReason by rememberSaveable { mutableStateOf("") }
+    var requestFilter by rememberSaveable { mutableStateOf("TODAS") }
+    var showImport by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(user?.uid) { local = ReportRepository.getUserReports(user?.uid.orEmpty()) }
     fun transition(request: WithdrawalRequest, action: String) {
+        transitionReason = ""
         pending = request to action
     }
     val mine = all.filter { it.authorId == user?.uid }
@@ -222,6 +222,9 @@ fun MyActivityScreen(
             }
         }
         item {
+            TextButton(onClick = { showImport = !showImport }) { Icon(Icons.Default.FolderOpen, null); Spacer(Modifier.width(8.dp)); Text("Gestionar reportes antiguos") }
+        }
+        if (showImport) item {
             OutlinedCard(
                 Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
@@ -295,125 +298,21 @@ fun MyActivityScreen(
                     "Al solicitar un material o recibir una solicitud, podrás coordinar y confirmar la entrega desde este espacio.",
                 )
             }
-        items(requests, key = { "request_${it.id}" }) { request ->
-            val owner = request.authorId == user?.uid
-            Card(
-                Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                ),
-            ) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        all.find { it.id == request.wasteId }?.title ?: request.wasteTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    ActivityBadge(request.typedStatus.displayName)
-                    Text(
-                        if (owner) "Solicitud recibida" else "Solicitud enviada",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (request.proposedDate.isNotBlank())
-                        Text("Fecha propuesta: ${request.proposedDate}")
-                    if (request.requestedQuantity.isNotBlank())
-                        Text("Cantidad solicitada: ${request.requestedQuantity}")
-                    if (owner && request.intendedUse.isNotBlank())
-                        Text("Uso previsto: ${request.intendedUse}")
-                    if (request.message.isNotBlank()) Text(request.message)
-                    if (request.isPending && owner)
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                enabled = !busy, onClick = { transition(request, "accept") },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Aceptar")
-                            }
-                            OutlinedButton(
-                                enabled = !busy,
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { transition(request, "reject") },
-                            ) {
-                                Text("Rechazar")
-                            }
-                        }
-                    WithdrawalPassActions(request, owner)
-                    if (request.isAccepted && request.passValidatedAt != null) {
-                        val confirmed =
-                            if (owner) request.authorConfirmedAt != null
-                            else request.requesterConfirmedAt != null
-                        if (confirmed)
-                            Text("Tu confirmación quedó registrada. Esperando a la otra persona.")
-                        else
-                            Button(
-                                enabled = !busy, onClick = { transition(request, "confirm") },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(
-                                    if (owner) "Confirmar que entregué" else "Confirmar que recibí"
-                                )
-                            }
-                    }
-                    if (request.isPending || request.isAccepted)
-                        TextButton(
-                            enabled = !busy, onClick = { transition(request, "cancel") },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Cancelar solicitud o reserva")
-                        }
-                    if (request.isCompleted) {
-                        Text(
-                            "Entrega confirmada por ambas personas. Ya no aparece entre los materiales disponibles."
-                        )
-                        request.receipt?.let { receipt ->
-                            Text(
-                                "Comprobante ${request.id.take(8)} · ${receipt["quantity"] ?: ""} ${receipt["unit"] ?: ""}"
-                            )
-                            OutlinedButton(
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !busy,
-                                onClick = {
-                                    try {
-                                        val folder =
-                                            File(context.cacheDir, "exports").apply { mkdirs() }
-                                        val file =
-                                            File(folder, "comprobante-${request.id}.json").apply {
-                                                writeText(JSONObject(receipt).toString(2))
-                                            }
-                                        val uri =
-                                            FileProvider.getUriForFile(
-                                                context,
-                                                "${context.packageName}.fileprovider",
-                                                file,
-                                            )
-                                        context.startActivity(
-                                            Intent.createChooser(
-                                                Intent(Intent.ACTION_SEND)
-                                                    .setType("application/json")
-                                                    .putExtra(Intent.EXTRA_STREAM, uri)
-                                                    .addFlags(
-                                                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                                    ),
-                                                "Guardar comprobante",
-                                            )
-                                        )
-                                    } catch (_: Exception) {
-                                        message = "No se pudo compartir el comprobante."
-                                    }
-                                }
-                            ) {
-                                Text("Guardar o compartir comprobante")
-                            }
-                            Text(
-                                "Comprobante de entrega; no es una factura fiscal.",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
+        item {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("TODAS" to "Todas", "ACTIVAS" to "En proceso", "COMPLETADA" to "Completadas", "CANCELADA" to "Canceladas", "RECHAZADA" to "Rechazadas", "VENCIDA" to "Vencidas").forEach { (value,label) ->
+                    FilterChip(selected = requestFilter == value, onClick = { requestFilter = value }, label = { Text(label) })
                 }
             }
         }
+        val visibleRequests = requests.filter { requestFilter == "TODAS" || (requestFilter == "ACTIVAS" && (it.isPending || it.isAccepted)) || it.status == requestFilter }
+        if (visibleRequests.isEmpty() && requests.isNotEmpty()) item { Text("No hay solicitudes en este estado.") }
+        items(visibleRequests, key = { "request_${it.id}" }) { request ->
+            ActivityRequestCard(request, all.find { it.id == request.wasteId }, request.authorId == user?.uid, busy,
+                transition = { transition(request, it) }, notify = { message = it })
+        }
     }
+
     pending?.let { (request, action) ->
         AlertDialog(
             onDismissRequest = { if (!busy) pending = null },
@@ -432,18 +331,19 @@ fun MyActivityScreen(
                     Text(
                         if (action == "confirm")
                             "Confirma solo si la entrega ocurrió. Cuando ambas personas confirmen se cerrará el retiro y quedará su comprobante privado."
-                        else "La otra persona verá el cambio de estado en su actividad."
+                        else "La otra persona recibirá el aviso y verá el cambio en su actividad. Al cancelar una reserva, el material volverá a estar disponible."
                     )
+                    if (action in listOf("cancel", "reject")) OutlinedTextField(transitionReason, { transitionReason = it.take(500) }, label = { Text("Motivo obligatorio") }, modifier = Modifier.fillMaxWidth())
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
                 Button(
-                    enabled = !busy,
+                    enabled = !busy && (action !in listOf("cancel", "reject") || transitionReason.isNotBlank()),
                     onClick = {
                         busy = true
                         scope.launch {
-                            WoodWasteRepository.transition(request.id, action)
+                            WoodWasteRepository.transition(request.id, action, reason = transitionReason)
                                 .onSuccess { message = "Estado actualizado." }
                                 .onFailure { message = it.message }
                             busy = false

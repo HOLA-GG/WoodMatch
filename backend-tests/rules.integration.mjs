@@ -77,6 +77,13 @@ after(async () => {
 const user = (uid) =>
   env.authenticatedContext(uid, { firebase: { sign_in_provider: "password" } })
     .firestore();
+test("support is server-provisioned and cannot access private accounts",async()=>{
+  await env.withSecurityRulesDisabled(async context=>setDoc(doc(context.firestore(),"users","support"),{uid:"support",name:"Support",role:"SOPORTE"}));
+  await assertSucceeds(updateDoc(doc(user("support"),"users","support"),{name:"Support operator",updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(doc(user("receiver"),"users","receiver"),{role:"SOPORTE",updatedAt:serverTimestamp()}));
+  await assertFails(setDoc(doc(user("self-support"),"users","self-support"),{uid:"self-support",name:"Self",role:"SOPORTE",privacyVersion:"2026-PILOTO-2",privacyAcceptedAt:serverTimestamp()}));
+  await assertFails(getDoc(doc(user("support"),"users","receiver")));
+});
 test("community reads require a real account and support the actual Android query", async () => {
   await assertFails(
     getDoc(

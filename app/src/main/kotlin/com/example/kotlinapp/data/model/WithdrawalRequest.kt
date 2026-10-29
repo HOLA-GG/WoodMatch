@@ -5,7 +5,8 @@ enum class RequestStatus(val displayName: String) {
     ACEPTADA("Aceptada / En Coordinación"),
     RECHAZADA("Rechazada"),
     CANCELADA("Cancelada"),
-    COMPLETADA("Retiro Completado")
+    COMPLETADA("Retiro Completado"),
+    VENCIDA("Vencida")
 }
 
 data class WithdrawalRequest(
@@ -29,7 +30,13 @@ data class WithdrawalRequest(
     val rejectionReason: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val completedAt: Long? = null
+    val completedAt: Long? = null,
+    val responseExpiresAt: Long? = null,
+    val reservationExpiresAt: Long? = null,
+    val reschedule: Map<String, Any>? = null,
+    val timeline: List<Map<String, Any>> = emptyList(),
+    val cancellationReason: String? = null,
+    val closeReason: String? = null
 ) {
     @get:com.google.firebase.firestore.Exclude
     val typedStatus: RequestStatus
@@ -46,5 +53,5 @@ data class WithdrawalRequest(
     @get:com.google.firebase.firestore.Exclude
     val isCompleted: Boolean get() = typedStatus == RequestStatus.COMPLETADA
     @get:com.google.firebase.firestore.Exclude
-    val isClosed: Boolean get() = typedStatus in listOf(RequestStatus.RECHAZADA, RequestStatus.CANCELADA, RequestStatus.COMPLETADA)
+    val isClosed: Boolean get() = typedStatus in listOf(RequestStatus.RECHAZADA, RequestStatus.CANCELADA, RequestStatus.COMPLETADA, RequestStatus.VENCIDA)
 }

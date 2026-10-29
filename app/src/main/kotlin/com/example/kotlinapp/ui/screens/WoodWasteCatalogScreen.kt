@@ -745,6 +745,7 @@ fun RequestItemCard(
                     RequestStatus.COMPLETADA -> MaterialTheme.colorScheme.secondary
                     RequestStatus.RECHAZADA -> MaterialTheme.colorScheme.error
                     RequestStatus.CANCELADA -> MaterialTheme.colorScheme.onSurfaceVariant
+                    RequestStatus.VENCIDA -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
 
                 Box(

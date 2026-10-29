@@ -82,7 +82,7 @@ async function fixture() {
       id,
       wasteId: "wood",
       intendedUse: "Construir un banco",
-      proposedDate: "2026-11-10",
+      proposedDate: "2027-02-01",
       requestedQuantity: "2 unidades",
       message: "",
     });
@@ -317,6 +317,7 @@ test("cancellation releases the reservation and invalidates the pass", async () 
   await f.call("receiver", "transitionWithdrawal", {
     requestId: "request",
     action: "cancel",
+    reason: "No puedo asistir a la recolección.",
   });
   assert.equal(f.db.docs.get("wood_wastes/wood").status, "DISPONIBLE");
   await assert.rejects(
@@ -324,6 +325,36 @@ test("cancellation releases the reservation and invalidates the pass", async () 
     { code: "pass" },
   );
   await f.request("receiver", "new_request");
+});
+
+test("pending requests expire after 72 hours and cannot be accepted", async () => {
+  const f=await fixture();await f.publish();await f.request();f.tick(72*60*60*1000+1);
+  await assert.rejects(f.accept());
+  assert.equal(f.db.docs.get("withdrawal_requests/request").status,"VENCIDA");
+  assert.equal(f.db.docs.get("wood_wastes/wood").status,"DISPONIBLE");
+});
+test("owner proposes, recipient accepts and old QR is invalidated", async () => {
+  const f=await fixture();await f.publish();await f.request();await f.accept();const old=await f.pass();
+  await f.call("owner","proposeReschedule",{requestId:"request",proposedDate:"2027-02-10",reason:"Cambio de disponibilidad"});
+  assert.equal(f.db.docs.get("withdrawal_requests/request").proposedDate,"2027-02-01");
+  await assert.rejects(f.call("owner","respondReschedule",{requestId:"request",action:"accept",reason:"Acepto"}));
+  await f.call("receiver","respondReschedule",{requestId:"request",action:"accept",reason:"Puedo asistir"});
+  assert.equal(f.db.docs.get("withdrawal_requests/request").proposedDate,"2027-02-10");
+  await assert.rejects(f.call("owner","redeemPass",{requestId:"request",code:old.code}));
+});
+test("recipient proposes and owner can counterpropose; decline releases material",async()=>{
+  const f=await fixture();await f.publish();await f.request();await f.accept();
+  await f.call("receiver","proposeReschedule",{requestId:"request",proposedDate:"2027-02-10",reason:"Necesito otra fecha"});
+  await f.call("owner","proposeReschedule",{requestId:"request",proposedDate:"2027-02-11",reason:"Solo puedo este día"});
+  await f.call("receiver","respondReschedule",{requestId:"request",action:"decline",reason:"No me sirve ese día"});
+  assert.equal(f.db.docs.get("wood_wastes/wood").status,"DISPONIBLE");
+  assert.equal(f.db.docs.get("withdrawal_requests/request").status,"CANCELADA");
+});
+test("validated physical handover is not expired or cancelled automatically",async()=>{
+  const f=await fixture();await f.publish();await f.request();await f.accept();const pass=await f.pass();
+  await f.call("owner","redeemPass",{requestId:"request",code:pass.code});f.tick(5*24*60*60*1000);
+  await assert.rejects(f.call("receiver","transitionWithdrawal",{requestId:"request",action:"cancel",reason:"Cancelar"}));
+  assert.equal(f.db.docs.get("wood_wastes/wood").status,"RESERVADO");
 });
 test("account tombstones prevent all later mutations", async () => {
   const f = await fixture();

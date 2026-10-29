@@ -33,7 +33,7 @@ service cloud.firestore {
     && data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128
     && data.name is string && data.name.size() > 0 && data.name.size() <= 120
     && data.role is string && data.role.size() > 0 && data.role.size() <= 32
-    && data.role in ['GENERADOR','RECEPTOR','MIXTO','ADMIN','admin','user']
+    && data.role in ['GENERADOR','RECEPTOR','MIXTO','SOPORTE','ADMIN','admin','user']
     && (!('email' in data) || (data.email is string && data.email.size() > 0 && data.email.size() <= 254
         && data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+[.][a-zA-Z]{2,}$')))
     && (!('phone' in data) || (data.phone is string && data.phone.size() == 13

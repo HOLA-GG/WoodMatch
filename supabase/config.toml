@@ -3,3 +3,6 @@ project_id = "woodmatch-pilot"
 [functions.woodmatch]
 # Firebase JWTs are verified by the function, not by the Supabase Auth gateway.
 verify_jwt = false
+
+[functions.woodmatch-maintenance]
+verify_jwt = true
