@@ -1,3 +1,4 @@
+import { RESPONSE_WINDOW, pickupDeadline, expireRequest, reschedule, movement, notifyParticipants, validFutureDate } from "./lifecycle.mjs";
 // Shared by the Edge Function and deterministic Node tests. No provider keys here.
 export class Fault extends Error {
   constructor(status, code, message) {
@@ -148,6 +149,7 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
         "account",
         "Tu cuenta no está disponible.",
       );
+      requireThat(profile.role !== "SOPORTE" && actor.uid !== "yDGu1WUesuc01uUbUzc3By4qyL02",403,"support","Esta cuenta está dedicada a soporte y moderación.");
       const existing = await tx.get(path);
       if (existing) {
         requireThat(
@@ -172,6 +174,8 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
   }
   async function call(actor, operation, data) {
     safeId(actor.uid);
+    if (data.requestId) await expireRequest(db, hash, safeId(data.requestId), now());
+    if (operation === "proposeReschedule" || operation === "respondReschedule") return mutate(actor, operation, data, tx => reschedule(tx, hash, actor, operation, data, now()));
     if (operation === "reservePhoto") {
       return mutate(actor, operation, data, async (tx) => {
         const path = `${actor.uid}/${safeId(data.id)}/${
@@ -341,6 +345,7 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
           "Ya tienes una solicitud activa para este material.",
         );
         const proposedDate = text(data.proposedDate, 10);
+        validFutureDate(proposedDate, now());
         requireThat(
           /^\d{4}-\d{2}-\d{2}$/.test(proposedDate) &&
             !isNaN(Date.parse(proposedDate)) &&
@@ -363,6 +368,9 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
           requestedQuantity: text(data.requestedQuantity, 100),
           message: text(data.message ?? "", 1000, true),
           status: "PENDIENTE",
+          responseExpiresAt: now() + RESPONSE_WINDOW,
+          reservationExpiresAt: null,
+          timeline: [{action:"SOLICITADA",reason:"Solicitud de material",actorId:actor.uid,at:now()}],
           createdAt: now(),
           updatedAt: now(),
           passValidatedAt: null,
@@ -373,6 +381,7 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
         tx.set(ref, request);
         tx.set(claimRef, { active: true, requestId: id });
         await event(tx, id, data.operationId, actor, "request");
+        await notifyParticipants(tx,hash,request,data.operationId,actor.uid,"Nueva solicitud de material",item.title,now());
         return { id };
       });
     }
@@ -406,6 +415,8 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
             "La solicitud ya no se puede aceptar.",
           );
           updated.status = "ACEPTADA";
+          validFutureDate(request.proposedDate, now());
+          updated.reservationExpiresAt = pickupDeadline(request.proposedDate);
           tx.set(itemRef, {
             ...item,
             status: "RESERVADO",
@@ -428,7 +439,11 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
             "transition",
             "Esta solicitud ya está cerrada.",
           );
+          requireThat(typeof data.reason === "string" && data.reason.trim() && data.reason.length <= 1000,400,"reason","Indica el motivo de cancelación.");
+          requireThat(!request.passValidatedAt,409,"handover","La entrega ya fue validada. Contacta soporte si hay un problema.");
+          updated.closeReason = data.reason.trim();
           updated.status = "CANCELADA";
+          tx.set(`withdrawal_passes/${requestId}`,{hash:null,expiresAt:0,attempts:0,lockedUntil:0});
           updated.activePassHash = null;
           if (request.status === "ACEPTADA") {
             requireThat(
@@ -489,7 +504,9 @@ export function createDomain({ db, hash, passCode, now = Date.now }) {
             { active: false, requestId },
           );
         }
+        updated.timeline = movement(request,data.action,data.reason || "Cambio de estado",actor.uid,now());
         tx.set(ref, updated);
+        await notifyParticipants(tx,hash,request,data.operationId,actor.uid,"Solicitud: " + updated.status,request.wasteTitle + (data.reason ? " · " + data.reason : ""),now());
         await event(tx, requestId, data.operationId, actor, data.action);
         return { ok: true, status: updated.status };
       });

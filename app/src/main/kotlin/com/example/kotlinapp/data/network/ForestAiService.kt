@@ -9,6 +9,18 @@ import kotlinx.coroutines.withContext
 
 object ForestAiService {
 
+    suspend fun getCandidateCareGuide(scientific: String, common: String, confidence: Double): Result<String> {
+        val response = askBotanicalConsultant(
+            "Da únicamente de 1 a 5 consejos breves de cuidado en español para este candidato de Pl@ntNet: " +
+                "nombre científico: ${scientific.take(200)}; nombre común: ${common.take(200)}; " +
+                "coincidencia: ${(confidence.coerceIn(0.0, 1.0) * 100).toInt()}%. Región: Suba, Bogotá. " +
+                "No recibiste ninguna imagen. La puntuación no garantiza la identificación. " +
+                "No saludes, no hagas preguntas, no invites a conversar. No diagnostiques el ejemplar. " +
+                "Limítate a luz, riego, suelo y cuidados pertinentes; evita cifras no verificadas y recomendaciones de consumo."
+        )
+        return response.map { it.removePrefix("Orientación botánica · Requiere revisión humana\n\n") }
+    }
+
     /**
      * Consulta al Consultor Botánico Inteligente sobre especies, cuidados o aprovechamiento.
      * Orientación remota enfocada en la localidad de Suba, Bogotá.

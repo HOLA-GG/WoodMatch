@@ -87,11 +87,13 @@ export class Firestore {
       writes: [{ delete: `${this.root}/${path}` }],
     });
   }
-  async list(collection, field, value, limit = 500) {
+  async list(collection, field, value, limit = 500, afterPath = null) {
     const parts = collection.split("/");
     const collectionId = parts.pop();
     const parent = parts.length ? `${this.root}/${parts.join("/")}` : this.root;
     const query = { from: [{ collectionId }], limit };
+    query.orderBy = [{field:{fieldPath:"__name__"},direction:"ASCENDING"}];
+    if(afterPath) query.startAt={values:[{referenceValue:`${this.root}/${afterPath}`}],before:false};
     if (field) {
       query.where = {
         fieldFilter: {

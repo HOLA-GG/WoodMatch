@@ -53,8 +53,8 @@ fun MaterialNotifications() {
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Default.Notifications, null, tint = MaterialTheme.colorScheme.primary)
-            Text("Entérate cuando llegue material", style = MaterialTheme.typography.titleMedium)
-            Text("Activa avisos de nuevas ofertas para receptores y perfiles mixtos. Puedes desactivarlos aquí.")
+            Text("Tus novedades, a tiempo", style = MaterialTheme.typography.titleMedium)
+            Text("Recibe avisos de solicitudes, fechas y soporte. Los receptores y mixtos reciben también nuevas ofertas. Puedes desactivarlos aquí.")
             Row {
                 TextButton(enabled = !busy, onClick = {
                     if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) permission.launch(Manifest.permission.POST_NOTIFICATIONS)

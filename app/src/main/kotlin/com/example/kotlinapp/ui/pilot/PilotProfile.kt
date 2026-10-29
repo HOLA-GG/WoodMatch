@@ -44,6 +44,7 @@ fun PilotProfile(
     onEditProfile: () -> Unit,
     onChangePassword: () -> Unit,
     onSupport: () -> Unit,
+    onNotifications: () -> Unit = {},
     onLogout: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -116,7 +117,8 @@ fun PilotProfile(
             ProfileDetail("Nombre", user?.name.orEmpty())
             ProfileDetail("Teléfono", user?.phone.orEmpty())
             ProfileDetail("Participación", user?.typedRole?.displayName.orEmpty())
-            Text("El rol se define al registrarte. Las cuentas mixtas pueden crear y buscar materiales.",
+            Text(if (user?.isSupport == true) "Cuenta exclusiva de soporte: atiende incidencias, opiniones y moderación de publicaciones."
+                else "El rol se define al registrarte. Las cuentas mixtas pueden crear y buscar materiales.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = onChangePassword, enabled = !busy,
@@ -229,6 +231,12 @@ fun PilotProfile(
                 Icon(Icons.Outlined.SupportAgent, null, Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Feedback, incidencias y satisfacción")
+            }
+            if (AuthRepository.isAuthenticated) OutlinedButton(onClick = onNotifications,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Icon(Icons.Outlined.Notifications, null, Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Notificaciones y avisos")
             }
             ProfileDetail("Responsable del piloto", "cookiestech@woodmatch.org")
             HorizontalDivider()

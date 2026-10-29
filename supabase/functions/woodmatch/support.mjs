@@ -1,4 +1,5 @@
 import { requireThat, safeId } from './domain.mjs';
+import { enqueueNotice } from './lifecycle.mjs';
 
 // Scoped operator: never grants Firebase's broad admin claim or account access.
 export const supportOperator = (actor) => actor.uid === 'yDGu1WUesuc01uUbUzc3By4qyL02'
@@ -39,6 +40,17 @@ export async function supportCall(db, actor, operation, data) {
     const rows = operation === 'mySupportCases' ? await db.list('support_cases','reporterId',actor.uid) : await db.list('support_cases');
     return { cases: rows.map(({ _path, ...row }) => row).sort((a,b) => b.updatedAt - a.updatedAt) };
   }
+  if (operation === 'reopenSupportCase') {
+    const id=safeId(data.id), reason=text(data.reason,1000);
+    requireThat(reason,400,'reason','Indica por qué necesitas reabrir el caso.');
+    return db.atomic(async tx=>{
+      const row=await tx.get('support_cases/'+id);
+      requireThat(row?.reporterId===actor.uid && ['RESUELTO','CERRADO'].includes(row.status),403,'owner','Solo puedes reabrir tus casos resueltos o cerrados.');
+      const now=Date.now();
+      tx.set('support_cases/'+id,{...row,status:'EN_PROGRESO',updatedAt:now,history:[...(row.history||[]).slice(-49),{at:now,action:'REABIERTO',reason,actorId:actor.uid}]});
+      return {ok:true};
+    });
+  }
   requireThat(supportOperator(actor), 403, 'support', 'Acceso exclusivo de soporte.');
   const id = safeId(data.id);
   if (operation === 'updateSupportCase') {
@@ -53,6 +65,7 @@ export async function supportCall(db, actor, operation, data) {
       const now = Date.now();
       tx.set(`support_cases/${id}`, { ...row, status, priority, response, updatedAt: now,
         history: [...(row.history || []).slice(-49),{at:now,action:status,actorId:actor.uid}] });
+      await enqueueNotice(tx,async value=>{const bytes=new TextEncoder().encode(value);return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(v=>v.toString(16).padStart(2,'0')).join('');},row.reporterId,id+':'+now,'Respuesta de soporte',row.subject,{caseId:id},now);
       return {ok:true};
     });
   }

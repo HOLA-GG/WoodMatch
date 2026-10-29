@@ -77,6 +77,13 @@ after(async () => {
 const user = (uid) =>
   env.authenticatedContext(uid, { firebase: { sign_in_provider: "password" } })
     .firestore();
+test("support is server-provisioned and cannot access private accounts",async()=>{
+  await env.withSecurityRulesDisabled(async context=>setDoc(doc(context.firestore(),"users","support"),{uid:"support",name:"Support",role:"SOPORTE"}));
+  await assertSucceeds(updateDoc(doc(user("support"),"users","support"),{name:"Support operator",updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(doc(user("receiver"),"users","receiver"),{role:"SOPORTE",updatedAt:serverTimestamp()}));
+  await assertFails(setDoc(doc(user("self-support"),"users","self-support"),{uid:"self-support",name:"Self",role:"SOPORTE",privacyVersion:"2026-PILOTO-2",privacyAcceptedAt:serverTimestamp()}));
+  await assertFails(getDoc(doc(user("support"),"users","receiver")));
+});
 test("community reads require a real account and support the actual Android query", async () => {
   await assertFails(
     getDoc(
@@ -280,6 +287,8 @@ test("REST adapter and domain retry concurrent transactions against Firestore", 
   );
   const hash = async (s) => createHash("sha256").update(s).digest("hex");
   const domain = createDomain({ db, hash, passCode: async () => "12345678" });
+  const createdAt = Date.now();
+  const proposedDate = new Date(createdAt + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   await db.set("wood_wastes/concurrent", {
     id: "concurrent",
     schemaVersion: 3,
@@ -296,6 +305,9 @@ test("REST adapter and domain retry concurrent transactions against Firestore", 
       authorId: "author",
       requesterId: id === "r1" ? "receiver" : "stranger",
       status: "PENDIENTE",
+      proposedDate,
+      createdAt,
+      responseExpiresAt: createdAt + 72 * 60 * 60 * 1000,
     });
   }
   const results = await Promise.allSettled(

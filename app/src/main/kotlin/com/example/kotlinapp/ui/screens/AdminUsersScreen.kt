@@ -82,6 +82,7 @@ fun AdminUsersScreen(
             UserRole.MIXTO -> UserRole.ADMIN.name
             UserRole.ADMIN -> UserRole.GENERADOR.name
             UserRole.INVITADO -> UserRole.INVITADO.name
+            UserRole.SOPORTE -> UserRole.SOPORTE.name
         }
         coroutineScope.launch {
             AuthRepository.updateUserRole(targetUser.uid, nextRole)

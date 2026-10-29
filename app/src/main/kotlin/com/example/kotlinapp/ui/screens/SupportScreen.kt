@@ -19,7 +19,7 @@ import org.json.JSONObject
 import coil.compose.AsyncImage
 
 @Composable
-fun SupportScreen(onBack: () -> Unit) {
+fun SupportScreen(onBack: () -> Unit, operatorMode: Boolean = false, moderationOnly: Boolean = false) {
     val scope = rememberCoroutineScope()
     var type by rememberSaveable { mutableStateOf("FEEDBACK") }
     var subject by rememberSaveable { mutableStateOf("") }
@@ -27,7 +27,9 @@ fun SupportScreen(onBack: () -> Unit) {
     var rating by rememberSaveable { mutableIntStateOf(5) }
     var operationId by rememberSaveable { mutableStateOf(PilotApi.operationId()) }
     var operator by remember { mutableStateOf(false) }
-    var inbox by rememberSaveable { mutableStateOf(false) }
+    var inbox by rememberSaveable { mutableStateOf(operatorMode) }
+    var filter by rememberSaveable { mutableStateOf("TODOS") }
+    var query by rememberSaveable { mutableStateOf("") }
     var rows by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -42,14 +44,14 @@ fun SupportScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
-            Text("Ayuda y participación", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            Text(if (moderationOnly) "Moderación" else if (operatorMode) "Bandeja de soporte" else "Ayuda y participación", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
             IconButton(onClick = { refresh() }, enabled = !busy) { Icon(Icons.Default.Refresh, "Actualizar casos") }
         }
         Text("Tu experiencia mejora WoodMatch. Consulta aquí las respuestas y el avance de tus casos.")
         if (operator) {
             Text("Soporte y moderación", style = MaterialTheme.typography.titleMedium)
             Text("Prioriza, investiga, responde y confirma la solución antes de cerrar. Los reportes de contenido se revisan con un motivo registrado.")
-            Row {
+            if (!operatorMode) Row {
                 FilterChip(selected = !inbox, onClick = { inbox = false }, label = { Text("Mis casos") })
                 Spacer(Modifier.width(8.dp))
                 FilterChip(selected = inbox, onClick = { inbox = true }, label = { Text("Bandeja de soporte") })
@@ -79,8 +81,18 @@ fun SupportScreen(onBack: () -> Unit) {
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         Text(if (inbox) "Casos de la comunidad" else "Mi seguimiento", style = MaterialTheme.typography.titleLarge)
+        if (inbox && operator) {
+            OutlinedTextField(query, { query = it }, label = { Text("Buscar asunto, detalle o caso") }, leadingIcon = { Icon(Icons.Default.Search, null) }, modifier = Modifier.fillMaxWidth())
+            SupportChoice("Filtrar", listOf("TODOS", "ABIERTOS", "NUEVO", "EN_REVISION", "EN_PROGRESO", "RESUELTO", "CERRADO", "ALTA", "CRITICA"), filter) { filter = it }
+        }
         if (rows.isEmpty() && !busy) Text("Aún no hay casos para mostrar.")
-        rows.forEach { row ->
+        val visible = rows.filter { row ->
+            (!moderationOnly || row.optString("type") == "MODERACION") &&
+                (query.isBlank() || (row.optString("subject") + " " + row.optString("detail") + " " + row.optString("id")).contains(query, true)) &&
+                (filter == "TODOS" || filter == row.optString("status") || filter == row.optString("priority") || filter == "ABIERTOS" && row.optString("status") !in listOf("RESUELTO", "CERRADO"))
+        }
+        if (rows.isNotEmpty() && visible.isEmpty()) Text("No hay casos con estos filtros.")
+        visible.forEach { row ->
             key(row.getString("id"), row.optLong("updatedAt")) {
                 SupportCaseCard(row, operator && inbox, busy) { operation, data ->
                     busy = true
@@ -148,7 +160,13 @@ private fun SupportCaseCard(row: JSONObject, admin: Boolean, busy: Boolean, acti
                     }
                     Text("Las publicaciones reservadas o recolectadas requieren revisar su flujo antes de moderar.", style = MaterialTheme.typography.bodySmall)
                 }
-            } else if (response.isNotBlank()) { Text("Respuesta de soporte", style = MaterialTheme.typography.labelLarge); Text(response) }
+            } else {
+                if (response.isNotBlank()) { Text("Respuesta de soporte", style = MaterialTheme.typography.labelLarge); Text(response) }
+                if (row.optString("status") in listOf("RESUELTO", "CERRADO")) {
+                    OutlinedTextField(reason, { reason = it.take(500) }, label = { Text("¿Por qué necesitas reabrir el caso?") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedButton(enabled = !busy && reason.isNotBlank(), onClick = { action("reopenSupportCase", mapOf("id" to row.getString("id"), "reason" to reason)) }) { Text("Reabrir caso") }
+                }
+            }
             val history = row.optJSONArray("history")
             if (history != null && history.length() > 0) Text("Último movimiento: " + history.getJSONObject(history.length()-1).optString("action").replace('_',' '), style = MaterialTheme.typography.labelSmall)
         }

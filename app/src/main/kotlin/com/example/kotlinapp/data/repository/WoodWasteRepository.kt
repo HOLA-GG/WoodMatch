@@ -54,6 +54,11 @@ object WoodWasteRepository {
                         .put("wasteTitle", request.wasteTitle)
                         .put("authorId", request.authorId)
                         .put("requesterId", request.requesterId)
+                        .put("createdAt", request.createdAt)
+                        .put("updatedAt", request.updatedAt)
+                        .put("proposedDate", request.proposedDate)
+                        .put("passValidatedAt", request.passValidatedAt)
+                        .put("timeline", org.json.JSONArray(request.timeline))
                         .put("completedAt", request.completedAt)
                         .put("status", request.status)
                         .put("receipt", JSONObject(request.receipt.orEmpty()))
@@ -72,6 +77,16 @@ object WoodWasteRepository {
                         wasteTitle = row.getString("wasteTitle"),
                         authorId = row.getString("authorId"),
                         requesterId = row.getString("requesterId"),
+                        createdAt = row.optLong("createdAt", row.optLong("completedAt")),
+                        updatedAt = row.optLong("updatedAt", row.optLong("completedAt")),
+                        proposedDate = row.optString("proposedDate"),
+                        passValidatedAt = if (row.isNull("passValidatedAt")) null else row.optLong("passValidatedAt"),
+                        timeline = row.optJSONArray("timeline")?.let { events ->
+                            (0 until events.length()).map { event ->
+                                val data = events.getJSONObject(event)
+                                data.keys().asSequence().associateWith { data.get(it) }
+                            }
+                        }.orEmpty(),
                         completedAt = row.optLong("completedAt"),
                         status = "COMPLETADA",
                         receipt =
@@ -319,10 +334,11 @@ object WoodWasteRepository {
         requestId: String,
         action: String,
         op: String = PilotApi.operationId(),
+        reason: String = "",
     ): Result<Unit> = runCatching {
         PilotApi.call(
             "transitionWithdrawal",
-            mapOf("requestId" to requestId, "action" to action, "operationId" to op),
+            mapOf("requestId" to requestId, "action" to action, "operationId" to op, "reason" to reason),
         )
         Unit
     }
@@ -331,7 +347,7 @@ object WoodWasteRepository {
         transition(requestId, "accept")
 
     suspend fun rejectWithdrawalRequest(wasteId: String, requestId: String, reason: String?) =
-        transition(requestId, "reject")
+        transition(requestId, "reject", reason = reason.orEmpty())
 
     suspend fun completeWithdrawal(wasteId: String, requestId: String, completedByUid: String) =
         transition(requestId, "confirm")
