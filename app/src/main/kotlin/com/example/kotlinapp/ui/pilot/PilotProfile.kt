@@ -43,6 +43,7 @@ fun PilotProfile(
     onTextScale: (Float) -> Unit,
     onEditProfile: () -> Unit,
     onChangePassword: () -> Unit,
+    onSupport: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -223,10 +224,13 @@ fun PilotProfile(
             Text("¿Necesitas ayuda?", style = MaterialTheme.typography.titleMedium)
             Text("Si algo falla, conserva el mensaje que aparece y compártelo con el responsable del piloto. Puedes añadir una captura sin datos personales.",
                 style = MaterialTheme.typography.bodyMedium)
-            ProfileDetail("Contacto previsto del proyecto", "Cookiestech@woodmatch.org")
-            Text("Buzón pendiente de confirmación. Este piloto todavía no ofrece soporte por ese correo.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (AuthRepository.isAuthenticated) OutlinedButton(onClick = onSupport,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Icon(Icons.Outlined.SupportAgent, null, Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Feedback, incidencias y satisfacción")
+            }
+            ProfileDetail("Responsable del piloto", "cookiestech@woodmatch.org")
             HorizontalDivider()
             Text("Un pequeño desvío curioso", style = MaterialTheme.typography.titleMedium)
             Text("Una sorpresa fuera de WoodMatch. Es entretenimiento, no la página de soporte.",
