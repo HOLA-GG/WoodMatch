@@ -287,6 +287,8 @@ test("REST adapter and domain retry concurrent transactions against Firestore", 
   );
   const hash = async (s) => createHash("sha256").update(s).digest("hex");
   const domain = createDomain({ db, hash, passCode: async () => "12345678" });
+  const createdAt = Date.now();
+  const proposedDate = new Date(createdAt + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   await db.set("wood_wastes/concurrent", {
     id: "concurrent",
     schemaVersion: 3,
@@ -303,6 +305,9 @@ test("REST adapter and domain retry concurrent transactions against Firestore", 
       authorId: "author",
       requesterId: id === "r1" ? "receiver" : "stranger",
       status: "PENDIENTE",
+      proposedDate,
+      createdAt,
+      responseExpiresAt: createdAt + 72 * 60 * 60 * 1000,
     });
   }
   const results = await Promise.allSettled(

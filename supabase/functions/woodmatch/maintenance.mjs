@@ -21,6 +21,11 @@ export async function runMaintenance(db,hash,send,now=Date.now()) {
       after=rows[rows.length-1]._path;
     }
   }
+  await deliverNotices(db,hash,send,now);
+  return {ok:true,expired};
+}
+
+export async function deliverNotices(db,hash,send,now=Date.now()) {
   // A stable per-device marker avoids duplicate pushes across scheduled retries.
   const pending=await db.list('notifications','deliveryState','PENDING');
   for(const notice of pending.slice(0,100)) {
@@ -32,11 +37,11 @@ export async function runMaintenance(db,hash,send,now=Date.now()) {
     let succeeded=true;
     for(const device of devices) {
       const id=await hash(notice.id+':'+device.token),path='notification_deliveries/'+id;
-      const previous=await db.get(path);if(previous?.state==='SENT') continue;
+      const claimed=await db.atomic(async tx=>{const previous=await tx.get(path);if(previous?.state==='SENT' || (previous?.state==='SENDING' && previous.at>now-120000))return false;tx.set(path,{state:'SENDING',at:now});return true;});
+      if(!claimed) {const previous=await db.get(path);if(previous?.state!=='SENT') succeeded=false;continue;}
       try {await send(device.token,notice);await db.set(path,{state:'SENT',at:now});}
-      catch {succeeded=false;}
+      catch {succeeded=false;await db.set(path,{state:'PENDING',at:now});}
     }
-    if(succeeded) await db.set('notifications/'+notice.id,{...notice,deliveryState:'SENT'});
+    if(succeeded) await db.atomic(async tx=>{const current=await tx.get('notifications/'+notice.id);if(current)tx.set('notifications/'+notice.id,{...current,deliveryState:'SENT'});});
   }
-  return {ok:true,expired};
 }

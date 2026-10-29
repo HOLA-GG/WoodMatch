@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { supportCall, supportOperator } from '../supabase/functions/woodmatch/support.mjs';
 import { registerDevice, notifyMaterial } from '../supabase/functions/woodmatch/notifications.mjs';
+import { deliverNotices } from '../supabase/functions/woodmatch/maintenance.mjs';
 
 const admin={uid:'yDGu1WUesuc01uUbUzc3By4qyL02',email:'cookiestech@woodmatch.org'};
 const user={uid:'receiver',email:'receiver@example.org'};
@@ -53,4 +54,56 @@ test('notification delivery checks recipient role and deduplicates publication/d
   rows.get('users/receiver').role='GENERADOR';
   await notifyMaterial(db,hash,async()=>{sent++},{...material,id:'another'});
   assert.equal(sent,1);
+});
+
+function maintenanceFixture() {
+  const {db,rows}=fixture();
+  rows.set('users/receiver',{uid:'receiver',role:'RECEPTOR'});
+  rows.set('notification_devices/one',{uid:'receiver',token:'device-token-one',enabled:true});
+  rows.set('notifications/notice',{id:'notice',uid:'receiver',title:'Material nuevo',body:'Mesa',deliveryState:'PENDING'});
+  return {db,rows};
+}
+
+test('maintenance retries a failed notification without duplicating a successful device delivery',async()=>{
+  const {db,rows}=maintenanceFixture();
+  const hash=async value=>'hash_'+value;
+  let attempts=0;
+  await deliverNotices(db,hash,async()=>{
+    attempts++;
+    throw new Error('temporary FCM failure');
+  },1000);
+  assert.equal(attempts,1);
+  assert.equal(rows.get('notification_deliveries/hash_notice:device-token-one').state,'PENDING');
+  assert.equal(rows.get('notifications/notice').deliveryState,'PENDING');
+
+  await deliverNotices(db,hash,async()=>{attempts++},122001);
+  assert.equal(attempts,2);
+  assert.equal(rows.get('notification_deliveries/hash_notice:device-token-one').state,'SENT');
+  assert.equal(rows.get('notifications/notice').deliveryState,'SENT');
+});
+
+test('maintenance never sends the same device twice while an earlier delivery is still claimed',async()=>{
+  const {db,rows}=maintenanceFixture();
+  const hash=async value=>'hash_'+value;
+  // A duplicate device record should not produce a second FCM send while the first
+  // delivery marker is SENDING. This protects retries and malformed legacy data.
+  rows.set('notification_devices/duplicate',{uid:'receiver',token:'device-token-one',enabled:true});
+  let sent=0;
+  await deliverNotices(db,hash,async()=>{sent++},1000);
+  assert.equal(sent,1);
+  assert.equal(rows.get('notification_deliveries/hash_notice:device-token-one').state,'SENT');
+});
+
+test('maintenance preserves a concurrent read marker when it marks a notice delivered',async()=>{
+  const {db,rows}=maintenanceFixture();
+  const hash=async value=>'hash_'+value;
+  await deliverNotices(db,hash,async()=>{
+    // Models a recipient opening the notification while FCM delivery is completing.
+    const current=rows.get('notifications/notice');
+    await db.set('notifications/notice',{...current,readAt:1001,readBy:'receiver'});
+  },1000);
+  const notice=rows.get('notifications/notice');
+  assert.equal(notice.deliveryState,'SENT');
+  assert.equal(notice.readAt,1001);
+  assert.equal(notice.readBy,'receiver');
 });

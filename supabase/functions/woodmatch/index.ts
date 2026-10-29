@@ -16,7 +16,7 @@ import { Firestore } from "./firestore.mjs";
 import { eraseAccount } from "./cleanup.mjs";
 import { supportCall, supportOperator } from "./support.mjs";
 import { registerDevice, notifyMaterial } from "./notifications.mjs";
-import { runMaintenance } from "./maintenance.mjs";
+import { deliverNotices } from "./maintenance.mjs";
 
 type Tx = {
   get: (path: string) => Promise<any>;
@@ -755,6 +755,15 @@ Deno.serve(async (request) => {
       operation,
       parsed.data || {},
     );
+    if (["createWithdrawal","transitionWithdrawal","proposeReschedule","respondReschedule","updateSupportCase","reopenSupportCase"].includes(operation)) {
+      const delivery = deliverNotices(db,hash,async(token:string,note:any)=>{
+        const response=await fetch(`https://fcm.googleapis.com/v1/projects/${project}/messages:send`,{method:"POST",headers:{Authorization:`Bearer ${await accessToken()}`,"Content-Type":"application/json"},
+          body:JSON.stringify({message:{token,data:{title:note.title,body:note.body,requestId:note.requestId||"",caseId:note.caseId||"",notificationId:note.id,recipientId:note.uid},android:{priority:"high"}}})});
+        if(!response.ok) throw new Error("Notification delivery pending");
+      }).catch(()=>console.log(JSON.stringify({operation:"notificationDelivery",state:"pending"})));
+      const runtime=(globalThis as any).EdgeRuntime;
+      if(runtime?.waitUntil) runtime.waitUntil(delivery); else await delivery;
+    }
     return Response.json({ data, correlationId });
   } catch (error) {
     if (error instanceof ProviderFault) providerFailure = error;
