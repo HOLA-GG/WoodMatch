@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.kotlinapp.data.network.PilotApi
 import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -32,6 +33,9 @@ fun MaterialNotifications() {
                 val messaging = FirebaseMessaging.getInstance()
                 val token = messaging.token.await()
                 PilotApi.call("registerNotificationDevice", mapOf("token" to token, "enabled" to enabled))
+                context.getSharedPreferences("material_alerts", 0).edit()
+                    .putString("uid", if (enabled) FirebaseAuth.getInstance().currentUser?.uid else "")
+                    .putBoolean("enabled", enabled).apply()
                 messaging.isAutoInitEnabled = enabled
                 if (!enabled) messaging.deleteToken().await()
             }.onSuccess { message = if (enabled) "Avisos activados para este dispositivo." else "Avisos desactivados." }
@@ -41,6 +45,10 @@ fun MaterialNotifications() {
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) register(true) else message = "Puedes seguir buscando materiales y activar los avisos cuando quieras."
+    }
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("material_alerts", 0)
+        if (prefs.getBoolean("enabled", false) && prefs.getString("uid", "") == FirebaseAuth.getInstance().currentUser?.uid) register(true)
     }
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
