@@ -14,6 +14,8 @@ import {
 } from "./domain.mjs";
 import { Firestore } from "./firestore.mjs";
 import { eraseAccount } from "./cleanup.mjs";
+import { supportCall, supportOperator } from "./support.mjs";
+import { registerDevice, notifyMaterial } from "./notifications.mjs";
 
 type Tx = {
   get: (path: string) => Promise<any>;
@@ -270,7 +272,7 @@ async function remote(provider: Provider, url: string, options: RequestInit = {}
   }
 }
 async function handle(
-  actor: { uid: string; authTime: number; admin?: boolean },
+  actor: { uid: string; authTime: number; email?: string },
   operation: string,
   data: any,
 ) {
@@ -282,6 +284,18 @@ async function handle(
     "account",
     "Tu cuenta no está disponible.",
   );
+  if (operation === "registerNotificationDevice") return registerDevice(db, hash, actor, profile, data);
+  if (operation === "supportPublication") {
+    requireThat(supportOperator(actor),403,"support","Acceso exclusivo de soporte.");
+    const item = await db.get(`wood_wastes/${safeId(data.id)}`);
+    requireThat(item,404,"missing","La publicación no existe.");
+    let url = null;
+    if (item.imagePath) {
+      const signed = await storage(`object/sign/${bucket}/${item.imagePath}`, "POST", JSON.stringify({expiresIn:300}));
+      url = signed.signedURL ? `${env("SUPABASE_URL")}/storage/v1${signed.signedURL}` : null;
+    }
+    return {title:item.title,description:item.description,status:item.status,url};
+  }
   if (operation === "uploadPhoto") {
     const id = safeId(data.id), uploadId = safeId(data.operationId);
     requireThat(
@@ -604,38 +618,21 @@ async function handle(
     });
     return { ok: true };
   }
-  if (operation === "createSupportCase") {
-    const type = supportText(data.type, 32);
-    requireThat(["INCIDENCIA", "FEEDBACK", "OPINION", "SATISFACCION", "MODERACION"].includes(type), 400, "type", "Selecciona el tipo de caso.");
-    const subject = supportText(data.subject, 120), detail = supportText(data.detail, 1500);
-    requireThat(subject && detail, 400, "case", "Escribe un asunto y una descripción.");
-    const id = safeId(data.id);
-    const existing = await db.get(`support_cases/${id}`);
-    requireThat(!existing, 409, "exists", "Este caso ya fue enviado.");
-    await db.set(`support_cases/${id}`, {
-      id, type, subject, detail, reporterId: actor.uid, publicationId: data.publicationId ? safeId(data.publicationId) : "",
-      status: "NUEVO", priority: type === "INCIDENCIA" || type === "MODERACION" ? "MEDIA" : "BAJA",
-      createdAt: Date.now(), updatedAt: Date.now(), history: [{ at: Date.now(), action: "CREADO", actorId: actor.uid }],
-    });
-    return { id, status: "NUEVO" };
+  if (["supportAccess", "createSupportCase", "mySupportCases", "adminSupportCases", "updateSupportCase", "moderateEntry"].includes(operation)) {
+    return supportCall(db, actor, operation, data);
   }
-  if (operation === "mySupportCases") {
-    return { cases: (await db.list("support_cases", "reporterId", actor.uid)).map(({ _path, ...row }: any) => row) };
+  const result = await domain.call(actor, operation, data);
+  if (operation === "publishEntry") {
+    const publication = await db.get(`wood_wastes/${safeId(data.id)}`);
+    await notifyMaterial(db, hash, async (token: string, note: any) => {
+      const response = await fetch(`https://fcm.googleapis.com/v1/projects/${project}/messages:send`, {
+        method: "POST", headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({message:{token,data:{title:note.title,body:note.body,publicationId:note.publicationId},android:{priority:"high"}}}),
+      });
+      if (!response.ok) throw new Error("Notification delivery pending");
+    }, publication).catch(() => console.log(JSON.stringify({operation:"notificationDelivery",state:"pending"})));
   }
-  if (operation === "adminSupportCases") {
-    requireThat(actor.admin, 403, "admin", "Esta acción requiere administración.");
-    return { cases: (await db.list("support_cases")).map(({ _path, ...row }: any) => row) };
-  }
-  if (operation === "moderateEntry") {
-    requireThat(actor.admin, 403, "admin", "Esta acción requiere administración.");
-    const id = safeId(data.id), reason = supportText(data.reason, 500);
-    requireThat(reason, 400, "reason", "Explica el motivo de moderación.");
-    const item = await db.get(`wood_wastes/${id}`);
-    requireThat(item, 404, "missing", "La publicación no existe.");
-    await db.set(`wood_wastes/${id}`, { ...item, status: "INACTIVO", moderationReason: reason, moderatedAt: Date.now(), moderatedBy: actor.uid, updatedAt: Date.now(), revision: (item.revision || 0) + 1 });
-    return { ok: true };
-  }
-  return domain.call(actor, operation, data);
+  return result;
 }
 Deno.serve(async (request) => {
   const correlationId = crypto.randomUUID(), start = Date.now();
@@ -707,6 +704,8 @@ Deno.serve(async (request) => {
     const parsed = JSON.parse(raw);
     const allowed = new Set([
       "uploadPhoto",
+      "registerNotificationDevice",
+      "supportPublication",
       "photoUrl",
       "botanicalAdvice",
       "reportAdvice",
@@ -725,6 +724,8 @@ Deno.serve(async (request) => {
       "createSupportCase",
       "mySupportCases",
       "adminSupportCases",
+      "supportAccess",
+      "updateSupportCase",
       "moderateEntry",
     ]);
     requireThat(
@@ -735,7 +736,7 @@ Deno.serve(async (request) => {
     );
     operation = parsed.operation;
     const data = await handle(
-      { uid, authTime: Number(payload.auth_time), admin: payload.admin === true },
+      { uid, authTime: Number(payload.auth_time), email: account.email },
       operation,
       parsed.data || {},
     );

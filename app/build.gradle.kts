@@ -20,8 +20,8 @@ android {
         applicationId = "com.example.kotlinapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6
-        versionName = "2.1.0-pilot"
+        versionCode = 7
+        versionName = "2.2.0-pilot"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -93,6 +93,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     implementation("com.google.zxing:core:3.5.3")

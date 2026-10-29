@@ -42,6 +42,9 @@ fun PilotHome(
     val receiver = user?.typedRole == UserRole.RECEPTOR
     val mixed = user?.typedRole == UserRole.MIXTO
     val all by WoodWasteRepository.items.collectAsState()
+    val latest = all.filter { it.status in listOf("DISPONIBLE", "HALLAZGO") && !it.imagePath.isNullOrBlank() }.maxByOrNull { it.createdAt }
+    var heroImage by remember(latest?.id, latest?.imagePath) { mutableStateOf<String?>(null) }
+    LaunchedEffect(latest?.id, latest?.imagePath) { heroImage = latest?.let { runCatching { WoodWasteRepository.photoUrl(it) }.getOrNull() } }
     val available = all.count { it.isAvailable }
     val found = all.count { it.entryType == "HALLAZGO" && it.status == "HALLAZGO" }
     val myContributions = all.count { it.authorId == user?.uid }
@@ -64,6 +67,20 @@ fun PilotHome(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text("Suba · Comunidad circular", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+        item {
+            Card(onClick = if (receiver || mixed) onCatalog else onEntities, shape = MaterialTheme.shapes.extraLarge) {
+                Box(Modifier.fillMaxWidth().height(210.dp).background(MaterialTheme.colorScheme.secondaryContainer)) {
+                    if ((receiver || mixed) && heroImage != null) AsyncImage(model = heroImage, contentDescription = latest?.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    else Icon(if (receiver || mixed) Icons.Default.Forest else Icons.Default.Business, null, Modifier.align(Alignment.Center).size(88.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Surface(Modifier.align(Alignment.BottomStart).padding(12.dp), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(if (receiver || mixed) "Lo último de la comunidad" else "Conecta con entidades de Suba", style = MaterialTheme.typography.labelLarge)
+                            Text(if (receiver || mixed) latest?.title ?: "Cada material abre una posibilidad" else "Madera, carpintería y nuevas oportunidades", style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
                 }
             }
         }
@@ -92,7 +109,7 @@ fun PilotHome(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                Text("$"+"{myContributions}", style = MaterialTheme.typography.titleLarge)
+                                Text("$myContributions", style = MaterialTheme.typography.titleLarge)
                                 Text("aportes", style = MaterialTheme.typography.labelSmall)
                             }
                         }
@@ -117,7 +134,7 @@ fun PilotHome(
                         else "Conecta hallazgos, materiales y personas. Desde una poda hasta una estiba o un mueble recuperable.",
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
-                    Button(
+                    SeasonalAction(
                         onClick = if (receiver) onCatalog else onCreate,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     ) {
@@ -143,6 +160,7 @@ fun PilotHome(
                 }
             }
         }
+        if (receiver || mixed) item { MaterialNotifications() }
         item {
             Text("Cerca de ti", style = MaterialTheme.typography.headlineMedium)
             Text(
@@ -223,6 +241,16 @@ private fun ActionCard(
             }
             Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.primary)
         }
+    }
+}
+
+@Composable
+private fun SeasonalAction(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+    Surface(onClick = onClick, modifier = modifier, shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+        Row(Modifier.background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer)))
+            .padding(horizontal = 20.dp, vertical = 14.dp), horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically, content = content)
     }
 }
 
@@ -444,6 +472,10 @@ private fun EntryDetail(
     var photoError by remember(item.id, item.imagePath) { mutableStateOf(false) }
     var photoRetry by remember(item.id, item.imagePath) { mutableIntStateOf(0) }
     var message by remember(item.id) { mutableStateOf<String?>(null) }
+    var reporting by rememberSaveable(item.id) { mutableStateOf(false) }
+    var reportReason by rememberSaveable(item.id) { mutableStateOf("Contenido ajeno a WoodMatch") }
+    var reportDetail by rememberSaveable(item.id) { mutableStateOf("") }
+    var reportId by rememberSaveable(item.id) { mutableStateOf(PilotApi.operationId()) }
     var requesting by rememberSaveable(item.id) { mutableStateOf(false) }
     var use by rememberSaveable(item.id) { mutableStateOf("") }
     var date by rememberSaveable(item.id) { mutableStateOf("") }
@@ -551,6 +583,28 @@ private fun EntryDetail(
                 }
             } else if (item.authorId != user?.uid && item.isAvailable && user?.canRequest != true)
                 Text("Para solicitar material, elige perfil receptor o mixto en Ajustes.")
+            if (user != null && item.authorId != user?.uid) {
+                TextButton(onClick = { reporting = !reporting }) { Icon(Icons.Default.Flag, null); Spacer(Modifier.width(8.dp)); Text("Reportar publicación") }
+                if (reporting) {
+                    Text("Ayúdanos a cuidar la comunidad", style = MaterialTheme.typography.titleMedium)
+                    listOf("Contenido ajeno a WoodMatch", "Fotografía incorrecta", "Spam o publicidad", "Contenido inapropiado", "Otro motivo").forEach { reason ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = reportReason == reason, onClick = { reportReason = reason })
+                            Text(reason)
+                        }
+                    }
+                    OutlinedTextField(reportDetail, { reportDetail = it.take(1000) }, label = { Text("Información adicional (opcional)") }, modifier = Modifier.fillMaxWidth())
+                    Button(enabled = !busy, onClick = {
+                        busy = true
+                        scope.launch {
+                            runCatching { PilotApi.call("createSupportCase", mapOf("id" to reportId, "type" to "MODERACION", "subject" to reportReason, "detail" to reportDetail.ifBlank { reportReason }, "publicationId" to item.id)) }
+                                .onSuccess { message = "Reporte recibido. Sigue la respuesta en Perfil → Ayuda y participación."; reporting = false; reportId = PilotApi.operationId() }
+                                .onFailure { message = it.message }
+                            busy = false
+                        }
+                    }) { Text("Enviar reporte") }
+                }
+            }
             message?.let { StatusMessage(it) }
             TextButton(onClick = onDismiss) { Text("Cerrar") }
             Spacer(Modifier.height(24.dp))
