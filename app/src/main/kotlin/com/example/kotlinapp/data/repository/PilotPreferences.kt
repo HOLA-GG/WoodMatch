@@ -6,6 +6,14 @@ import java.util.Calendar
 
 object PilotPreferences {
     const val TEXT_SCALE_KEY = "text_scale"
+    const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
+
+    fun hasCompletedOnboarding(context: Context): Boolean =
+        store(context).getBoolean(ONBOARDING_COMPLETED_KEY, false)
+
+    fun completeOnboarding(context: Context) {
+        store(context).edit().putBoolean(ONBOARDING_COMPLETED_KEY, true).apply()
+    }
 
     /** App scaling is additive to Android accessibility settings, never a replacement. */
     fun normalizedTextScale(value: Float): Float =
