@@ -34,6 +34,15 @@ fun WoodMatchBottomNav(
     onNavigate: (String) -> Unit,
 ) {
     val roleName = role.uppercase()
+    if (roleName == "INVITADO") {
+        val guestItems = listOf(
+            WoodMatchDestination("Inicio", "guest", Icons.Default.Home),
+            WoodMatchDestination("Mapa", "guest_map", Icons.Default.Map),
+            WoodMatchDestination("Cuenta", "login", Icons.Default.Person, true),
+        )
+        GuestNavigationBar(currentRoute, guestItems, onNavigate)
+        return
+    }
     val create = roleName in setOf("GENERADOR", "MIXTO")
     val search = roleName != "GENERADOR"
     val items = buildList {
@@ -112,6 +121,20 @@ fun WoodMatchBottomNav(
                     },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GuestNavigationBar(currentRoute: String, items: List<WoodMatchDestination>, onNavigate: (String) -> Unit) {
+    Surface(shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
+        NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+            items.forEach { item -> NavigationBarItem(
+                selected = currentRoute == item.route,
+                onClick = { if (currentRoute != item.route) onNavigate(item.route) },
+                icon = { Icon(item.icon, null) },
+                label = { Text(item.label, maxLines = 1) },
+            ) }
         }
     }
 }

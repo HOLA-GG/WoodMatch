@@ -20,6 +20,8 @@ type Tx = {
   set: (path: string, value: any) => void;
 };
 const env = (name: string) => Deno.env.get(name) || "";
+const supportText = (value: unknown, max: number) =>
+  typeof value === "string" ? value.trim().replace(/[<>]/g, "").slice(0, max) : "";
 const project = env("FIREBASE_PROJECT_ID");
 const account = () => JSON.parse(env("FIREBASE_SERVICE_ACCOUNT"));
 const jwks = createRemoteJWKSet(
@@ -268,7 +270,7 @@ async function remote(provider: Provider, url: string, options: RequestInit = {}
   }
 }
 async function handle(
-  actor: { uid: string; authTime: number },
+  actor: { uid: string; authTime: number; admin?: boolean },
   operation: string,
   data: any,
 ) {
@@ -602,6 +604,37 @@ async function handle(
     });
     return { ok: true };
   }
+  if (operation === "createSupportCase") {
+    const type = supportText(data.type, 32);
+    requireThat(["INCIDENCIA", "FEEDBACK", "OPINION", "SATISFACCION", "MODERACION"].includes(type), 400, "type", "Selecciona el tipo de caso.");
+    const subject = supportText(data.subject, 120), detail = supportText(data.detail, 1500);
+    requireThat(subject && detail, 400, "case", "Escribe un asunto y una descripción.");
+    const id = safeId(data.id);
+    const existing = await db.get(`support_cases/${id}`);
+    requireThat(!existing, 409, "exists", "Este caso ya fue enviado.");
+    await db.set(`support_cases/${id}`, {
+      id, type, subject, detail, reporterId: actor.uid, publicationId: data.publicationId ? safeId(data.publicationId) : "",
+      status: "NUEVO", priority: type === "INCIDENCIA" || type === "MODERACION" ? "MEDIA" : "BAJA",
+      createdAt: Date.now(), updatedAt: Date.now(), history: [{ at: Date.now(), action: "CREADO", actorId: actor.uid }],
+    });
+    return { id, status: "NUEVO" };
+  }
+  if (operation === "mySupportCases") {
+    return { cases: (await db.list("support_cases", "reporterId", actor.uid)).map(({ _path, ...row }: any) => row) };
+  }
+  if (operation === "adminSupportCases") {
+    requireThat(actor.admin, 403, "admin", "Esta acción requiere administración.");
+    return { cases: (await db.list("support_cases")).map(({ _path, ...row }: any) => row) };
+  }
+  if (operation === "moderateEntry") {
+    requireThat(actor.admin, 403, "admin", "Esta acción requiere administración.");
+    const id = safeId(data.id), reason = supportText(data.reason, 500);
+    requireThat(reason, 400, "reason", "Explica el motivo de moderación.");
+    const item = await db.get(`wood_wastes/${id}`);
+    requireThat(item, 404, "missing", "La publicación no existe.");
+    await db.set(`wood_wastes/${id}`, { ...item, status: "INACTIVO", moderationReason: reason, moderatedAt: Date.now(), moderatedBy: actor.uid, updatedAt: Date.now(), revision: (item.revision || 0) + 1 });
+    return { ok: true };
+  }
   return domain.call(actor, operation, data);
 }
 Deno.serve(async (request) => {
@@ -689,6 +722,10 @@ Deno.serve(async (request) => {
       "transitionWithdrawal",
       "issuePass",
       "redeemPass",
+      "createSupportCase",
+      "mySupportCases",
+      "adminSupportCases",
+      "moderateEntry",
     ]);
     requireThat(
       allowed.has(parsed.operation),
@@ -698,7 +735,7 @@ Deno.serve(async (request) => {
     );
     operation = parsed.operation;
     const data = await handle(
-      { uid, authTime: Number(payload.auth_time) },
+      { uid, authTime: Number(payload.auth_time), admin: payload.admin === true },
       operation,
       parsed.data || {},
     );
