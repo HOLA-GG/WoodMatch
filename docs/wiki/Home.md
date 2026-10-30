@@ -5,6 +5,7 @@ WoodMatch es un piloto Android para registrar, ofrecer y recuperar madera y resi
 ## Navegación
 
 - [Catálogo de servicios TI · ITIL 4](Catalogo-de-servicios-TI)
+- [Relación de evidencias visuales por servicio](Evidencias-de-servicios)
 - [Arquitectura y servicios](Arquitectura-y-servicios)
 - [Pantallas y acciones](Pantallas-y-acciones)
 - [Roles y ciclo de aprovechamiento](Roles-y-ciclo-de-aprovechamiento)
