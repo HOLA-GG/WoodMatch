@@ -1,6 +1,6 @@
 # Administración, feedback y moderación — WoodMatch 2.3
 
-**Estado:** documentación del piloto revisada el 30 de octubre de 2026. Ver [Manual de usuario y gestión de servicios TI](Manual-de-usuario), secciones 12–14, y [Catálogo de servicios TI](Catalogo-de-servicios-TI).
+**Estado:** documentación del piloto revisada el 30 de octubre de 2026. Ver [Manual de usuario y gestión de servicios TI](Manual-de-usuario.md), secciones 12–14, y [Catálogo de servicios TI](Catalogo-de-servicios-TI.md).
 
 ## 1. Distinguir los accesos
 
@@ -11,6 +11,25 @@
 | **Usuarios comunitarios** | Pueden registrar incidencias, feedback, opiniones y satisfacción; reportar publicaciones mediante el flujo apropiado. No acceden a los casos de otras cuentas. |
 
 No publicar contraseñas ni identificadores secretos del operador, ni atribuirle capacidades de bloqueo o edición general de cuentas no existentes en la pantalla actual.
+
+
+## Resumen visual del proceso de soporte
+
+```mermaid
+flowchart TD
+    U["Usuario registra incidencia o feedback"] --> C["Caso con ID y estado Nuevo"]
+    C --> O["Cookiestech revisa, prioriza y responde"]
+    O --> D{"¿Problema solucionado?"}
+    D -- "No" --> P["En progreso; investigar o escalar a desarrollo"]
+    P --> O
+    D -- "Sí" --> R["Resuelto o Cerrado con respuesta"]
+    R --> N["Notificación en bandeja"]
+    N --> Q{"¿Se requiere reapertura?"}
+    Q -- "Sí, con motivo" --> P
+    Q -- "No" --> F["Registro para indicadores y mejora"]
+    classDef fin fill:#E5F5EA,stroke:#34844D
+    class F fin
+```
 
 ## 2. Registro y seguimiento de casos (actualmente implementado en código)
 
@@ -44,6 +63,6 @@ Estas condiciones son **requisitos de diseño**, no capacidades que se declaren 
 
 ## 5. Evidencias y controles
 
-Revisar [EV-08 Ayuda y participación, EV-09 Centro de soporte y EV-10 Moderación](Evidencias-de-servicios). Las capturas demuestran la interfaz; para sustentar operación son necesarios casos de prueba con creación, transición, respuesta, cierre, reapertura y moderación justificada, sin datos reales de terceros.
+Revisar [EV-08 Ayuda y participación, EV-09 Centro de soporte y EV-10 Moderación](Evidencias-de-servicios.md). Las capturas demuestran la interfaz; para sustentar operación son necesarios casos de prueba con creación, transición, respuesta, cierre, reapertura y moderación justificada, sin datos reales de terceros.
 
 **Responsables:** Juan Sebastian Fune Sanchez, mantenimiento y corrección técnica; Yeison David Diaz Navarrete, pruebas funcionales y documentación. La cuenta Cookiestech es una identidad operativa de la aplicación, no un tercer integrante del proyecto.
