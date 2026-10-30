@@ -202,3 +202,7 @@ El catálogo identifica quince servicios TI de WoodMatch y establece una base de
 - Consulta oficial de prácticas ITIL: https://www.peoplecert.org/
 
 **Historial:** v1.0, 30-10-2026 — catálogo inicial con quince servicios, RACI para dos personas, KPIs, riesgos y objetivos académicos. **Próxima revisión:** después de recopilar evidencias del APK y confirmar los objetivos de atención.
+
+## Evidencias visuales del piloto
+
+Las capturas revisadas se describen en la [galería de evidencias de servicios TI](Evidencias-de-servicios). Se incluye una captura verificable del [mapa OSM](evidencias/mapa/mapa-osm-suba.jpeg). Las demás imágenes seleccionadas se conservan en el paquete descargable de evidencias, pendiente de incorporación gráfica a esta carpeta. Una captura de historial con fechas y cantidades contradictorias se excluyó del material destinado a publicación académica.
