@@ -155,4 +155,4 @@
 - Las capturas disponibles no reemplazan bitácoras, pruebas de dos dispositivos ni aprobaciones de CI Android, reglas o lint.
 - Las imágenes se incorporaron como archivos JPEG optimizados para consulta y citación, conservando el aspecto real de las interfaces.
 
-[Volver al catálogo de servicios TI](Catalogo-de-servicios-TI) · [Índice de documentación](Home)
+[Volver al catálogo de servicios TI](Catalogo-de-servicios-TI.md) · [Índice de documentación](Home.md)

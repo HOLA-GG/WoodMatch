@@ -1,21 +1,29 @@
-# WoodMatch Wiki
+# WoodMatch — Centro de documentación
 
-WoodMatch es un piloto Android para registrar, ofrecer y recuperar madera y residuos leñosos en Suba, Bogotá. La aplicación combina Firebase Authentication y Firestore con una Edge Function de Supabase para operaciones protegidas, fotos privadas, asistencia botánica y Pl@ntNet.
+**Piloto Android en Suba, Bogotá** · Documentación de servicios, funcionamiento, pruebas y arquitectura.
 
-## Navegación
+> Para la versión actual, consulta el **manual de usuario**, el **catálogo TI** y el **desarrollo técnico unificado**. Los documentos de `docs/` sobre prototipos históricos pueden describir arquitecturas anteriores y no sustituyen la revisión del código y del APK actual.
 
-- **[Manual de usuario y gestión de servicios TI · ITIL 4](Manual-de-usuario)** — procedimientos para comunidad y Cookiestech, seguridad, incidentes y evidencias
+## Accesos principales
 
-- [Catálogo de servicios TI · ITIL 4](Catalogo-de-servicios-TI)
-- [Evidencias visuales de los servicios](Evidencias-de-servicios)
-- [Arquitectura y servicios](Arquitectura-y-servicios)
-- [Pantallas y acciones](Pantallas-y-acciones)
-- [Roles y ciclo de aprovechamiento](Roles-y-ciclo-de-aprovechamiento)
-- [Asistente botánico y evidencia](Asistente-botanico-y-evidencia)
-- [Administración, feedback y moderación](Administracion-feedback-y-moderacion)
-- [Seguridad, datos y permisos](Seguridad-datos-y-permisos)
-- [Operación, pruebas y lanzamiento](Operacion-pruebas-y-lanzamiento)
+| Quiero consultar… | Documento | Contenido |
+|---|---|---|
+| Uso de la aplicación | [Manual de usuario](Manual-de-usuario.md) | Registro, mapa, materiales, reservas, QR, datos y soporte |
+| Cómo está programada | [Desarrollo técnico de WoodMatch](Desarrollo-Tecnico-Woodmacth.md) | Arquitectura, Firebase, Supabase, Edge Functions, OSM, Pl@ntNet, Gemini, código y glosario |
+| Qué servicios ofrece | [Catálogo de servicios TI · ITIL 4](Catalogo-de-servicios-TI.md) | 15 servicios, KPI, responsables y RACI |
+| Evidencia visual del APK | [Galería de capturas](Evidencias-de-servicios.md) | Capturas seleccionadas con alcance y limitaciones |
+| Roles y retiros | [Roles y ciclo de aprovechamiento](Roles-y-ciclo-de-aprovechamiento.md) | Participantes, vencimientos, reprogramación, QR |
+| Atención a usuarios | [Soporte y moderación](Administracion-feedback-y-moderacion.md) | Cookiestech, casos, estados, restricciones y moderación |
 
-## Alcance
+## Organización de la documentación
 
-El piloto funciona dentro de Suba. No certifica especies, propiedad, peso, permisos ni resistencia estructural. El comprobante de entrega no es factura ni acredita identidad física.
+- **Usuario:** procedimientos, precauciones y accesibilidad en el manual.
+- **Operación y calidad:** servicios ITIL, bandeja de soporte, casos e indicadores.
+- **Tecnología:** único documento de arquitectura e integraciones con diagramas Mermaid y ejemplos de código.
+- **Evidencias:** fotografías seleccionadas que ilustran interfaces; no sustituyen pruebas ejecutadas.
+
+## Alcance y límites
+
+El piloto se centra en el aprovechamiento comunitario de madera y residuos leñosos en Suba. La identificación botánica y el álbum son **funciones complementarias** y no bloquean publicaciones. La aplicación no certifica especies, propiedad, peso, permisos, seguridad estructural ni identidad física. Los comprobantes no son facturas. La documentación no equivale a certificación de seguridad ni validación de todos los workflows CI.
+
+**GitHub:** este índice forma parte de `docs/wiki/` en el repositorio principal. La Wiki nativa independiente de GitHub no se actualiza automáticamente.
