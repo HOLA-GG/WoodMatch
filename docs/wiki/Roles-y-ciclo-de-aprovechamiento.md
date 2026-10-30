@@ -1,6 +1,6 @@
 # Roles y ciclo de aprovechamiento — WoodMatch 2.3
 
-Vigente para la documentación del piloto revisada el 30 de octubre de 2026. Véase [Manual de usuario y gestión de servicios TI](Manual-de-usuario).
+Vigente para la documentación del piloto revisada el 30 de octubre de 2026. Véase [Manual de usuario y gestión de servicios TI](Manual-de-usuario.md).
 
 ## Roles de aplicación
 
@@ -12,6 +12,28 @@ Vigente para la documentación del piloto revisada el 30 de octubre de 2026. Vé
 | **Mixto** | Funciones de generador y receptor | Requiere permisos y validaciones de cada operación |
 | **Soporte Cookiestech** | Bandeja de casos, seguimiento, respuesta y moderación | Acceso exclusivo verificado en servidor; no es administrador global |
 | **Administrador** | Administración general solo cuando exista autorización firmada y reglas efectivas | No basta seleccionar o escribir `ADMIN` en un perfil |
+
+
+## Esquema visual de la entrega
+
+```mermaid
+flowchart TD
+    A["Registrar material"] --> B{"¿Hallazgo u oferta?"}
+    B -- "Hallazgo" --> C["Aviso comunitario; no reservable"]
+    B -- "Oferta disponible" --> D["Solicitud con respuesta hasta 72 h"]
+    D --> E{"¿Acepta el generador?"}
+    E -- "No o vencida" --> F["Cerrar solicitud con estado y motivo"]
+    E -- "Sí" --> G["Reservar material"]
+    G --> H{"¿Cambiar fecha?"}
+    H -- "Sí" --> I["Propuesta y aprobación de contraparte"]
+    I --> J["Emitir pase nuevo"]
+    H -- "No" --> J
+    J --> K["Validar QR o código"]
+    K --> L["Ambos confirman entrega"]
+    L --> M["Comprobante privado PDF o JSON"]
+    classDef fin fill:#E3F6E7,stroke:#39834D
+    class M fin
+```
 
 ## Flujo principal de aprovechamiento
 
@@ -34,4 +56,4 @@ Una publicación reservada no puede editarse. La reprogramación puede invalidar
 - **Moderación:** reportar contenidos desde el flujo de publicación; Cookiestech gestiona el caso con motivo, trazabilidad y validación de estados.
 - **Álbum y escáner botánico:** funcionalidades **opcionales** basadas en Pl@ntNet y asistencia orientativa; no son un paso obligatorio para publicar u obtener materiales.
 
-[Volver al catálogo de servicios TI](Catalogo-de-servicios-TI) · [Evidencias](Evidencias-de-servicios) · [Inicio](Home)
+[Volver al catálogo de servicios TI](Catalogo-de-servicios-TI.md) · [Evidencias](Evidencias-de-servicios.md) · [Inicio](Home.md)
