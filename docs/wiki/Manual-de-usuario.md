@@ -36,12 +36,12 @@ Guiar al usuario final y al operador de soporte en el acceso a los servicios de 
 
 Documentos de referencia:
 
-- [Catálogo de servicios TI — 15 servicios](Catalogo-de-servicios-TI)
-- [Evidencias visuales de pantallas](Evidencias-de-servicios)
-- [Roles y ciclo de aprovechamiento](Roles-y-ciclo-de-aprovechamiento)
-- [Arquitectura y servicios](Arquitectura-y-servicios)
-- [Administración, feedback y moderación](Administracion-feedback-y-moderacion)
-- [Operación, pruebas y lanzamiento](Operacion-pruebas-y-lanzamiento)
+- [Catálogo de servicios TI — 15 servicios](Catalogo-de-servicios-TI.md)
+- [Evidencias visuales de pantallas](Evidencias-de-servicios.md)
+- [Roles y ciclo de aprovechamiento](Roles-y-ciclo-de-aprovechamiento.md)
+- [Arquitectura y servicios](Desarrollo-Tecnico-Woodmacth.md)
+- [Administración, feedback y moderación](Administracion-feedback-y-moderacion.md)
+- [Operación, pruebas y lanzamiento](Desarrollo-Tecnico-Woodmacth.md)
 
 ## 2. Requisitos, alcance y navegación
 
@@ -383,7 +383,7 @@ No enviar contraseñas, tokens, códigos de retiro vigentes, claves, fotografía
 - La identificación Pl@ntNet, la orientación de Gemini y los datos aproximados **no certifican propiedad, especie, permisos, toxicidad, peso, seguridad ni aptitud estructural**.
 - No retirar madera sin consentimiento de quien está legitimado para entregarla; coordinar físicamente antes de acudir.
 - Mantener archivos de exportación JSON, ZIP de álbum, comprobantes y reportes ADB en espacios privados; no subirlos completos a Issues o Wiki públicos.
-- Las capturas de este manual fueron seleccionadas para no exponer datos directos de perfiles. Ver su alcance limitado en [Evidencias de servicios](Evidencias-de-servicios).
+- Las capturas de este manual fueron seleccionadas para no exponer datos directos de perfiles. Ver su alcance limitado en [Evidencias de servicios](Evidencias-de-servicios.md).
 - Para diagnóstico avanzado de cierres Android, el equipo técnico puede usar ADB en un dispositivo autorizado y sanear cualquier registro antes de compartirlo.
 - No introducir claves privadas de Firebase, Supabase o proveedores externos en APK, capturas, repositorios ni chats.
 
@@ -410,7 +410,7 @@ No enviar contraseñas, tokens, códigos de retiro vigentes, claves, fotografía
 | Casos por prioridad | Cantidad agrupada por BAJA/MEDIA/ALTA/CRITICA | No confundir con incidencia real |
 | Cumplimiento de objetivos internos | Casos respondidos dentro de meta / evaluables × 100 | Metas académicas, no SLA firmados |
 
-Véase el [catálogo de servicios TI](Catalogo-de-servicios-TI) para fichas ST-01 a ST-15 y objetivos internos propuestos.
+Véase el [catálogo de servicios TI](Catalogo-de-servicios-TI.md) para fichas ST-01 a ST-15 y objetivos internos propuestos.
 
 ## 18. Responsabilidades y checklist de validación
 
@@ -447,4 +447,4 @@ El **usuario de soporte Cookiestech** es una identidad operativa de la aplicaci�
 
 **Mantenimiento del manual.** Actualizar al cambiar pantallas, transiciones de solicitudes, permisos o flujos de soporte. Antes de publicar una nueva versión, contrastar el manual con el APK real y con las evidencias verificadas. Los cambios documentales deben revisarse mediante Pull Request y no deben introducir credenciales ni datos personales.
 
-**Enlaces:** [Catálogo TI](Catalogo-de-servicios-TI) · [Evidencias](Evidencias-de-servicios) · [Índice de Wiki](Home)
+**Enlaces:** [Catálogo TI](Catalogo-de-servicios-TI.md) · [Evidencias](Evidencias-de-servicios.md) · [Índice de Wiki](Home.md)
