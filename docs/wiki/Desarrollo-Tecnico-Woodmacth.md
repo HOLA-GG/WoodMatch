@@ -43,8 +43,8 @@ flowchart LR
     EDGE --> VERIFY["Verificación de identidad Firebase"]
     EDGE --> DB["Firestore - operaciones protegidas"]
     EDGE --> STORE["Supabase Storage - fotos privadas"]
-    EDGE -. "Función complementaria" .-> PLANT["API Pl@ntNet"]
-    EDGE -. "Orientación opcional" .-> GEMINI["API Gemini"]
+    EDGE -.->|Función complementaria| PLANT["API Pl@ntNet"]
+    EDGE -.->|Orientación opcional| GEMINI["API Gemini"]
     EDGE --> FCM["Firebase Cloud Messaging"]
     FCM --> UI
     classDef client fill:#E7F1FF,stroke:#3166AF,color:#172E4D
@@ -180,8 +180,8 @@ flowchart TD
     F --> G["Edge Function valida perfil, límites y estados"]
     G --> H["Foto privada en Storage y registro en Firestore"]
     H --> I["Publicación disponible o hallazgo registrado"]
-    D -. "Solo si la persona lo solicita" .-> J["Gemini: sugerencia revisable"]
-    J -. "El usuario decide qué copiar" .-> D
+    D -.->|Solo a solicitud del usuario| J["Gemini: sugerencia revisable"]
+    J -.->|Revisión humana| D
     classDef ok fill:#E6F6E9,stroke:#308449
     class I ok
 ```
@@ -411,6 +411,16 @@ El workflow `.github/workflows/pilot.yml` incluye pruebas Node/Edge, revisión D
 ## 11. Mantenimiento de documentación y referencias
 
 Esta página **unifica** la documentación técnica dispersa que antes se encontraba en las páginas de arquitectura, asistente botánico, pantallas/acciones, seguridad/permisos y operación/lanzamiento de `docs/wiki`. El **Manual de usuario**, **Catálogo TI**, **Evidencias**, **Roles/ciclo** y **Administración/soporte** se mantienen como documentos funcionales y académicos complementarios, no como duplicados técnicos.
+
+### Pasos operativos adicionales conservados de las guías previas
+
+1. Preparar un proyecto de prueba autorizado de Firebase con autenticación, Firestore y reglas; verificar cuentas con roles distintos y acceso denegado.
+2. Preparar la Edge Function en Supabase, su almacenamiento privado, funciones de mantenimiento y secretos sin llevarlos al APK.
+3. Configurar el destino de la compilación en `WOODMATCH_API_URL` y el archivo cliente `google-services.json` sin sustituirlo por una cuenta de servicio.
+4. Probar con **dos cuentas/dispositivos** el flujo completo y los errores de red, permisos, fotografía, cuotas y pases.
+5. Para una entrega por **GitHub Release**, preparar APK, checksum, notas de versión y `build-info.json`; comprobar que corresponden al mismo commit y que las comprobaciones están aprobadas.
+6. Antes de distribuir en **Google Play**, revisar identificador definitivo de aplicación, firma/AAB, Play App Signing, política de privacidad, seguridad, consentimiento y requisitos vigentes de pruebas cerradas.
+7. Consultar el plan de uso de teselas OSM y cuotas de proveedores externos antes de ampliar el piloto. Los planes gratuitos actuales no implican garantía de recursos ni disponibilidad continua.
 
 La documentación fuente permanece en Git y la copia técnica más reciente es siempre la de la rama principal, una vez revisados los cambios. Los gráficos de esta página utilizan bloques \`\`\`mermaid, como solicita la [documentación oficial de GitHub](https://docs.github.com/es/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams#crear-diagramas-de-mermaid). Los diagramas no sustituyen pruebas de ejecución.
 
