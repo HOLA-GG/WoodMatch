@@ -422,7 +422,7 @@ Esta página **unifica** la documentación técnica dispersa que antes se encont
 6. Antes de distribuir en **Google Play**, revisar identificador definitivo de aplicación, firma/AAB, Play App Signing, política de privacidad, seguridad, consentimiento y requisitos vigentes de pruebas cerradas.
 7. Consultar el plan de uso de teselas OSM y cuotas de proveedores externos antes de ampliar el piloto. Los planes gratuitos actuales no implican garantía de recursos ni disponibilidad continua.
 
-La documentación fuente permanece en Git y la copia técnica más reciente es siempre la de la rama principal, una vez revisados los cambios. Los gráficos de esta página utilizan bloques \`\`\`mermaid, como solicita la [documentación oficial de GitHub](https://docs.github.com/es/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams#crear-diagramas-de-mermaid). Los diagramas no sustituyen pruebas de ejecución.
+La documentación fuente permanece en Git y la copia técnica más reciente es siempre la de la rama principal, una vez revisados los cambios. Los gráficos de esta página utilizan bloques \`\`\`mermaid, como solicita la [documentación oficial de GitHub](https://docs.github.com/es/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams#creating-mermaid-diagrams). Los diagramas no sustituyen pruebas de ejecución.
 
 - [Inicio de la documentación](Home.md)
 - [Catálogo de servicios ITIL 4](Catalogo-de-servicios-TI.md)
