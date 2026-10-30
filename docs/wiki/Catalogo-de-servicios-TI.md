@@ -44,6 +44,26 @@ Documentar y clasificar los servicios TI de WoodMatch según su finalidad, acces
 
 **Interpretación de estados:** *Implementado en código* significa que se localizaron pantallas/operaciones asociadas; no implica que su despliegue, aceptación en dispositivo ni disponibilidad real estén certificados. *Prototipo* no implica integración productiva.
 
+
+### 2.1 Mapa de relación de servicios
+
+Las agrupaciones siguientes facilitan la lectura del catálogo; **el escáner botánico no es un paso obligatorio para publicar**.
+
+```mermaid
+flowchart LR
+    Acc["ST-01 Acceso"] --> Pub["ST-02 a ST-07: comunidad, mapas y entregas"]
+    Pub --> Aviso["ST-11: notificaciones"]
+    Pub --> Soporte["ST-12 y ST-13: soporte y moderación"]
+    Acc -.-> Opt["ST-08 a ST-10: botánica e IA opcionales"]
+    Acc --> Datos["ST-14: privacidad y datos"]
+    Pub --> KPI["ST-15: KPI académico"]
+    Soporte --> KPI
+    classDef base fill:#E9F4FF,stroke:#386EAE
+    classDef opt fill:#F2F8E5,stroke:#6A923D
+    class Acc,Pub,Aviso,Soporte,Datos,KPI base
+    class Opt opt
+```
+
 ## 3. Fichas normalizadas de servicio
 
 Las fichas describen **finalidad, acceso, dependencias, control y KPI**. Los indicadores se formulan para ser calculados posteriormente en el tablero; no se presentan valores no medidos.
@@ -196,16 +216,16 @@ El catálogo identifica quince servicios TI de WoodMatch y establece una base de
 
 - Repositorio: https://github.com/HOLA-GG/WoodMatch
 - PR #7 (WoodMatch 2.3): https://github.com/HOLA-GG/WoodMatch/pull/7
-- Arquitectura: [Arquitectura y servicios](Arquitectura-y-servicios)
-- Operación: [Operación, pruebas y lanzamiento](Operacion-pruebas-y-lanzamiento)
-- Manual: [Manual de usuario](Manual-de-usuario)
+- Arquitectura: [Arquitectura y servicios](Desarrollo-Tecnico-Woodmacth.md)
+- Operación: [Operación, pruebas y lanzamiento](Desarrollo-Tecnico-Woodmacth.md)
+- Manual: [Manual de usuario](Manual-de-usuario.md)
 - Consulta oficial de prácticas ITIL: https://www.peoplecert.org/
 
 **Historial:** v1.0, 30-10-2026 — catálogo inicial con quince servicios, RACI para dos personas, KPIs, riesgos y objetivos académicos. **Próxima revisión:** después de recopilar evidencias del APK y confirmar los objetivos de atención.
 
 ## Evidencias visuales del piloto
 
-Se incorporaron **12 capturas seleccionadas** a la [galería de evidencias de servicios TI](Evidencias-de-servicios), con descripciones y correspondencia entre pantallas y códigos ST-01 a ST-15. Las capturas son evidencia de interfaz, no validación automática de todas las operaciones. Se excluyó una pantalla del historial con fechas y cantidades contradictorias, así como pantallas del perfil con datos personales.
+Se incorporaron **12 capturas seleccionadas** a la [galería de evidencias de servicios TI](Evidencias-de-servicios.md), con descripciones y correspondencia entre pantallas y códigos ST-01 a ST-15. Las capturas son evidencia de interfaz, no validación automática de todas las operaciones. Se excluyó una pantalla del historial con fechas y cantidades contradictorias, así como pantallas del perfil con datos personales.
 
 | ST-02 · Registro de reportes | ST-04 · Mapa OpenStreetMap |
 |:---:|:---:|
