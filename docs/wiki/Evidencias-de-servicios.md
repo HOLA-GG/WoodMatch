@@ -1,48 +1,158 @@
-# Evidencias visuales de WoodMatch 2.3
+# Evidencias de pantallas y servicios TI — WoodMatch 2.3
 
-**Materia:** Ingeniería de Software II · **Marco de trabajo:** ITIL 4  
-**Fecha de captura:** 30 de octubre de 2026  
-**Responsable de desarrollo:** Juan Sebastian Fune Sanchez  
-**Gestión de pruebas y documentación:** Yeison David Diaz Navarrete
+**Ingeniería de Software II · ITIL 4**  
+**Fecha del recorrido:** 30 de octubre de 2026  
+**Responsables:** Juan Sebastian Fune Sanchez — desarrollo técnico; Yeison David Diaz Navarrete — gestión de pruebas y documentación.
 
-> **Alcance de las evidencias.** Las capturas muestran interfaces existentes en un APK del piloto. La presencia de una pantalla no certifica que todos los flujos hayan sido probados de extremo a extremo, ni valida SLA o disponibilidad en producción.
+> **Naturaleza de las evidencias.** Las 12 capturas seleccionadas corresponden al APK del piloto WoodMatch. Demuestran interfaces observadas, pero no sustituyen pruebas integrales, métricas de producción, SLA ni certificaciones de seguridad.
 
-## Registro de evidencias
+## Índice de evidencias
 
-| Código | Servicio | Pantalla identificada | Estado documental |
-| --- | --- | --- | --- |
-| EV-01 | ST-01 | Acceso y exploración de invitado | Captura seleccionada |
-| EV-02 | ST-03 | Inicio de la comunidad autenticada | Captura seleccionada |
-| EV-03 | ST-03 | Consulta del catálogo de materiales | Captura seleccionada |
-| EV-04 | ST-04 | Mapa de Suba con OpenStreetMap | **Imagen incorporada abajo** |
-| EV-05 | ST-02 | Crear reporte, evidencia fotográfica | Captura seleccionada |
-| EV-06 | ST-05, ST-07 | Mi actividad y entregas | Captura seleccionada |
-| EV-07 | ST-09 | Mi álbum botánico | Captura seleccionada |
-| EV-08 | ST-12 | Formulario de ayuda y participación | Captura seleccionada |
-| EV-09 | ST-12 | Centro de soporte Cookiestech | Captura seleccionada |
-| EV-10 | ST-13 | Moderación de contenido | Captura seleccionada |
-| EV-11 | ST-14 | Privacidad y exportación de datos | Captura seleccionada |
-| EV-12 | ST-03 | Conexiones en Suba / directorio | Captura seleccionada |
+| ID | Pantalla | Servicios TI asociados |
+|---|---|---|
+| EV-01 | Exploración de invitado | ST-01, ST-03 |
+| EV-02 | Inicio de comunidad | ST-03 |
+| EV-03 | Catálogo comunitario | ST-03 |
+| EV-04 | Mapa OpenStreetMap de Suba | ST-04 |
+| EV-05 | Creación de reportes | ST-02 |
+| EV-06 | Panel Mi actividad | ST-05, ST-07 |
+| EV-07 | Álbum botánico | ST-09, ST-08 |
+| EV-08 | Ayuda y participación | ST-12 |
+| EV-09 | Centro de soporte Cookiestech | ST-12, ST-15 |
+| EV-10 | Moderación de contenido | ST-13 |
+| EV-11 | Privacidad y datos | ST-14 |
+| EV-12 | Directorio Conexiones en Suba | ST-03 |
 
-**Estado de carga:** esta página contiene por ahora la imagen EV-04. Las otras once capturas están clasificadas en el paquete local de evidencias, **no están alojadas en el repositorio** y no se enlazan como imágenes para evitar referencias rotas.
+## Galería de capturas
 
-## EV-04 · Servicio de mapa con OpenStreetMap (ST-04)
+### EV-01 — Exploración de invitado
 
-![Mapa interactivo de Suba con marcadores de WoodMatch y atribución a OpenStreetMap](evidencias/mapa/mapa-osm-suba.jpeg)
+**Servicio(s):** ST-01, ST-03  
 
-**Descripción:** pantalla de mapa con capas de OpenStreetMap, controles de acercamiento y alejamiento, marcadores de publicaciones comunitarias y atribución al proveedor cartográfico.
+![Exploración de invitado — evidencia de interfaz WoodMatch](evidencias/inicio/inicio-explora-woodmatch.jpeg)
 
-**Prueba pendiente:** verificar actualización de marcadores, filtros, manejo de fallos de red, permisos de ubicación y comportamiento de la caché sobre uno o más dispositivos.
+**Descripción:** Muestra el acceso de invitado, la consulta del mapa y las rutas de registro o inicio de sesión.  
+**Alcance de la captura:** No demuestra autenticación exitosa.
 
-## Hallazgos de control de calidad
+### EV-02 — Inicio de comunidad
 
-- Una captura de solicitudes e historial muestra diferencias entre cantidades y fechas del registro. Se excluyó para evitar mostrarla como evidencia validada y se recomienda investigar los datos del caso antes de utilizarla académicamente.
-- Una captura de perfil presenta datos personales identificables. No se incluyó en la selección publicable.
-- No se encontró captura independiente de la bandeja de notificaciones para ST-11.
-- Las capturas del álbum botánico y del centro de soporte muestran la interfaz, pero no bastan por sí solas para verificar una identificación exitosa o un ciclo completo de incidencia.
+**Servicio(s):** ST-03  
 
-## Criterio de publicación
+![Inicio de comunidad — evidencia de interfaz WoodMatch](evidencias/inicio/inicio-comunidad-circular.jpeg)
 
-Antes de publicar más capturas en este repositorio público, revisar datos privados y anomalías de prueba; mantener la correspondencia entre servicio, captura y descripción. Las imágenes deben acompañar a las fichas ITIL sin sustituir métricas, registros de pruebas ni evidencias de validación funcional.
+**Descripción:** Pantalla principal de WoodMatch después del acceso, con el resumen de comunidad circular.  
+**Alcance de la captura:** El saludo de cuenta no aporta evidencia de una operación terminada.
+
+### EV-03 — Catálogo comunitario
+
+**Servicio(s):** ST-03  
+
+![Catálogo comunitario — evidencia de interfaz WoodMatch](evidencias/catalogo/catalogo-comunitario.jpeg)
+
+**Descripción:** Muestra el listado de publicaciones y la búsqueda de madera y materiales.  
+**Alcance de la captura:** Las publicaciones visibles son datos de prueba o de la comunidad y requieren moderación.
+
+### EV-04 — Mapa OpenStreetMap de Suba
+
+**Servicio(s):** ST-04  
+
+![Mapa OpenStreetMap de Suba — evidencia de interfaz WoodMatch](evidencias/mapa/mapa-osm-suba.jpeg)
+
+**Descripción:** Presenta mapa interactivo de Suba, marcadores, controles de escala y atribución a OpenStreetMap.  
+**Alcance de la captura:** No certifica disponibilidad sin conexión ni exactitud de cada marcador.
+
+### EV-05 — Creación de reportes
+
+**Servicio(s):** ST-02  
+
+![Creación de reportes — evidencia de interfaz WoodMatch](evidencias/reportes/crear-reporte-evidencia.jpeg)
+
+**Descripción:** Primer paso del formulario de hallazgo u oferta, con captura y selección de fotografía.  
+**Alcance de la captura:** No acredita una publicación guardada hasta completar los tres pasos.
+
+### EV-06 — Panel Mi actividad
+
+**Servicio(s):** ST-05, ST-07  
+
+![Panel Mi actividad — evidencia de interfaz WoodMatch](evidencias/actividad/mi-actividad.jpeg)
+
+**Descripción:** Vista de publicaciones, solicitudes y entregas del usuario.  
+**Alcance de la captura:** Debe complementarse con casos verificables para demostrar un retiro completo.
+
+### EV-07 — Álbum botánico
+
+**Servicio(s):** ST-09, ST-08  
+
+![Álbum botánico — evidencia de interfaz WoodMatch](evidencias/botanico/album-botanico.jpeg)
+
+**Descripción:** Colección por cuenta con búsqueda, categorías y acceso al escáner de plantas.  
+**Alcance de la captura:** El botón del escáner no prueba por sí mismo una identificación exitosa.
+
+### EV-08 — Ayuda y participación
+
+**Servicio(s):** ST-12  
+
+![Ayuda y participación — evidencia de interfaz WoodMatch](evidencias/soporte/ayuda-participacion.jpeg)
+
+**Descripción:** Formulario de reporte de casos y sección de seguimiento individual.  
+**Alcance de la captura:** La pantalla vacía no prueba la resolución de un caso.
+
+### EV-09 — Centro de soporte Cookiestech
+
+**Servicio(s):** ST-12, ST-15  
+
+![Centro de soporte Cookiestech — evidencia de interfaz WoodMatch](evidencias/soporte/centro-soporte-cookiestech.jpeg)
+
+**Descripción:** Resumen operativo de casos abiertos, prioridades, moderación y satisfacción.  
+**Alcance de la captura:** Los indicadores mostrados corresponden al estado de la bandeja en la captura, no a datos agregados históricos.
+
+### EV-10 — Moderación de contenido
+
+**Servicio(s):** ST-13  
+
+![Moderación de contenido — evidencia de interfaz WoodMatch](evidencias/soporte/moderacion-casos.jpeg)
+
+**Descripción:** Vista operativa del operador con búsqueda, filtros y un caso de moderación.  
+**Alcance de la captura:** La imagen muestra un caso en estado resuelto; no sustituye evidencia del acto de moderar.
+
+### EV-11 — Privacidad y datos
+
+**Servicio(s):** ST-14  
+
+![Privacidad y datos — evidencia de interfaz WoodMatch](evidencias/cuenta/privacidad-datos-exportacion.jpeg)
+
+**Descripción:** Muestra preferencias de diagnósticos y opción de exportación de datos personales.  
+**Alcance de la captura:** No demuestra que la exportación se haya completado.
+
+### EV-12 — Directorio Conexiones en Suba
+
+**Servicio(s):** ST-03  
+
+![Directorio Conexiones en Suba — evidencia de interfaz WoodMatch](evidencias/directorio/conexiones-en-suba.jpeg)
+
+**Descripción:** Consulta de entidades locales de referencia vinculadas al aprovechamiento de madera.  
+**Alcance de la captura:** El directorio no acredita alianza comercial o disponibilidad real.
+
+## Cobertura por completar
+
+| Servicio | Evidencia aún necesaria |
+|---|---|
+| ST-01 | Sesión iniciada y recuperación de credenciales |
+| ST-05 | Solicitud, propuesta de fecha, aceptación y vencimiento validado |
+| ST-06 | Emisión y validación de pase QR |
+| ST-07 | PDF o JSON de una entrega con datos de prueba consistentes |
+| ST-08 | Identificación botánica con resultado Pl@ntNet |
+| ST-10 | Orientación Gemini con respuesta y límites |
+| ST-11 | Bandeja de notificaciones y estado de entrega |
+| ST-12 | Caso creado, priorizado, respondido, cerrado y, si aplica, reabierto |
+| ST-15 | Captura del tablero KPI con fuentes y fórmulas validadas |
+
+## Revisión y criterios de publicación
+
+- Se recibieron 32 capturas y se publican 12 representativas, agrupadas por módulo.
+- Se descartó una captura del historial de retiros donde la fecha y la cantidad mostradas no eran coherentes con los datos de la misma tarjeta. No usarla como comprobante de una transacción validada.
+- Se excluyeron capturas del perfil que revelaban datos personales de la cuenta.
+- Las capturas disponibles no reemplazan bitácoras, pruebas de dos dispositivos ni aprobaciones de CI Android, reglas o lint.
+- Las imágenes se incorporaron como archivos JPEG optimizados para consulta y citación, conservando el aspecto real de las interfaces.
 
 [Volver al catálogo de servicios TI](Catalogo-de-servicios-TI) · [Índice de documentación](Home)

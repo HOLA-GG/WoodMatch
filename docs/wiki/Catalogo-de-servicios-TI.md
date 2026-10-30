@@ -205,4 +205,12 @@ El catálogo identifica quince servicios TI de WoodMatch y establece una base de
 
 ## Evidencias visuales del piloto
 
-Las capturas revisadas se describen en la [galería de evidencias de servicios TI](Evidencias-de-servicios). Se incluye una captura verificable del [mapa OSM](evidencias/mapa/mapa-osm-suba.jpeg). Las demás imágenes seleccionadas se conservan en el paquete descargable de evidencias, pendiente de incorporación gráfica a esta carpeta. Una captura de historial con fechas y cantidades contradictorias se excluyó del material destinado a publicación académica.
+Se incorporaron **12 capturas seleccionadas** a la [galería de evidencias de servicios TI](Evidencias-de-servicios), con descripciones y correspondencia entre pantallas y códigos ST-01 a ST-15. Las capturas son evidencia de interfaz, no validación automática de todas las operaciones. Se excluyó una pantalla del historial con fechas y cantidades contradictorias, así como pantallas del perfil con datos personales.
+
+| ST-02 · Registro de reportes | ST-04 · Mapa OpenStreetMap |
+|:---:|:---:|
+| <img src="evidencias/reportes/crear-reporte-evidencia.jpeg" width="220" alt="Formulario de creación de reporte WoodMatch"> | <img src="evidencias/mapa/mapa-osm-suba.jpeg" width="220" alt="Mapa OSM interactivo en Suba"> |
+| ST-09 · Álbum botánico | ST-12 · Soporte Cookiestech |
+| <img src="evidencias/botanico/album-botanico.jpeg" width="220" alt="Álbum botánico WoodMatch"> | <img src="evidencias/soporte/centro-soporte-cookiestech.jpeg" width="220" alt="Centro de soporte Cookiestech"> |
+
+**Evidencia aún necesaria:** identificación botánica exitosa, confirmación QR, notificaciones, pruebas integrales de incidentes y tablero KPI. Consultar la galería para la matriz de cobertura.
