@@ -27,3 +27,8 @@
 El piloto se centra en el aprovechamiento comunitario de madera y residuos leñosos en Suba. La identificación botánica y el álbum son **funciones complementarias** y no bloquean publicaciones. La aplicación no certifica especies, propiedad, peso, permisos, seguridad estructural ni identidad física. Los comprobantes no son facturas. La documentación no equivale a certificación de seguridad ni validación de todos los workflows CI.
 
 **GitHub:** este índice forma parte de `docs/wiki/` en el repositorio principal. La Wiki nativa independiente de GitHub no se actualiza automáticamente.
+
+## Calidad y dashboard
+
+- [Control de calidad, versiones y evidencias](Control-de-calidad-y-evidencias.md)
+- [Dashboard web: KPI, seguridad y operación](Dashboard-Web.md)
