@@ -33,43 +33,6 @@ object AuthRepository {
         }
     }
 
-    // Perfiles iniciales de prueba para verificación sin passwords hardcodeados en el APK
-    private val demoUsers = mutableListOf(
-        User(
-            uid = "admin_suba",
-            name = "Coordinador Ambiental Suba",
-            email = "coordinacion.suba@woodmatch.co",
-            phone = "+573101234567",
-            dob = "15-05-1988",
-            city = "Bogotá",
-            gender = "Otro",
-            role = UserRole.ADMIN.name,
-            sectorSuba = "Suba Centro"
-        ),
-        User(
-            uid = "gen_carlos",
-            name = "Carlos M. (Poda y Jardinería)",
-            email = "carlos.poda@woodmatch.co",
-            phone = "+573159876543",
-            dob = "22-09-1992",
-            city = "Bogotá",
-            gender = "Masculino",
-            role = UserRole.GENERADOR.name,
-            sectorSuba = "El Rincón"
-        ),
-        User(
-            uid = "rec_elena",
-            name = "Elena R. (Taller Ebanistería)",
-            email = "elena.taller@woodmatch.co",
-            phone = "+573204567890",
-            dob = "10-12-1995",
-            city = "Bogotá",
-            gender = "Femenino",
-            role = UserRole.RECEPTOR.name,
-            sectorSuba = "Niza / La Colina"
-        )
-    )
-
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
@@ -78,6 +41,10 @@ object AuthRepository {
     suspend fun restoreSession() {
         val uid = auth?.currentUser?.takeUnless { it.isAnonymous }?.uid ?: return
         _currentUser.value = fetchUserProfile(uid)
+        if (_currentUser.value != null && com.example.kotlinapp.data.network.PilotApi.configured) {
+            runCatching { com.example.kotlinapp.data.network.PilotApi.call("clientAccess") }
+                .onFailure { if (it.message?.contains("panel web", ignoreCase = true) == true) logout() }
+        }
     }
 
     val isAuthenticated: Boolean
@@ -117,11 +84,15 @@ object AuthRepository {
             val uid = res.user?.uid ?: error("No se pudo iniciar sesión.")
             val profile = fetchUserProfile(uid) ?: error("No se pudo cargar tu perfil. Comprueba tu conexión e inténtalo de nuevo.")
             _currentUser.value = profile
+            if (com.example.kotlinapp.data.network.PilotApi.configured)
+                com.example.kotlinapp.data.network.PilotApi.call("clientAccess")
             Result.success(profile)
         } catch (e: Exception) {
             firebaseAuth.signOut()
             _currentUser.value = null
             val message = when {
+                e.message?.contains("panel web", ignoreCase = true) == true ->
+                    "Esta cuenta se administra desde el panel web de WoodMatch."
                 e.message?.contains("password", ignoreCase = true) == true ||
                 e.message?.contains("credential", ignoreCase = true) == true ->
                     "Contraseña o credenciales incorrectas."
@@ -220,17 +191,8 @@ object AuthRepository {
             }
         }
 
-        demoUsers.add(newUser)
         _currentUser.value = newUser
         return Result.success(newUser)
-    }
-
-    fun switchUserForTesting(role: UserRole) {
-        if (!BuildConfig.DEBUG || auth != null) return
-        val target = demoUsers.find { it.typedRole == role }
-        if (target != null) {
-            _currentUser.value = target
-        }
     }
 
     fun loginAsGuest() {
@@ -314,34 +276,6 @@ object AuthRepository {
         _currentUser.value = null
     }
 
-    suspend fun getAllUsers(): List<User> {
-        if (!isAuthenticated || _currentUser.value?.isAdmin != true) return emptyList()
-        firestore?.let { db ->
-            try {
-                val snapshot = db.collection("users").get().await()
-                if (!snapshot.isEmpty) {
-                    val remote = snapshot.documents.mapNotNull { doc ->
-                        val email = doc.getString("email") ?: ""
-                        val fallbackName = email.substringBefore("@").replaceFirstChar { it.uppercase() }.ifBlank { "Usuario" }
-                        User(
-                            uid = doc.getString("uid") ?: doc.id,
-                            name = doc.getString("name")?.takeIf { it.isNotBlank() } ?: fallbackName,
-                            email = email,
-                            phone = doc.getString("phone") ?: "",
-                            dob = doc.getString("dob") ?: "",
-                            city = doc.getString("city") ?: "Bogotá",
-                            gender = doc.getString("gender") ?: "",
-                            role = doc.getString("role") ?: UserRole.GENERADOR.name,
-                            sectorSuba = doc.getString("sectorSuba") ?: "Suba Centro"
-                        )
-                    }
-                    if (remote.isNotEmpty()) return remote
-                }
-            } catch (_: Exception) {}
-        }
-        return emptyList()
-    }
-
     /** Older call sites keep this signature; role and region remain the registered values. */
     @Suppress("UNUSED_PARAMETER")
     suspend fun updateCurrentUserProfile(name: String, phone: String, sectorSuba: String, role: String): Result<User> {
@@ -387,10 +321,6 @@ object AuthRepository {
         logout()
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    suspend fun updateUserRole(uid: String, newRole: String): Result<Unit> =
-        Result.failure(Exception("El rol se elige al registrarte y no se cambia desde el perfil."))
-
     private suspend fun fetchUserProfile(uid: String): User? {
         return try {
             firestore?.collection("users")?.document(uid)?.get()?.await()?.let { doc ->
@@ -405,7 +335,7 @@ object AuthRepository {
                         dob = doc.getString("dob") ?: "",
                         city = doc.getString("city") ?: "Bogotá",
                         gender = doc.getString("gender") ?: "",
-                        role = if (uid == "yDGu1WUesuc01uUbUzc3By4qyL02" && email.equals("cookiestech@woodmatch.org", true)) UserRole.SOPORTE.name else doc.getString("role") ?: UserRole.GENERADOR.name,
+                        role = doc.getString("role") ?: UserRole.GENERADOR.name,
                         sectorSuba = doc.getString("sectorSuba") ?: "Suba Centro"
                     )
                 } else null

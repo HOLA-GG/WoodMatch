@@ -58,7 +58,6 @@ fun DashboardScreen(
     onNavigateToViewReports: () -> Unit,
     onNavigateToSpecies: () -> Unit,
     onNavigateToMap: () -> Unit,
-    onNavigateToAdminUsers: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val currentUser by AuthRepository.currentUser.collectAsState()
@@ -103,18 +102,6 @@ fun DashboardScreen(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (currentUser?.isAdmin == true) {
-                        IconButton(
-                            onClick = onNavigateToAdminUsers,
-                            modifier = Modifier.testTag("dashboard_admin_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.AdminPanelSettings,
-                                contentDescription = "Panel Administrador",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
                     IconButton(
                         onClick = onNavigateToSettings,
                         modifier = Modifier.testTag("dashboard_settings_button")

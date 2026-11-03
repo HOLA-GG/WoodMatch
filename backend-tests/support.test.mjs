@@ -4,7 +4,7 @@ import { supportCall, supportOperator } from '../supabase/functions/woodmatch/su
 import { registerDevice, notifyMaterial } from '../supabase/functions/woodmatch/notifications.mjs';
 import { deliverNotices } from '../supabase/functions/woodmatch/maintenance.mjs';
 
-const admin={uid:'yDGu1WUesuc01uUbUzc3By4qyL02',email:'cookiestech@woodmatch.org'};
+const admin={uid:'operator-fixture',email:'operator@example.invalid',webAdmin:true};
 const user={uid:'receiver',email:'receiver@example.org'};
 function fixture() {
   const rows=new Map([['wood_wastes/entry',{id:'entry',title:'Mesa',status:'DISPONIBLE',revision:1}],['users/receiver',{role:'RECEPTOR'}]]);
@@ -15,6 +15,7 @@ function fixture() {
 }
 test('support operator requires exact verified identity; admin flag and matching email alone do not grant access',async()=>{
   assert.equal(supportOperator({...user,admin:true}),false);
+  assert.equal(supportOperator({uid:admin.uid,email:admin.email}),false);
   assert.equal(supportOperator({...user,email:admin.email}),false);
   const {db}=fixture();
   await assert.rejects(()=>supportCall(db,user,'adminSupportCases',{}));

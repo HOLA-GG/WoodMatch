@@ -464,6 +464,9 @@ test("erasure is resumable, anonymizes receipts and removes nested events and ph
     ["photo_budget/global", { bytes: 100 }],
     ["photo_budget/removed", { bytes: 50 }],
     ["operations/op", { uid: "removed" }],
+    ["support_cases/c",{reporterId:"removed",subject:"PRIVATE",detail:"PRIVATE",response:"PRIVATE",history:[{actorId:"removed",reason:"PRIVATE"}]}],
+    ["notifications/n",{uid:"removed"}],
+    ["notification_devices/d",{uid:"removed",token:"PRIVATE"}],
   ]);
   const db = {
     get: async (p) => docs.get(p) || null,
@@ -502,4 +505,8 @@ test("erasure is resumable, anonymizes receipts and removes nested events and ph
   assert.equal(docs.get("withdrawal_requests/r/events/e").actorId, "deleted");
   assert.equal(docs.has("operations/op"), false);
   assert.equal(docs.get("photo_budget/global").bytes, 50);
+  assert.equal(docs.get("support_cases/c").reporterId,"deleted");
+  assert.equal(docs.get("support_cases/c").detail,"");
+  assert.equal(docs.has("notifications/n"),false);
+  assert.equal(docs.has("notification_devices/d"),false);
 });

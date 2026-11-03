@@ -1,5 +1,6 @@
 # Dashboard web — gestión TI
 
+> **Evolución vigente:** la nueva administración se documenta en [Administración web](Administracion-Web.md). El contenido siguiente describe la etapa anterior y no acredita que esas pantallas sigan disponibles en el APK nuevo.
 Estado: propuesta en revisión, **sin despliegue**. [Control y evidencias](Control-de-calidad-y-evidencias.md). [Catálogo ST-01 a ST-15](Catalogo-de-servicios-TI.md).
 
 ## Acceso y arquitectura

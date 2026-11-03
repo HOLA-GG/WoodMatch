@@ -2,8 +2,7 @@ import { requireThat, safeId } from './domain.mjs';
 import { enqueueNotice } from './lifecycle.mjs';
 
 // Scoped operator: never grants Firebase's broad admin claim or account access.
-export const supportOperator = (actor) => actor.uid === 'yDGu1WUesuc01uUbUzc3By4qyL02'
-  && actor.email === 'cookiestech@woodmatch.org';
+export const supportOperator = (actor) => actor.webAdmin === true;
 const text = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 export async function supportCall(db, actor, operation, data) {
   if (operation === 'supportAccess') return { operator: supportOperator(actor) };

@@ -117,8 +117,7 @@ fun PilotProfile(
             ProfileDetail("Nombre", user?.name.orEmpty())
             ProfileDetail("Teléfono", user?.phone.orEmpty())
             ProfileDetail("Participación", user?.typedRole?.displayName.orEmpty())
-            Text(if (user?.isSupport == true) "Cuenta exclusiva de soporte: atiende incidencias, opiniones y moderación de publicaciones."
-                else "El rol se define al registrarte. Las cuentas mixtas pueden crear y buscar materiales.",
+            Text("El rol se define al registrarte. Las cuentas mixtas pueden crear y buscar materiales.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = onChangePassword, enabled = !busy,

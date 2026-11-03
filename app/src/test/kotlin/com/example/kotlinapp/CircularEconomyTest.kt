@@ -29,10 +29,10 @@ class CircularEconomyTest {
         assertTrue(receptor.canRequest)
         assertFalse(receptor.isAdmin)
 
-        val admin = User(uid = "a1", role = UserRole.ADMIN.name)
-        assertTrue(admin.isAdmin)
-        assertTrue(admin.canPublish)
-        assertTrue(admin.canRequest)
+        val admin = User(uid = "a1", role = "ADMIN")
+        assertFalse(admin.isAdmin)
+        assertFalse(admin.canPublish)
+        assertFalse(admin.canRequest)
     }
 
     @Test

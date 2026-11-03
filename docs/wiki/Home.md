@@ -33,3 +33,5 @@ El piloto se centra en el aprovechamiento comunitario de madera y residuos leño
 - [Control de calidad, versiones y evidencias](Control-de-calidad-y-evidencias.md)
 - [Dashboard web: KPI, seguridad y operación](Dashboard-Web.md)
 - [Secuencias de reservas, QR, notificaciones y soporte](Secuencias-de-servicio.md)
+
+- [Administración web y transición desde Android](Administracion-Web.md)

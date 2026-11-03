@@ -72,6 +72,11 @@ export async function eraseAccount({ uid, db, identity, deletePhotos }) {
   for (const collection of ["ai_quotas", "operations"]) {
     await drain(collection, "uid", (row) => db.remove(row._path));
   }
+  await drain("support_cases", "reporterId", async row => {
+    const {_path,...fields}=row;
+    await db.set(_path,{...fields,reporterId:"deleted",subject:"Cuenta eliminada",detail:"",response:"",history:(fields.history||[]).map(event=>({...event,actorId:event.actorId===uid?"deleted":event.actorId,...(event.actorId===uid?{reason:""}:{})}))});
+  });
+  for(const collection of ["notifications","notification_devices"]) await drain(collection,"uid",row=>db.remove(row._path));
   await db.remove(`users/${uid}`);
   await identity("delete", { localId: uid });
   // Keep the tombstone so older client tokens cannot reopen access before expiring.
