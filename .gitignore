@@ -39,3 +39,8 @@ functions/.secret.local
 supabase/functions/.env*
 !supabase/functions/.env.example
 release-assets/
+
+# Dashboard local configuration and build output
+dashboard/node_modules/
+dashboard/dist/
+dashboard/public/config.json

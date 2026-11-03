@@ -1,0 +1,31 @@
+name: Dashboard quality
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci --prefix dashboard --ignore-scripts --no-audit --no-fund
+      - run: python3 scripts/check-wiki-links.py
+      - run: npm --prefix dashboard run check
+      - run: npm --prefix dashboard run build
+      - run: cd dashboard && npx playwright install --with-deps chromium
+      - run: npm --prefix dashboard run test:web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-demo-screenshots
+          path: docs/dashboard-*.png
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.6
+      - run: deno check supabase/functions/woodmatch-dashboard/index.ts
+      - run: deno test --allow-env backend-tests/dashboard-edge.test.ts

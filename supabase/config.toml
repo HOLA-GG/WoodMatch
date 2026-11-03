@@ -6,3 +6,7 @@ verify_jwt = false
 
 [functions.woodmatch-maintenance]
 verify_jwt = true
+
+[functions.woodmatch-dashboard]
+# Dedicated verifier validates Firebase signature, issuer, audience and account revocation.
+verify_jwt = false
