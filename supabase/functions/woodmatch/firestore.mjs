@@ -121,6 +121,7 @@ export class Firestore {
       try {
         const result = await work({
           get: (path) => this.get(path, transaction),
+          patch: (path, value, updateTime) => writes.push({update:{name:`${this.root}/${path}`,fields:encode(value).mapValue.fields},updateMask:{fieldPaths:Object.keys(value)},currentDocument:{updateTime}}),
           set: (path, value) =>
             writes.push({
               update: {

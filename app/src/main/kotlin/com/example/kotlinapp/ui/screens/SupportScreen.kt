@@ -1,6 +1,10 @@
 package com.example.kotlinapp.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -10,54 +14,44 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.example.kotlinapp.data.network.PilotApi
 import com.example.kotlinapp.data.repository.WoodWasteRepository
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import coil.compose.AsyncImage
 
 @Composable
-fun SupportScreen(onBack: () -> Unit, operatorMode: Boolean = false, moderationOnly: Boolean = false) {
+fun SupportScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var type by rememberSaveable { mutableStateOf("FEEDBACK") }
     var subject by rememberSaveable { mutableStateOf("") }
     var detail by rememberSaveable { mutableStateOf("") }
     var rating by rememberSaveable { mutableIntStateOf(5) }
     var operationId by rememberSaveable { mutableStateOf(PilotApi.operationId()) }
-    var operator by remember { mutableStateOf(false) }
-    var inbox by rememberSaveable { mutableStateOf(operatorMode) }
-    var filter by rememberSaveable { mutableStateOf("TODOS") }
-    var query by rememberSaveable { mutableStateOf("") }
     var rows by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     suspend fun load() {
-        val access = PilotApi.call("supportAccess")
-        operator = access.optBoolean("operator")
-        val response = PilotApi.call(if (inbox && operator) "adminSupportCases" else "mySupportCases").getJSONArray("cases")
+        val response = PilotApi.call("mySupportCases").getJSONArray("cases")
         rows = (0 until response.length()).map { response.getJSONObject(it) }
     }
     fun refresh() { scope.launch { busy = true; runCatching { load() }.onFailure { message = it.message }; busy = false } }
-    LaunchedEffect(inbox) { busy = true; runCatching { load() }.onFailure { message = it.message }; busy = false }
+    LaunchedEffect(Unit) { busy = true; runCatching { load() }.onFailure { message = it.message }; busy = false }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
-            Text(if (moderationOnly) "Moderación" else if (operatorMode) "Bandeja de soporte" else "Ayuda y participación", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            Text("Ayuda y participación", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
             IconButton(onClick = { refresh() }, enabled = !busy) { Icon(Icons.Default.Refresh, "Actualizar casos") }
         }
         Text("Tu experiencia mejora WoodMatch. Consulta aquí las respuestas y el avance de tus casos.")
-        if (operator) {
-            Text("Soporte y moderación", style = MaterialTheme.typography.titleMedium)
-            Text("Prioriza, investiga, responde y confirma la solución antes de cerrar. Los reportes de contenido se revisan con un motivo registrado.")
-            if (!operatorMode) Row {
-                FilterChip(selected = !inbox, onClick = { inbox = false }, label = { Text("Mis casos") })
-                Spacer(Modifier.width(8.dp))
-                FilterChip(selected = inbox, onClick = { inbox = true }, label = { Text("Bandeja de soporte") })
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer))).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.SupportAgent, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+                Text("Estamos para escucharte", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                Text("Comparte una incidencia, una idea o tu experiencia. Aquí puedes seguir cada respuesta.", textAlign = TextAlign.Center)
             }
         }
-        if (!inbox) {
+        run {
             SupportChoice("Tipo", listOf("FEEDBACK","INCIDENCIA","OPINION","SATISFACCION"), type) { type = it }
             if (type == "SATISFACCION") {
                 Text("¿Cómo fue tu experiencia? 1: muy insatisfecho · 5: muy satisfecho")
@@ -80,21 +74,11 @@ fun SupportScreen(onBack: () -> Unit, operatorMode: Boolean = false, moderationO
         }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-        Text(if (inbox) "Casos de la comunidad" else "Mi seguimiento", style = MaterialTheme.typography.titleLarge)
-        if (inbox && operator) {
-            OutlinedTextField(query, { query = it }, label = { Text("Buscar asunto, detalle o caso") }, leadingIcon = { Icon(Icons.Default.Search, null) }, modifier = Modifier.fillMaxWidth())
-            SupportChoice("Filtrar", listOf("TODOS", "ABIERTOS", "NUEVO", "EN_REVISION", "EN_PROGRESO", "RESUELTO", "CERRADO", "ALTA", "CRITICA"), filter) { filter = it }
-        }
+        Text("Mi seguimiento", style = MaterialTheme.typography.titleLarge)
         if (rows.isEmpty() && !busy) Text("Aún no hay casos para mostrar.")
-        val visible = rows.filter { row ->
-            (!moderationOnly || row.optString("type") == "MODERACION") &&
-                (query.isBlank() || (row.optString("subject") + " " + row.optString("detail") + " " + row.optString("id")).contains(query, true)) &&
-                (filter == "TODOS" || filter == row.optString("status") || filter == row.optString("priority") || filter == "ABIERTOS" && row.optString("status") !in listOf("RESUELTO", "CERRADO"))
-        }
-        if (rows.isNotEmpty() && visible.isEmpty()) Text("No hay casos con estos filtros.")
-        visible.forEach { row ->
+        rows.forEach { row ->
             key(row.getString("id"), row.optLong("updatedAt")) {
-                SupportCaseCard(row, operator && inbox, busy) { operation, data ->
+                SupportCaseCard(row, busy) { operation, data ->
                     busy = true
                     scope.launch {
                         runCatching { PilotApi.call(operation, data); WoodWasteRepository.refreshSession(); load() }
@@ -120,12 +104,7 @@ private fun SupportChoice(label: String, values: List<String>, selected: String,
 }
 
 @Composable
-private fun SupportCaseCard(row: JSONObject, admin: Boolean, busy: Boolean, action: (String, Map<String, Any?>) -> Unit) {
-    val scope = rememberCoroutineScope()
-    var publication by remember { mutableStateOf<JSONObject?>(null) }
-    var previewError by remember { mutableStateOf<String?>(null) }
-    var status by remember { mutableStateOf(row.optString("status")) }
-    var priority by remember { mutableStateOf(row.optString("priority")) }
+private fun SupportCaseCard(row: JSONObject, busy: Boolean, action: (String, Map<String, Any?>) -> Unit) {
     var response by remember { mutableStateOf(row.optString("response")) }
     var reason by remember { mutableStateOf("") }
     Card(Modifier.fillMaxWidth()) {
@@ -136,31 +115,7 @@ private fun SupportCaseCard(row: JSONObject, admin: Boolean, busy: Boolean, acti
             Text(row.optString("detail"))
             if (row.optString("type") == "SATISFACCION") Text("Satisfacción: " + row.optInt("rating") + "/5")
             if (row.optString("publicationId").isNotBlank()) Text("Publicación: " + row.optString("publicationTitle"))
-            if (admin) {
-                SupportChoice("Estado", listOf("NUEVO","EN_REVISION","EN_PROGRESO","RESUELTO","CERRADO"), status) { status = it }
-                SupportChoice("Prioridad", listOf("BAJA","MEDIA","ALTA","CRITICA"), priority) { priority = it }
-                OutlinedTextField(response, { response = it.take(1500) }, label = { Text("Respuesta o solución para el usuario") }, modifier = Modifier.fillMaxWidth())
-                Button(enabled = !busy, onClick = { action("updateSupportCase", mapOf("id" to row.getString("id"), "status" to status, "priority" to priority, "response" to response, "expectedUpdatedAt" to row.optLong("updatedAt"))) }) { Text("Guardar seguimiento") }
-                if (row.optString("publicationId").isNotBlank()) {
-                    TextButton(onClick = { scope.launch {
-                        runCatching { PilotApi.call("supportPublication", mapOf("id" to row.optString("publicationId"))) }
-                            .onSuccess { publication = it; previewError = null }.onFailure { previewError = it.message }
-                    } }) { Text("Revisar publicación y fotografía") }
-                    publication?.let { entry ->
-                        Text(entry.optString("title") + " · " + entry.optString("status"))
-                        Text(entry.optString("description"))
-                        if (!entry.isNull("url")) AsyncImage(model = entry.optString("url"), contentDescription = "Fotografía de la publicación reportada", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(200.dp))
-                    }
-                    previewError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    OutlinedTextField(reason, { reason = it.take(500) }, label = { Text("Motivo de moderación") }, modifier = Modifier.fillMaxWidth())
-                    Row {
-                        listOf("OCULTAR","RESTAURAR").forEach { decision ->
-                            TextButton(enabled = !busy && reason.isNotBlank(), onClick = { action("moderateEntry", mapOf("id" to row.optString("publicationId"), "caseId" to row.getString("id"), "reason" to reason, "action" to decision)) }) { Text(decision.lowercase().replaceFirstChar { it.uppercase() }) }
-                        }
-                    }
-                    Text("Las publicaciones reservadas o recolectadas requieren revisar su flujo antes de moderar.", style = MaterialTheme.typography.bodySmall)
-                }
-            } else {
+            run {
                 if (response.isNotBlank()) { Text("Respuesta de soporte", style = MaterialTheme.typography.labelLarge); Text(response) }
                 if (row.optString("status") in listOf("RESUELTO", "CERRADO")) {
                     OutlinedTextField(reason, { reason = it.take(500) }, label = { Text("¿Por qué necesitas reabrir el caso?") }, modifier = Modifier.fillMaxWidth())

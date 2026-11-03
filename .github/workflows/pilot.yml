@@ -40,8 +40,8 @@ jobs:
           npm --prefix backend-tests run test:rules
       - name: Edge authentication and type checks
         run: |
-          deno check supabase/functions/woodmatch/index.ts supabase/functions/woodmatch/maintenance.ts
-          deno test --allow-env backend-tests/edge.test.ts
+          deno check supabase/functions/woodmatch/index.ts supabase/functions/woodmatch/maintenance.ts supabase/functions/woodmatch-admin/index.ts
+          deno test --allow-env backend-tests/edge.test.ts backend-tests/admin-edge.test.ts
       - name: Optional pilot client configuration
         if: github.event_name != 'pull_request'
         env:

@@ -125,7 +125,6 @@ fun WoodMatchApp(
     val nav = rememberNavController()
     val back by nav.currentBackStackEntryAsState()
     val route = back?.destination?.route.orEmpty()
-    val support = user?.isSupport == true
     // Wait for session restoration/login and the normal landing route before opening the inbox.
     // This avoids racing SplashScreen's navigation and consuming a tap before authentication.
     LaunchedEffect(openNotifications, user?.uid, route) {
@@ -135,13 +134,7 @@ fun WoodMatchApp(
             if (route != "notifications") nav.navigate("notifications") { launchSingleTop = true }
         }
     }
-    LaunchedEffect(support, route) {
-        val allowed = setOf("splash", "login", "support_home", "support_inbox", "support_moderation", "profile", "settings", "edit_profile", "change_password", "forgot_password", "notifications")
-        if (support && route.isNotBlank() && route !in allowed) {
-            nav.navigate("support_home") { popUpTo(0) { inclusive = true }; launchSingleTop = true }
-        }
-    }
-    val tabs = listOf("dashboard", "tree_map", "report_tree", "view_reports", "my_activity", "profile", "entities", "species", "guest", "guest_map", "support_home", "support_inbox", "support_moderation")
+    val tabs = listOf("dashboard", "tree_map", "report_tree", "view_reports", "my_activity", "profile", "entities", "species", "guest", "guest_map")
     val items by WoodWasteRepository.items.collectAsState()
     var importJson by rememberSaveable { mutableStateOf<String?>(null) }
     fun go(target: String) {
@@ -149,7 +142,7 @@ fun WoodMatchApp(
     }
     fun navigateTopLevel(target: String) {
         nav.navigate(target) {
-            popUpTo(if (support) "support_home" else "dashboard") { saveState = true }
+            popUpTo("dashboard") { saveState = true }
             launchSingleTop = true
             restoreState = true
         }
@@ -182,7 +175,7 @@ fun WoodMatchApp(
             composable("splash") {
                 SplashScreen(
                     onNavigateToDashboard = {
-                        nav.navigate(if (AuthRepository.currentUser.value?.isSupport == true) "support_home" else "dashboard") { popUpTo("splash") { inclusive = true } }
+                        nav.navigate("dashboard") { popUpTo("splash") { inclusive = true } }
                     },
                     onNavigateToLogin = {
                         nav.navigate("login") { popUpTo("splash") { inclusive = true } }
@@ -211,7 +204,7 @@ fun WoodMatchApp(
             composable("login") {
                 LoginScreen(
                     onLoginSuccess = {
-                        nav.navigate(if (AuthRepository.currentUser.value?.isSupport == true) "support_home" else "dashboard") { popUpTo("login") { inclusive = true } }
+                        nav.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                     },
                     onNavigateToRegister = { go("register") },
                     onNavigateToForgotPassword = { go("forgot_password") },
@@ -220,7 +213,7 @@ fun WoodMatchApp(
             composable("register") {
                 RegisterScreen(
                     onRegisterSuccess = {
-                        nav.navigate(if (AuthRepository.currentUser.value?.isSupport == true) "support_home" else "dashboard") { popUpTo("login") { inclusive = true } }
+                        nav.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                     },
                     onNavigateBackToLogin = { nav.popBackStack() },
                 )
@@ -229,7 +222,7 @@ fun WoodMatchApp(
                 ForgotPasswordScreen(onNavigateBack = { nav.popBackStack() })
             }
             composable("dashboard") {
-                if (support) SupportHomeScreen(onCases = { navigateTopLevel("support_inbox") }, onModeration = { navigateTopLevel("support_moderation") }, onNotifications = { go("notifications") }) else PilotHome(
+                PilotHome(
                     onMap = { navigateTopLevel("tree_map") },
                     onCreate = { go("report_tree") },
                     onSpecies = { navigateTopLevel("species") },
@@ -324,7 +317,7 @@ fun WoodMatchApp(
                     onTextScale = onTextScale,
                     onEditProfile = { go("edit_profile") },
                     onChangePassword = { go("change_password") },
-                    onSupport = { go(if (support) "support_inbox" else "support") },
+                    onSupport = { go("support") },
                     onNotifications = { go("notifications") },
                     onLogout = ::logout,
                 )
@@ -339,7 +332,7 @@ fun WoodMatchApp(
                     onTextScale = onTextScale,
                     onEditProfile = { go("edit_profile") },
                     onChangePassword = { go("change_password") },
-                    onSupport = { go(if (support) "support_inbox" else "support") },
+                    onSupport = { go("support") },
                     onNotifications = { go("notifications") },
                     onLogout = ::logout,
                 )
@@ -357,29 +350,16 @@ fun WoodMatchApp(
                 if (AuthRepository.isAuthenticated) NotificationsScreen(
                     onBack = { nav.popBackStack() },
                     onOpen = { requestId, caseId ->
-                        if (caseId.isNotBlank()) go(if (support) "support_inbox" else "support")
-                        else if (!support && requestId.isNotBlank()) go("my_activity")
-                        else go(if (support) "support_home" else "dashboard")
+                        if (caseId.isNotBlank()) go("support")
+                        else if (requestId.isNotBlank()) go("my_activity")
+                        else go("dashboard")
                     },
                 ) else AccessMessage("Inicia sesión para consultar tus avisos.") { nav.popBackStack() }
             }
             composable("support") { SupportScreen(onBack = { nav.popBackStack() }) }
-            composable("support_home") {
-                if (support) SupportHomeScreen(onCases = { navigateTopLevel("support_inbox") }, onModeration = { navigateTopLevel("support_moderation") }, onNotifications = { go("notifications") })
-                else AccessMessage("Esta sección es exclusiva de soporte.") { nav.popBackStack() }
-            }
-            composable("support_inbox") {
-                if (support) SupportScreen(onBack = { navigateTopLevel("support_home") }, operatorMode = true)
-                else AccessMessage("Esta sección es exclusiva de soporte.") { nav.popBackStack() }
-            }
-            composable("support_moderation") {
-                if (support) SupportScreen(onBack = { navigateTopLevel("support_home") }, operatorMode = true, moderationOnly = true)
-                else AccessMessage("Esta sección es exclusiva de soporte.") { nav.popBackStack() }
-            }
             composable("species") {
                 SpeciesScreen(onNavigateBack = { nav.popBackStack() })
             }
-            composable("admin_users") { AdminUsersScreen(onNavigateBack = { nav.popBackStack() }) }
         }
     }
 }

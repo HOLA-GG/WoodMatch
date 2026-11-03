@@ -27,5 +27,5 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.5.6
-      - run: deno check supabase/functions/woodmatch-dashboard/index.ts
-      - run: deno test --allow-env backend-tests/dashboard-edge.test.ts
+      - run: deno check supabase/functions/woodmatch-dashboard/index.ts supabase/functions/woodmatch-admin/index.ts
+      - run: deno test --allow-env backend-tests/dashboard-edge.test.ts backend-tests/admin-edge.test.ts

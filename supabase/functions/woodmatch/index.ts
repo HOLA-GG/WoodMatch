@@ -277,6 +277,7 @@ async function handle(
   operation: string,
   data: any,
 ) {
+  requireThat(!env("WOODMATCH_ADMIN_UIDS").split(",").filter(Boolean).includes(actor.uid),403,"web_only","Esta cuenta se administra desde el panel web de WoodMatch.");
   const profile = await db.get(`users/${actor.uid}`);
   requireThat(
     profile && !profile.deleting &&
@@ -286,6 +287,7 @@ async function handle(
     "Tu cuenta no está disponible.",
   );
   if (supportOperator(actor)) requireThat(["supportAccess","createSupportCase","mySupportCases","adminSupportCases","updateSupportCase","reopenSupportCase","moderateEntry","supportPublication","registerNotificationDevice","myNotifications","markNotificationRead","exportAccount"].includes(operation),403,"support","Esta cuenta está dedicada a soporte y moderación.");
+  if (operation === "clientAccess") return { community: true };
   if (operation === "myNotifications") return { notifications: (await db.list("notifications","uid",actor.uid)).map(({_path,...row}: any)=>row).sort((a: any,b: any)=>b.createdAt-a.createdAt) };
   if (operation === "markNotificationRead") {
     const id=safeId(data.id);
@@ -727,6 +729,7 @@ Deno.serve(async (request) => {
       "publishEntry",
       "editEntry",
       "deactivateEntry",
+      "clientAccess",
       "createWithdrawal",
       "transitionWithdrawal",
       "issuePass",

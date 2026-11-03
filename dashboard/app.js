@@ -7,422 +7,559 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import {
-  services,
-  summarize,
-} from "../supabase/functions/woodmatch-dashboard/metrics.mjs";
-const $ = (id) => document.getElementById(id);
-const el = (tag, text, cls) => {
-  const n = document.createElement(tag);
-  if (text !== undefined) n.textContent = text;
-  if (cls) n.className = cls;
-  return n;
-};
-const fmt = (n) =>
-  n === null || n === undefined
+import { services } from "../supabase/functions/woodmatch-dashboard/metrics.mjs";
+import { applyTheme } from "./themes.js";
+const $ = (id) => document.getElementById(id),
+  el = (tag, text, cls) => {
+    const n = document.createElement(tag);
+    if (text !== undefined) n.textContent = text;
+    if (cls) n.className = cls;
+    return n;
+  };
+const number = (v) =>
+  v == null
     ? "Sin datos suficientes"
-    : Number(n).toLocaleString("es-CO", { maximumFractionDigits: 1 });
-let mode = "demo",
+    : Number(v).toLocaleString("es-CO", { maximumFractionDigits: 1 });
+const date = (v) =>
+  v
+    ? new Date(v).toLocaleString("es-CO", { timeZone: "America/Bogota" })
+    : "Sin registro";
+const message = (text) => $("message").textContent = text;
+let auth,
+  config,
   page = "Resumen",
-  data = null,
-  auth = null,
-  config = null,
-  generation = 0;
-const now = Date.now(), day = 86400000;
-const fixtures = Array.from({ length: 30 }, (_, i) => ({
-  id: `DEMO-${String(i + 1).padStart(3, "0")}`,
-  type: i % 7 === 0
-    ? "SATISFACCION"
-    : i % 5 === 0
-    ? "MODERACION"
-    : "INCIDENCIA",
-  rating: i % 5 + 1,
-  serviceId: services[i % 15],
-  status: ["NUEVO", "EN_REVISION", "EN_PROGRESO", "RESUELTO", "CERRADO"][i % 5],
-  priority: ["BAJA", "MEDIA", "ALTA", "CRITICA"][i % 4],
-  createdAt: now - (i + 1) * day,
-  updatedAt: now - i * day,
-  moderationAction: i % 10 === 0 ? "OCULTAR" : "",
-  history: [{ at: now - (i + 1) * day, action: "CREADO" }],
-}));
-$("from").value = new Date(now - 30 * day).toISOString().slice(0, 10);
-$("to").value = new Date(now).toISOString().slice(0, 10);
+  generation = 0,
+  authorized = false,
+  sessionVersion = 0;
+const day = 86400000;
+$("from").value = new Date(Date.now() - 90 * day).toISOString().slice(0, 10);
+$("to").value = new Date().toISOString().slice(0, 10);
 services.forEach((s) => $("service").append(new Option(s, s)));
 function clear() {
   generation++;
-  data = null;
+  sessionVersion++;
+  authorized = false;
   $("view").replaceChildren();
+  $("filters").hidden = true;
   $("detail").close();
-  $("detailText").textContent = "";
+  $("detailContent").replaceChildren();
 }
-function message(text) {
-  $("message").textContent = text;
+function setBusy(form, busy) {
+  form.querySelectorAll("button,input,select,textarea").forEach((n) =>
+    n.disabled = busy
+  );
 }
-async function refresh() {
-  const run = ++generation;
-  data = null;
-  $("view").replaceChildren(el("p", "Cargando…"));
-  const from = Date.parse($("from").value + "T00:00:00Z"),
-    to = Date.parse($("to").value + "T00:00:00Z") + day,
-    service = $("service").value;
-  try {
-    let result;
-    if (mode === "demo") {
-      result = summarize(fixtures, from, to, service);
-      result.source = "demo";
-    } else {
-      if (!auth?.currentUser) {
-        throw Error("Inicia sesión con una cuenta autorizada.");
-      }
-      const token = await auth.currentUser.getIdToken();
-      const url = new URL(config.endpoint);
-      url.search = new URLSearchParams({
-        from,
-        to,
-        ...(service ? { service } : {}),
-      });
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!response.ok) {
-        throw Error(
-          response.status === 401
-            ? "Sesión caducada. Cierra sesión y vuelve a entrar."
-            : response.status === 403
-            ? "Acceso denegado. Tu cuenta no tiene permiso de lectura."
-            : response.status === 429
-            ? "Límite de consultas. Espera un minuto."
-            : "No fue posible consultar el servicio.",
-        );
-      }
-      result = await response.json();
+async function api(operation, data = {}) {
+  if (!auth?.currentUser) throw Error("Inicia sesión para continuar.");
+  const requestSession = sessionVersion, requestUid = auth.currentUser.uid;
+  const token = await auth.currentUser.getIdToken();
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ operation, data }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(operation === "deleteUser" ? 120000 : 30000),
+  });
+  const body = await response.json();
+  if (
+    requestSession !== sessionVersion || auth.currentUser?.uid !== requestUid
+  ) throw Error("La sesión cambió.");
+  if (!response.ok) {
+    if ([401, 403].includes(response.status)) {
+      clear();
+      message(body.error || "Vuelve a iniciar sesión.");
     }
-    if (run !== generation) return;
-    data = result;
-    render();
-  } catch (e) {
-    if (run !== generation) return;
-    clear();
-    message(
-      e.message === "range"
-        ? "Selecciona un periodo válido de hasta 366 días."
-        : e.message,
-    );
+    throw Error(body.error || "No se pudo completar la operación.");
   }
+  return body.data;
 }
 function card(title, value, caption) {
-  const c = el("article", undefined, "card stat");
-  c.append(el("small", title), el("strong", fmt(value)), el("small", caption));
-  return c;
-}
-function bars(title, items) {
-  const box = el("section", undefined, "card");
-  box.append(el("h2", title));
-  const max = Math.max(1, ...items.map((x) => x.count));
-  for (const x of items) {
-    const row = el("div", undefined, "bar"), p = el("progress");
-    p.max = max;
-    p.value = x.count;
-    p.setAttribute("aria-label", `${x.id}: ${x.count}`);
-    row.append(
-      el("span", x.id.replaceAll("_", " ")),
-      p,
-      el("strong", String(x.count)),
-    );
-    box.append(row);
-  }
+  const box = el("article", undefined, "card stat");
+  box.append(
+    el("small", title),
+    el("strong", number(value)),
+    el("small", caption),
+  );
   return box;
 }
-function table(rows) {
+function field(form, label, type = "text", value = "") {
+  const l = el("label", label),
+    n = el(
+      type === "textarea" ? "textarea" : type === "select" ? "select" : "input",
+    );
+  if (n.tagName === "INPUT") n.type = type;
+  if (type === "textarea") n.rows = 3;
+  n.value = value;
+  l.append(n);
+  form.append(l);
+  return n;
+}
+function choice(form, label, values, value) {
+  const s = field(form, label, "select");
+  values.forEach((v) => s.append(new Option(v.replaceAll("_", " "), v)));
+  s.value = value;
+  return s;
+}
+function open(title) {
+  $("detailTitle").textContent = title;
+  $("detailContent").replaceChildren();
+  $("detail").showModal();
+  return $("detailContent");
+}
+function actionForm(container, operation, data, fields, destructive = false) {
+  const f = el("form", undefined, "operation-form");
+  const inputs = fields(f), reason = field(f, "Motivo", "textarea");
+  reason.required = true;
+  reason.minLength = 8;
+  reason.maxLength = 1000;
+  let confirmation;
+  if (destructive) {
+    f.append(
+      el(
+        "p",
+        "La eliminación retira la cuenta, sus publicaciones y fotografías. La trazabilidad de entregas se anonimiza. Esta acción no se puede deshacer.",
+        "notice",
+      ),
+    );
+    confirmation = field(
+      f,
+      "Escribe el identificador de la cuenta para confirmar",
+    );
+    confirmation.required = true;
+  }
+  const result = el("p", undefined, "form-result");
+  result.setAttribute("role", "status");
+  const submit = el(
+    "button",
+    destructive ? "Eliminar cuenta" : "Guardar cambio",
+  );
+  f.append(submit, result);
+  let operationId = crypto.randomUUID();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!f.reportValidity()) return;
+    setBusy(f, true);
+    try {
+      const values = Object.fromEntries(
+        Object.entries(inputs).map(([k, n]) => [k, n.value]),
+      );
+      await api(operation, {
+        ...data,
+        ...values,
+        reason: reason.value,
+        operationId,
+        ...(confirmation ? { confirmation: confirmation.value } : {}),
+      });
+      message("Cambio guardado.");
+      $("detail").close();
+      await render();
+    } catch (e) {
+      result.textContent = e.message;
+    } finally {
+      setBusy(f, false);
+    }
+  };
+  container.append(f);
+  return f;
+}
+function table(title, headers, rows, values, openRow) {
   const box = el("section", undefined, "card");
-  box.append(el("h2", "Casos · solo lectura"));
-  const search = el("input", undefined, "search");
-  search.placeholder = "Buscar ID, tipo o estado";
-  search.setAttribute("aria-label", "Buscar casos");
-  box.append(search);
+  box.append(el("h2", title));
+  const q = el("input", undefined, "search");
+  q.setAttribute("aria-label", "Buscar registros");
+  q.placeholder = "Buscar";
+  box.append(q);
   const wrap = el("div", undefined, "table-wrap"),
     t = el("table"),
     head = el("thead"),
     tr = el("tr");
-  ["Caso", "Servicio", "Prioridad", "Estado", "Registro UTC", "Detalle"]
-    .forEach((x) => tr.append(el("th", x)));
+  headers.forEach((h) => tr.append(el("th", h)));
+  if (openRow) tr.append(el("th", "Detalle"));
   head.append(tr);
   const body = el("tbody");
   t.append(head, body);
   wrap.append(t);
   box.append(wrap);
-  const fill = () => {
+  function fill() {
     body.replaceChildren();
-    const q = search.value.toLocaleLowerCase();
-    const matches = rows.filter((r) =>
-      `${r.id} ${r.type} ${r.status}`.toLocaleLowerCase().includes(q)
+    const matched = rows.filter((r) =>
+      values(r).join(" ").toLocaleLowerCase().includes(
+        q.value.toLocaleLowerCase(),
+      )
     );
-    for (const r of matches) {
+    for (const r of matched) {
       const tr = el("tr");
-      [
-        r.id,
-        r.serviceId || "Sin clasificar",
-        r.priority,
-        r.status,
-        new Date(r.createdAt).toISOString().slice(0, 10),
-      ].forEach((x) => tr.append(el("td", x)));
-      const td = el("td"), b = el("button", "Ver");
-      b.setAttribute("aria-label", `Ver caso ${r.id}`);
-      b.onclick = () => {
-        $("detailText").textContent =
-          `${r.id} · ${r.type}\n${r.status} · ${r.priority}\nActualización: ${
-            r.updatedAt ? new Date(r.updatedAt).toISOString() : "Sin datos"
-          }\n` + r.history.map((h) =>
-            `${new Date(h.at).toISOString()} · ${h.action}`
-          ).join("\n");
-        $("detail").showModal();
-      };
-      td.append(b);
+      values(r).forEach((v) => tr.append(el("td", String(v ?? ""))));
+      if (openRow) {
+        const td = el("td"), b = el("button", "Abrir");
+        b.onclick = () =>
+          Promise.resolve(openRow(r)).catch((e) => message(e.message));
+        td.append(b);
+        tr.append(td);
+      }
+      body.append(tr);
+    }
+    if (!matched.length) {
+      const tr = el("tr"),
+        td = el("td", "No hay registros para esta consulta.");
+      td.colSpan = headers.length + (openRow ? 1 : 0);
       tr.append(td);
       body.append(tr);
     }
-    if (!matches.length) {
-      const r = el("tr"), c = el("td", "No hay casos para este filtro.");
-      c.colSpan = 6;
-      r.append(c);
-      body.append(r);
-    }
-  };
-  search.oninput = fill;
+  }
+  q.oninput = fill;
   fill();
   return box;
 }
-function render() {
-  if (!data) return;
-  const v = $("view");
-  v.replaceChildren();
-  const title = el("h2", page);
-  v.append(title);
-  if (page === "Documentación") {
-    const c = el("section", undefined, "card");
-    for (
-      const [label, path] of [["Centro de documentación", "Home.md"], [
-        "KPI y manual del dashboard",
-        "Dashboard-Web.md",
-      ], [
-        "Calidad, versiones y evidencias",
-        "Control-de-calidad-y-evidencias.md",
-      ], ["Catálogo de 15 servicios", "Catalogo-de-servicios-TI.md"]]
-    ) {
-      const p = el("p"), a = el("a", label);
-      a.href =
-        `https://github.com/HOLA-GG/WoodMatch/blob/21932966e28aef8622ad47735a99efa72e19cf4f/docs/wiki/${path}`;
-      p.append(a);
-      c.append(p);
+async function caseDetail(r) {
+  const row = await api("caseDetails", { id: r.id }),
+    box = open(row.subject || "Seguimiento del caso");
+  box.append(
+    el("p", row.detail),
+    el("p", `${row.type} · ${row.status} · ${row.priority}`),
+    el("p", "Creación: " + date(row.createdAt)),
+  );
+  if (row.response) box.append(el("p", "Respuesta: " + row.response));
+  actionForm(box, "updateSupportCase", {
+    id: row.id,
+    expectedUpdatedAt: row.updatedAt,
+  }, (f) => ({
+    status: choice(f, "Estado", [
+      "NUEVO",
+      "EN_REVISION",
+      "EN_PROGRESO",
+      "RESUELTO",
+      "CERRADO",
+    ], row.status),
+    priority: choice(
+      f,
+      "Prioridad",
+      ["BAJA", "MEDIA", "ALTA", "CRITICA"],
+      row.priority,
+    ),
+    response: field(
+      f,
+      "Respuesta para el usuario",
+      "textarea",
+      row.response || "",
+    ),
+  }));
+  if (["RESUELTO", "CERRADO"].includes(row.status)) {
+    box.append(el("h3", "Reabrir caso"));
+    actionForm(box, "reopenCase", {
+      id: row.id,
+      expectedUpdatedAt: row.updatedAt,
+    }, () => ({}));
+  }
+  box.append(el("h3", "Historial"));
+  for (const h of row.history || []) {
+    box.append(
+      el(
+        "p",
+        `${date(h.at)} · ${h.action.replaceAll("_", " ")}${
+          h.reason ? " · " + h.reason : ""
+        }`,
+      ),
+    );
+  }
+  if (row.publicationId) {
+    box.append(el("h3", "Publicación reportada"));
+    const publications = await api("publications");
+    const p = publications.publications.find((p) => p.id === row.publicationId);
+    if (p) {
+      box.append(el("p", p.title), el("p", p.description));
+      moderationForm(box, p, row.id);
     }
-    c.append(
-      el(
-        "p",
-        "Documentación enlazada a la revisión documental verificable de este panel.",
-      ),
-    );
-    v.append(c);
-    return;
   }
-  if (page === "Operación") {
-    v.append(
-      el(
-        "div",
-        "Sin datos suficientes para reservas vencidas, entrega push o disponibilidad. La existencia de un aviso no prueba su recepción en el teléfono.",
-        "card notice",
-      ),
-    );
-    return;
-  }
-  if (page === "Servicios TI") {
-    v.append(
-      bars("Casos por servicio", data.byService),
-      el(
-        "p",
-        `Sin clasificar: ${data.unclassified}. Cero casos no implica disponibilidad del servicio.`,
-        "notice",
-      ),
-    );
-    return;
-  }
-  if (page === "Moderación") {
-    v.append(
-      card("Reportes recibidos", data.moderation.received, "ST-13"),
-      card(
-        "Con acción registrada",
-        data.moderation.handled,
-        "Ocultar / restaurar",
-      ),
-      card(
-        "Pendientes",
-        data.moderation.received - data.moderation.handled,
-        "Sin acción registrada",
-      ),
-      table(data.cases.filter((r) => r.type === "MODERACION")),
-    );
-    return;
-  }
-  if (page === "Incidentes") {
-    v.append(table(data.cases.filter((r) => r.type === "INCIDENCIA")));
-    return;
-  }
-  const stats = el("div", undefined, "stats");
-  stats.append(
-    card(
-      "Incidencias registradas",
-      data.incidents,
-      "ST-12 · cohorte por creación",
-    ),
-    card(
-      "Resueltas / cerradas",
-      data.resolved,
-      `${fmt(data.resolutionRate)}${
-        data.resolutionRate === null ? "" : " %"
-      } · estado actual`,
-    ),
-    card(
-      "Alta / crítica pendientes",
-      data.urgent,
-      `${data.open} incidencias abiertas`,
-    ),
-    card(
-      "Satisfacción media",
-      data.satisfaction,
-      `${data.ratingCount} respuestas · escala 1–5`,
-    ),
-  );
-  v.append(stats);
-  const grid = el("div", undefined, "grid");
-  grid.append(
-    bars(
-      "Incidencias por estado",
-      ["NUEVO", "EN_REVISION", "EN_PROGRESO", "RESUELTO", "CERRADO"].map(
-        (id) => ({
-          id,
-          count:
-            data.cases.filter((r) => r.type === "INCIDENCIA" && r.status === id)
-              .length,
-        }),
-      ),
-    ),
-    bars(
-      "Casos por tramo del periodo",
-      Array.from(
-        { length: 5 },
-        (_, i) => ({
-          id: `Tramo ${i + 1}/5`,
-          count:
-            data.cases.filter((r) =>
-              r.createdAt >= data.from + i * (data.to - data.from) / 5 &&
-              r.createdAt < data.from + (i + 1) * (data.to - data.from) / 5
-            ).length,
-        }),
-      ),
-    ),
-  );
-  v.append(grid);
-  v.append(
-    el(
-      "p",
-      `Reaperturas observadas: ${data.reopened} (${fmt(data.reopenRate)}${
-        data.reopenRate === null ? "" : " %"
-      } de incidencias). Historial retenido: mínimo observado. Tiempos: Sin datos suficientes.`,
-      "notice",
-    ),
-    table(data.cases.slice(0, 10)),
-  );
-  for (const text of data.limitations) v.append(el("p", text, "muted"));
 }
-async function setupAuth() {
-  if (auth) return;
-  const res = await fetch("/config.json", { cache: "no-store" });
-  if (
-    !res.ok || !res.headers.get("content-type")?.includes("application/json")
-  ) {
-    throw Error(
-      "Conexión real pendiente de configurar. La demostración sigue disponible.",
-    );
-  }
-  config = await res.json();
-  const endpoint = new URL(config.endpoint);
-  if (
-    endpoint.protocol !== "https:" ||
-    !endpoint.hostname.endsWith(".supabase.co") ||
-    endpoint.pathname !== "/functions/v1/woodmatch-dashboard"
-  ) throw Error("Endpoint no válido.");
-  auth = getAuth(initializeApp(config.firebase));
-  await setPersistence(auth, inMemoryPersistence);
-  onAuthStateChanged(auth, (user) => {
-    if (mode !== "real") return;
-    clear();
-    $("login").hidden = !!user;
-    $("logout").hidden = !user;
-    if (user) {
-      message("Sesión iniciada. El servidor verificará el permiso de lectura.");
-      refresh();
-    } else message("Inicia sesión para consultar datos reales.");
-  });
+function moderationForm(box, r, caseId) {
+  actionForm(
+    box,
+    "moderatePublication",
+    { id: r.id, expectedRevision: r.revision, ...(caseId ? { caseId } : {}) },
+    (f) => ({
+      action: choice(
+        f,
+        "Acción",
+        ["OCULTAR", "RESTAURAR"],
+        r.status === "MODERADO" ? "RESTAURAR" : "OCULTAR",
+      ),
+    }),
+  );
 }
-$("demo").onclick = async () => {
-  clear();
-  mode = "demo";
-  $("mode").textContent = "DATOS SIMULADOS";
-  $("login").hidden = true;
-  $("logout").hidden = true;
-  if (auth) await signOut(auth);
-  message("Demostración con datos ficticios. No representa producción.");
-  refresh();
-};
-$("real").onclick = async () => {
-  clear();
-  mode = "real";
-  $("mode").textContent = "DATOS REALES · ACCESO PRIVADO";
-  message("Preparando acceso…");
+function userDetail(r) {
+  const box = open(r.name || "Cuenta");
+  box.append(el("p", "Identificador: " + r.uid));
+  box.append(el("h3", "Corregir nombre"));
+  actionForm(
+    box,
+    "renameUser",
+    { id: r.uid, version: r.version },
+    (f) => ({ name: field(f, "Nombre permitido", "text", r.name) }),
+  );
+  box.append(el("h3", "Enviar aviso"));
+  actionForm(
+    box,
+    "notifyUser",
+    { id: r.uid },
+    (f) => ({
+      title: field(f, "Título"),
+      body: field(f, "Mensaje", "textarea"),
+    }),
+  );
+  box.append(el("h3", "Eliminar cuenta"));
+  actionForm(box, "deleteUser", { id: r.uid }, () => ({}), true);
+}
+async function render() {
+  const run = ++generation;
+  const view = $("view");
+  view.replaceChildren(el("p", "Cargando…"));
   try {
-    await setupAuth();
-    $("login").hidden = !!auth.currentUser;
-    $("logout").hidden = !auth.currentUser;
-    if (auth.currentUser) refresh();
-    else message("Inicia sesión para consultar datos reales.");
+    let body;
+    if (page === "Resumen" || page === "Servicios TI") {
+      const from = Date.parse($("from").value + "T00:00:00Z"),
+        to = Date.parse($("to").value + "T00:00:00Z") + day;
+      body = await api("summary", { from, to, service: $("service").value });
+    } else {body = await api(
+        page === "Moderación"
+          ? "publications"
+          : page === "Usuarios" || page === "Alertas"
+          ? "users"
+          : page === "Auditoría"
+          ? "audit"
+          : "cases",
+      );}
+    if (run !== generation) return;
+    authorized = true;
+    $("filters").hidden = !(page === "Resumen" || page === "Servicios TI");
+    view.replaceChildren(el("h2", page));
+    if (page === "Resumen") {
+      const stats = el("div", undefined, "stats");
+      stats.append(
+        card("Incidencias recibidas", body.incidents, "Periodo seleccionado"),
+        card(
+          "Resueltas / cerradas",
+          body.resolved,
+          `${number(body.resolutionRate)}${
+            body.resolutionRate == null ? "" : " %"
+          } de resolución`,
+        ),
+        card(
+          "Prioridad alta / crítica",
+          body.urgent,
+          `${body.open} incidencias abiertas`,
+        ),
+        card(
+          "Satisfacción media",
+          body.satisfaction,
+          `${body.ratingCount} respuestas · escala 1–5`,
+        ),
+      );
+      view.append(
+        stats,
+        table(
+          "Casos recientes",
+          ["Caso", "Tipo", "Estado", "Prioridad", "Registro"],
+          body.cases.slice().sort((a, b) => b.createdAt - a.createdAt).slice(
+            0,
+            10,
+          ),
+          (r) => [
+            r.id.slice(0, 8),
+            r.type,
+            r.status,
+            r.priority,
+            date(r.createdAt),
+          ],
+          caseDetail,
+        ),
+      );
+      view.append(
+        el(
+          "p",
+          "Reaperturas observadas: " + body.reopened +
+            ". Tiempos de atención: Sin datos suficientes.",
+          "muted",
+        ),
+      );
+    } else if (page === "Servicios TI") {
+      view.append(
+        table(
+          "Casos por servicio",
+          ["Servicio", "Casos"],
+          body.byService,
+          (r) => [r.id, r.count],
+        ),
+        el(
+          "p",
+          `Sin clasificar: ${body.unclassified}. El número de casos no mide la disponibilidad de un servicio.`,
+          "muted",
+        ),
+      );
+    } else if (page === "Incidentes") {
+      view.append(
+        table(
+          "Bandeja de atención",
+          ["Asunto", "Tipo", "Estado", "Prioridad", "Actualización"],
+          body.cases,
+          (r) => [
+            r.subject || r.id.slice(0, 8),
+            r.type,
+            r.status,
+            r.priority,
+            date(r.updatedAt),
+          ],
+          caseDetail,
+        ),
+      );
+    } else if (page === "Moderación") {
+      view.append(
+        table(
+          "Publicaciones",
+          ["Título", "Estado", "Revisión"],
+          body.publications,
+          (r) => [r.title, r.status, r.revision],
+          (r) => {
+            const box = open(r.title);
+            box.append(el("p", r.description));
+            moderationForm(box, r);
+          },
+        ),
+      );
+    } else if (page === "Usuarios") {
+      view.append(
+        table(
+          "Cuentas de la comunidad",
+          ["Nombre", "Identificador", "Estado"],
+          body.users,
+          (r) => [
+            r.name,
+            r.uid,
+            r.deleting ? "Eliminación en curso" : "Activa",
+          ],
+          userDetail,
+        ),
+      );
+    } else if (page === "Alertas") {
+      view.append(
+        table(
+          "Enviar aviso",
+          ["Nombre", "Identificador"],
+          body.users,
+          (r) => [r.name, r.uid],
+          (r) => {
+            const box = open("Aviso para " + r.name);
+            actionForm(
+              box,
+              "notifyUser",
+              { id: r.uid },
+              (f) => ({
+                title: field(f, "Título"),
+                body: field(f, "Mensaje", "textarea"),
+              }),
+            );
+          },
+        ),
+      );
+    } else if (page === "Auditoría") {
+      view.append(
+        table(
+          "Registro administrativo",
+          ["Acción", "Destino", "Motivo", "Fecha", "Estado"],
+          body.events,
+          (r) => [r.operation, r.target, r.reason, date(r.at), r.state],
+        ),
+      );
+    }
+  } catch (e) {
+    if (run !== generation) return;
+    view.replaceChildren();
+    message(e.message);
+  }
+}
+async function start() {
+  try {
+    const response = await fetch("/config.json", { cache: "no-store" });
+    if (!response.ok) throw Error("No se pudo cargar la configuración.");
+    config = await response.json();
+    const endpoint = new URL(config.endpoint);
+    if (
+      endpoint.protocol !== "https:" ||
+      !endpoint.hostname.endsWith(".supabase.co") ||
+      endpoint.pathname !== "/functions/v1/woodmatch-admin"
+    ) throw Error("Configuración no válida.");
+    auth = getAuth(initializeApp(config.firebase));
+    await setPersistence(auth, inMemoryPersistence);
+    onAuthStateChanged(auth, (user) => {
+      clear();
+      $("login").hidden = !!user;
+      $("logout").hidden = !user;
+      message(user ? "Verificando acceso…" : "Inicia sesión para continuar.");
+      if (user) {
+        render().then(() => {
+          if (authorized) message("Sesión administrativa activa.");
+        });
+      }
+    });
   } catch (e) {
     message(e.message);
   }
-};
+}
 $("login").onsubmit = async (e) => {
   e.preventDefault();
+  if (!auth) return;
+  setBusy($("login"), true);
   try {
     await signInWithEmailAndPassword(
       auth,
-      $("email").value,
+      $("email").value.trim(),
       $("password").value,
     );
     $("password").value = "";
   } catch {
     clear();
     $("password").value = "";
-    message("No se pudo iniciar sesión. Verifica tu cuenta y configuración.");
+    message(
+      "No fue posible iniciar sesión. Verifica tus datos e inténtalo de nuevo.",
+    );
+  } finally {
+    setBusy($("login"), false);
   }
 };
 $("logout").onclick = async () => {
   clear();
   await signOut(auth);
-  message("Sesión cerrada.");
-};
-$("filters").onsubmit = (e) => {
-  e.preventDefault();
-  refresh();
 };
 $("close").onclick = () => $("detail").close();
+$("filters").onsubmit = (e) => {
+  e.preventDefault();
+  render();
+};
 for (const b of document.querySelectorAll("nav button")) {
   b.onclick = () => {
+    if (!auth?.currentUser) return;
     page = b.dataset.page;
-    document.querySelectorAll("nav button").forEach((x) =>
-      x.removeAttribute("aria-current")
+    document.querySelectorAll("nav button").forEach((n) =>
+      n.removeAttribute("aria-current")
     );
     b.setAttribute("aria-current", "page");
+    $("detail").close();
     render();
   };
 }
-refresh();
+for (const id of ["season", "appearance"]) {
+  $(id).value = localStorage.getItem("woodmatch-" + id) || $(id).value;
+  $(id).onchange = () => {
+    localStorage.setItem("woodmatch-" + id, $(id).value);
+    applyTheme($("season").value, $("appearance").value);
+  };
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener(
+  "change",
+  () => applyTheme($("season").value, $("appearance").value),
+);
+applyTheme($("season").value, $("appearance").value);
+start();

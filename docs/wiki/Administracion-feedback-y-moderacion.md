@@ -1,5 +1,6 @@
 # Administración, feedback y moderación — WoodMatch 2.3
 
+> **Evolución vigente:** la nueva administración se documenta en [Administración web](Administracion-Web.md). El contenido siguiente describe la etapa anterior y no acredita que esas pantallas sigan disponibles en el APK nuevo.
 **Estado:** documentación del piloto revisada el 30 de octubre de 2026. Ver [Manual de usuario y gestión de servicios TI](Manual-de-usuario.md), secciones 12–14, y [Catálogo de servicios TI](Catalogo-de-servicios-TI.md).
 
 ## 1. Distinguir los accesos
