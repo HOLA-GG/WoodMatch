@@ -32,7 +32,7 @@ Navegador → Firebase Auth → ID token → función dedicada Supabase → vali
 
 Solo lectura de casos. Sin permisos de moderación desde web. Ningún UID de operador, correo personal, service account ni secreto se incorpora al frontend. La allowlist no copia ni amplía la autorización actual del operador Android. La función actual de producción no fue alterada. Registros excluyen identidad, token, asunto y cuerpo del caso.
 
-Limitaciones: consultas completas con límite de 10 000 casos, limpieza de cuotas pendiente de preparar antes de uso continuado, falta de serviceId en casos actuales, historial limitado a 50 eventos y ausencia de evento inequívoco de primera respuesta. Tiempos y disponibilidad muestran Sin datos suficientes. Reaperturas representan mínimo observado. Cohorte por creación con estado actual, no reconstrucción histórica.
+Limitaciones: consultas completas con límite de 10 000 casos, limpieza de cuotas pendiente de preparar antes de uso continuado, falta de serviceId en casos actuales, historial limitado a 50 eventos y ausencia de evento inequívoco de primera respuesta. Tiempos y disponibilidad muestran Sin datos suficientes. El panel Android aproxima primera atención por la primera acción de otro actor; no es equivalente a una respuesta escrita. Reaperturas representan mínimo observado. Cohorte por creación con estado actual, no reconstrucción histórica.
 
 ## Validaciones locales
 
@@ -46,7 +46,7 @@ Limitaciones: consultas completas con límite de 10 000 casos, limpieza de cuota
 | `npm --prefix dashboard run build` | Aprobado con Vite 8.3.5 |
 | `npm --prefix dashboard audit --audit-level=high` | 0 vulnerabilidades tras actualización y override gRPC |
 | `npm --prefix dashboard run test:web` | Escritorio 1440×1000, móvil 390×844, sin desbordamiento global, navegación, búsqueda, diálogo, aislamiento demo/real y sin excepciones JS |
-| `python scripts/check-wiki-links.py` | 98 enlaces/imágenes locales comprobados; 0 ausentes al cierre |
+| `python scripts/check-wiki-links.py` | 124 enlaces/imágenes locales comprobados; 0 ausentes al cierre |
 | `git diff --check` | Sin errores |
 | Supabase security advisors, consulta de solo lectura | Sin lints devueltos; no equivale a auditoría integral de Firebase o seguridad de aplicación |
 | Android, reglas en emulador, login Firebase real | No ejecutados localmente; no declarar aprobados |
