@@ -5,7 +5,7 @@ Base: main `e42bc112d4eaa1e198b51577319d900fed5a100f`. No se modificó código A
 ## Pull Requests y alcance
 
 - Fase 1: [PR #14](https://github.com/HOLA-GG/WoodMatch/pull/14): control documental, evidencia y contrato KPI.
-- Fase 2: rama `feat/private-ti-dashboard-20261103`, sobre fase 1: frontend, backend lector dedicado, pruebas, CI y secuencias. La URL del PR se registra en GitHub al crearlo. Integrar primero fase 1 y después fase 2 tras revisión.
+- Fase 2: [PR #15](https://github.com/HOLA-GG/WoodMatch/pull/15), rama `feat/private-ti-dashboard-20261103`, sobre fase 1: frontend, backend lector dedicado, pruebas, CI y secuencias. Integrar primero fase 1 y después fase 2 tras revisión.
 
 ## Checklist
 
@@ -15,15 +15,15 @@ Base: main `e42bc112d4eaa1e198b51577319d900fed5a100f`. No se modificó código A
 | Definición de KPI, metas y FAQ de operación | Completado documental | [Manual](wiki/Dashboard-Web.md); objetivos académicos del catálogo |
 | Ciclo soporte completo | Completado en fixture automatizado | support.test.mjs; prueba física pendiente |
 | Render de ocho Mermaid existentes en GitHub | Completado | Desarrollo técnico (5), catálogo (1), roles (1), soporte (1); iframe con salida de diagrama y SVG. No se detectaron errores de sintaxis |
-| Nuevas secuencias | Implementado; render GitHub por verificar en PR | [Secuencias](wiki/Secuencias-de-servicio.md) |
+| Nuevas secuencias | Completado: cuatro diagramas renderizados en GitHub sin error de sintaxis | [Secuencias](wiki/Secuencias-de-servicio.md) |
 | Capturas existentes | Inventario técnico completado | 12 archivos y dimensiones; privacidad/legibilidad humana pendientes |
 | Capturas de teléfono faltantes | Bloqueado por evidencia | Guía precisa de captura en control de calidad |
 | Auditorías cruzadas finales y anexos | Bloqueado por evidencia | No disponibles entre los adjuntos; no inventados ni archivados como finales |
 | Dashboard demo responsive | Completado y probado localmente | Capturas abajo; navegación, búsqueda y detalle |
 | Backend real protegido | Implementado, comprobado con fixtures | Firma JWT, revocación, allowlist, CORS y cuota; sin despliegue |
-| Login real / datos privados reales | Bloqueado por acceso y configuración | Firebase Console solicita acceso; falta verificar app web, cuentas lectoras y secretos del endpoint dedicado |
+| Login real / datos privados reales | Bloqueado por configuración | Acceso a consola confirmado; proyecto woodmatch-piloto solo tiene app Android registrada. Falta registrar app web y confirmar cuentas lectoras/secretos del endpoint dedicado |
 | Hosting y producción | Pendiente, sin ejecutar | Entorno de prueba y destino deben verificarse; producción requiere aprobación |
-| CI remoto | Consultar checks de los PR | No sustituir su resultado por pruebas locales |
+| CI remoto web | Aprobado sobre código 956d709 | [Dashboard quality](https://github.com/HOLA-GG/WoodMatch/actions/runs/41733984739): instalación, enlaces, pruebas, build, navegador y Deno aprobados. Pipeline Android separado aún en ejecución al registrar este resultado |
 | Wiki nativa GitHub | Pendiente deliberado | docs/wiki sigue siendo fuente canónica; no sincronización implícita |
 
 ## Arquitectura y protección
@@ -61,7 +61,7 @@ Las capturas siguientes contienen únicamente fixtures generados; no representan
 
 ## Pendientes necesarios para conexión real
 
-1. Acceso autenticado a Firebase Console y verificación del proyecto existente; no enviar contraseñas por chat.
+1. Acceso autenticado confirmado en Firebase Console: WoodMatch Piloto, plan Spark. Solo app Android registrada. No se cambió configuración ni se generaron credenciales. No enviar contraseñas por chat.
 2. Registrar/verificar configuración pública web, dominios autorizados y proveedor actual sin alterar producción.
 3. Confirmar las identidades lectoras exactas mediante canal privado y secretos de servidor; no inferir UID del equipo.
 4. Preparar entorno de prueba y limpieza de cuotas, verificar IAM y origen CORS. Aprobar despliegue del entorno dedicado; ejecutar cuenta permitida, ajena, revocada y sesión caducada con backend real.
