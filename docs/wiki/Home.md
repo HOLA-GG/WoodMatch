@@ -35,3 +35,7 @@ El piloto se centra en el aprovechamiento comunitario de madera y residuos leño
 - [Secuencias de reservas, QR, notificaciones y soporte](Secuencias-de-servicio.md)
 
 - [Administración web y transición desde Android](Administracion-Web.md)
+
+## Estado consolidado
+
+[Trabajo integrado en main, validaciones y pendientes de activación](../CIERRE_CHATGPT_WORK.md).
