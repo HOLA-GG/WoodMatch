@@ -107,3 +107,17 @@ test('maintenance preserves a concurrent read marker when it marks a notice deli
   assert.equal(notice.readAt,1001);
   assert.equal(notice.readBy,'receiver');
 });
+
+test('incident lifecycle creates, prioritizes, responds, closes and reopens only for owner with reason',async()=>{
+ const {db,rows}=fixture();
+ await supportCall(db,user,'createSupportCase',{id:'incident-cycle',type:'INCIDENCIA',subject:'Caso ficticio',detail:'Prueba automatizada sin datos reales'});
+ const update=async(status,priority,response)=>supportCall(db,admin,'updateSupportCase',{id:'incident-cycle',status,priority,response,expectedUpdatedAt:rows.get('support_cases/incident-cycle').updatedAt});
+ await update('EN_REVISION','ALTA','Investigación iniciada');
+ await update('EN_PROGRESO','ALTA','Respuesta de prueba');
+ await update('RESUELTO','ALTA','Solución de prueba');
+ await update('CERRADO','ALTA','Cierre de prueba');
+ await assert.rejects(()=>supportCall(db,{uid:'other'},'reopenSupportCase',{id:'incident-cycle',reason:'No autorizado'}));
+ await assert.rejects(()=>supportCall(db,user,'reopenSupportCase',{id:'incident-cycle',reason:''}));
+ await supportCall(db,user,'reopenSupportCase',{id:'incident-cycle',reason:'El fallo persiste en esta prueba'});
+ const row=rows.get('support_cases/incident-cycle');assert.equal(row.status,'EN_PROGRESO');assert.equal(row.history.at(-1).action,'REABIERTO');assert.equal(row.history.length,6);
+});

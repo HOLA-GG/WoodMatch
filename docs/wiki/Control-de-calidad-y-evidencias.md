@@ -8,7 +8,7 @@ Base auditada: `e42bc112d4eaa1e198b51577319d900fed5a100f`. Fuente vigente: códi
 |---|---|---|
 | Catálogo, manual, roles, soporte, arquitectura e índice | Completado: existencia verificada | Páginas enlazadas en [Home](Home.md) |
 | Matriz requisito/servicio/prueba | Completado documental | Tabla siguiente; ejecución física separada |
-| Render real Mermaid en GitHub | Pendiente | Abrir cada bloque en GitHub; registrar URL, commit y captura sin errores |
+| Render real Mermaid en GitHub | Completado: ocho bloques existentes renderizados | Revisión de iframes Mermaid en las cuatro páginas principales; detalle en informe de ejecución |
 | Capturas: inventario técnico | Completado | Dimensiones abajo; no acredita privacidad ni funcionamiento |
 | Capturas: privacidad y aceptación física | Bloqueado por evidencia | Yeison valida datos visibles y aporta secuencias descritas abajo |
 | KPI y metas académicas | Completado documental | [Definiciones](Dashboard-Web.md); catálogo mantiene metas propuestas |

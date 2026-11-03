@@ -1,0 +1,21 @@
+{
+  "name": "woodmatch-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "check": "node --check app.js && node --test ../backend-tests/dashboard.test.mjs",
+    "test:web": "node smoke.cjs"
+  },
+  "dependencies": {
+    "firebase": "13.2.0"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "vite": "8.3.5"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.7"
+  }
+}

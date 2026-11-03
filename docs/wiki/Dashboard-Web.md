@@ -34,7 +34,7 @@ Metas de atención: propuestas académicas del catálogo, no SLA. Escalamiento: 
 ## Instalación y vista previa
 
 1. `npm ci --prefix dashboard`; `npm --prefix dashboard run check`; `npm --prefix dashboard run build`.
-2. `npm --prefix dashboard run dev`. Demo arranca sin cuentas, sin backend y con rótulo permanente.
+2. Para pruebas visuales: `cd dashboard && npx playwright install chromium && npm run test:web`. Luego `npm --prefix dashboard run dev` desde la raíz. Demo arranca sin cuentas, sin backend y con rótulo permanente.
 3. Para real: copiar `dashboard/config.example.json` a `dashboard/public/config.json` (ignorado por Git); usar configuración **pública** de app web registrada en el Firebase existente, endpoint HTTPS exacto de Supabase. No usar JSON de cuenta de servicio, claves privadas ni UID en frontend.
 4. Secretos de función: `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT` (solo servidor), `DASHBOARD_READER_UIDS` (confirmar las tres identidades reales sin publicarlas), `DASHBOARD_ORIGINS` (orígenes exactos, sin comodines). Reutilizar proyecto existente; no asumir que configuración Android registra una app web.
 5. Antes de conexión real verificar IAM mínimo para Firestore/lookup, dominio autorizado Firebase, CORS, allowlist, revocación, latencia y limpieza de cuotas. Ejecutar pruebas con cuenta permitida y cuenta ajena; no subir registros privados.
@@ -51,3 +51,5 @@ Metas de atención: propuestas académicas del catálogo, no SLA. Escalamiento: 
 - Privacidad: publicar solo capturas con fixtures, sin identificadores reales, sesiones, QR vigente o ubicaciones sensibles. No archivar exportaciones de producción en Git.
 
 Pruebas de teléfono, login real y Hosting se registran como pendientes hasta obtener evidencia; tests con mocks no sustituyen aceptación en proyecto real.
+
+Dependencias fijadas con lockfile: Firebase 13.2.0 y Vite 8.3.5; override gRPC 1.14.7 para corregir el aviso transitivo detectado por npm audit. El cliente importa exclusivamente Firebase App/Auth.
