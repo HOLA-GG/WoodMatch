@@ -59,13 +59,13 @@ La base funcional integrada es 02e5900. Los tres PR tenían checks aprobados ant
 | Cuenta del propietario en Firebase Authentication | Alta confirmada tras la acción del usuario; el UID se mantiene fuera de este informe |
 | Cookiestech | Identidad existente; no necesita buzón real para autenticación por correo/contraseña |
 | Supabase woodmatch-admin | Versión 1 desplegada, ACTIVE; solicitud sin origen autorizado devuelve HTTP 403 |
-| Lista de dos administradores y CORS de producción | Pendiente de configurar/verificar; el servicio permanece cerrado por defecto |
+| Lista de dos administradores y CORS de producción | Configurados en Supabase para Cookiestech/propietario y los dos dominios Hosting exactos; solicitud con origen válido sin token responde Inicia sesión |
 | Firebase Hosting | Sin publicación confirmada; consola muestra Comenzar y la CLI local no tiene cuenta autorizada |
 | Cloud Shell | Devolvió Site Unavailable en este navegador |
 | Función comunitaria woodmatch activa | Conservada; no se ha desplegado todavía el cierre del acceso administrativo antiguo |
 | Casos reales | Dos documentos observados en support_cases, conservados sin copia, recreación ni eliminación |
 
-Una sesión abierta en Firebase Console no autentica automáticamente Firebase CLI ni Supabase Dashboard. Las herramientas conectadas permiten desplegar la función Supabase, pero no ofrecen una operación para establecer sus secretos; el Dashboard de Supabase solicita iniciar sesión.
+Una sesión abierta en Firebase Console no autentica automáticamente Firebase CLI ni Supabase Dashboard. Los secretos administrativos y los orígenes ya se guardaron desde la sesión autorizada del Dashboard de Supabase. No se leyeron ni exportaron claves privadas existentes. La publicación de Hosting aún requiere autenticación independiente de Firebase CLI.
 
 ## Validación y resultados
 
@@ -85,7 +85,7 @@ Las capturas automatizadas [escritorio](dashboard-desktop.png) y [móvil](dashbo
 
 ## Pendientes exactos para dejar el panel operativo
 
-1. Configurar en Supabase los secretos WOODMATCH_ADMIN_UIDS, con los dos UID reales confirmados (Cookiestech y propietario), y DASHBOARD_ORIGINS con los orígenes HTTPS exactos del sitio. No publicar UID en frontend, repositorio o capturas.
+1. **Completado:** configurados en Supabase WOODMATCH_ADMIN_UIDS para los dos UID confirmados y DASHBOARD_ORIGINS para los dos dominios HTTPS exactos. Los valores privados no se incluyen en frontend, repositorio o capturas.
 2. Probar login de ambas cuentas y acceso denegado a un tercero en woodmatch-admin. Conservar los casos existentes; no crear resultados ficticios como evidencia real.
 3. Autenticar Firebase CLI o un canal de despliegue autorizado. Preparar dashboard/public/config.json con la configuración pública de la app web registrada y el endpoint woodmatch-admin. Nunca introducir cuenta de servicio ni contraseña en ese archivo.
 4. Ejecutar npm ci --prefix dashboard, npm --prefix dashboard run check y npm --prefix dashboard run build. Publicar únicamente Hosting clásico con npx -y firebase-tools@latest deploy --only hosting --config dashboard/firebase.json --project woodmatch-piloto, tras verificar el sitio destino. No usar despliegue general que pueda cambiar reglas u otros servicios.
@@ -102,3 +102,12 @@ La autorización del usuario ya cubre la migración y el despliegue cuando funci
 - [Informe técnico de migración](ADMINISTRATION_MIGRATION_REPORT.md)
 - [Informe de las fases anteriores](DASHBOARD_EXECUTION_REPORT.md)
 - [Centro de documentación](wiki/Home.md)
+
+
+## Actualización posterior: paquete listo para Hosting
+
+Se guardaron ambos secretos y se verificó que el origen permitido llega a la validación de autenticación (sin token: Inicia sesión). Se repitieron las comprobaciones del frontend y la compilación Vite, aprobadas. Firebase Console ofrece Hosting clásico en el plan Spark; el asistente requiere firebase login desde terminal para continuar. La CLI local sigue sin cuentas autorizadas.
+
+Se entregó al usuario WoodMatch_Dashboard_Firebase_Hosting.zip: frontend compilado, configuración pública web, firebase.json limitado al sitio correcto, .firebaserc y LEEME_PUBLICAR.md. No contiene credenciales privadas ni UID administrativos. SHA256: 78d3d9db12056dd9564fdc78f4c570ab8644747caeb86e7f6c8063a4145c8960.
+
+[Publicación del paquete compilado](PUBLICAR_DASHBOARD_HOSTING.md). El paquete todavía no acredita una publicación: debe ejecutarse el despliegue con Firebase CLI autenticada y verificarse el acceso real.
