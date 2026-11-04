@@ -1,15 +1,16 @@
 # Dashboard web — gestión TI
 
-> **Evolución vigente:** la nueva administración se documenta en [Administración web](Administracion-Web.md). El contenido siguiente describe la etapa anterior y no acredita que esas pantallas sigan disponibles en el APK nuevo.
-Estado: propuesta en revisión, **sin despliegue**. [Control y evidencias](Control-de-calidad-y-evidencias.md). [Catálogo ST-01 a ST-15](Catalogo-de-servicios-TI.md).
+> **Dashboard TI actual:** consola privada de administración web con incidentes, moderación, usuarios, alertas, auditoría y KPIs; sin modo demo en producción. Requiere Firebase Authentication y `woodmatch-admin` desplegada en Supabase. Hosting clásico todavía no tiene publicación verificada. La cuenta operativa solo puede ver y modificar información si su UID está autorizado en la lista privada del backend.
+
+> Las definiciones de KPI abajo son útiles, pero las secciones sobre el backend lector `woodmatch-dashboard` corresponden a la fase anterior del PR #15. La referencia **vigente para desplegar** es [Administración Web](Administracion-Web.md) y [Publicación en Firebase Hosting](../PUBLICAR_DASHBOARD_HOSTING.md). La versión actual no incorpora datos ficticios en operación: los fixtures son exclusivamente pruebas automatizadas.
 
 ## Acceso y arquitectura
 
-Frontend `dashboard/`: español, responsive, Firebase Authentication; demo separada con fixtures. Endpoint dedicado `woodmatch-dashboard`: valida firma RS256, issuer, audience, caducidad y sesión Firebase; consulta cuenta para revocación/deshabilitación y comprueba allowlist **en servidor**. Sin lectura Firestore directa desde el navegador. Cookiestech recibe solo acceso lector si se autoriza explícitamente; no obtiene administración global ni acciones de moderación web.
+Frontend `dashboard/`: español, responsive, Firebase Authentication, sin selector demo. Endpoint dedicado vigente `woodmatch-admin`: valida firma RS256, issuer, audience, caducidad y sesión Firebase; consulta cuenta para revocación/deshabilitación y comprueba allowlist **en servidor**. Sin lectura Firestore directa desde el navegador. Las dos cuentas autorizadas pueden operar las funciones administrativas habilitadas en `woodmatch-admin`, bajo auditoría y verificaciones de permisos.
 
-Respuesta minimizada: identificador de caso, tipo, servicio si existe, estado, prioridad, fechas y acciones sin actor ni motivo. Se excluyen asunto, respuesta y detalle porque texto libre puede contener datos privados. El detalle completo sigue en Android para usuarios autorizados.
+El backend minimiza la exposición según la operación y exige autorización a nivel servidor. Los datos personales y la respuesta detallada permanecen protegidos: solo pueden consultarse y editarse desde la cuenta administrativa autorizada.
 
-La función lee páginas de 500 casos, máximo 10 000; si alcanza el límite falla sin presentar métricas parciales. Riesgo pendiente: coste/latencia de barrido; antes de escalar implementar consulta temporal indexada o agregados. Rate limit transaccional: 10 solicitudes por UID/minuto. Logs solo componente, estado y fecha, sin token, correo o UID; revisar y configurar retención en consola. Programar TTL para `dashboard_limits.expiresAt` con tipo timestamp compatible antes de uso continuado; el adaptador actual guarda milisegundos, por lo que se requiere limpieza programada si no se migra tipo. No afirmar TTL activo.
+La consola administra consultas reales a Firestore mediante una función protegida de Supabase. Para costos, límites y limpieza de cuotas, consultar los componentes de backend y el reporte de migración vigente.
 
 ## Contrato KPI
 
@@ -32,15 +33,15 @@ Propietarios: Juan valida fuente y cálculo; Yeison revisa definición, evidenci
 
 Metas de atención: propuestas académicas del catálogo, no SLA. Escalamiento: Cookiestech clasifica; Juan investiga fallo técnico; Yeison reproduce y registra evidencia; ambos aceptan cierre. No se inventan horarios de guardia.
 
-## Instalación y vista previa
+## Publicación vigente de la consola administrativa
 
-1. `npm ci --prefix dashboard`; `npm --prefix dashboard run check`; `npm --prefix dashboard run build`.
-2. Para pruebas visuales: `cd dashboard && npx playwright install chromium && npm run test:web`. Luego `npm --prefix dashboard run dev` desde la raíz. Demo arranca sin cuentas, sin backend y con rótulo permanente.
-3. Para real: copiar `dashboard/config.example.json` a `dashboard/public/config.json` (ignorado por Git); usar configuración **pública** de app web registrada en el Firebase existente, endpoint HTTPS exacto de Supabase. No usar JSON de cuenta de servicio, claves privadas ni UID en frontend.
-4. Secretos de función: `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT` (solo servidor), `DASHBOARD_READER_UIDS` (confirmar las tres identidades reales sin publicarlas), `DASHBOARD_ORIGINS` (orígenes exactos, sin comodines). Reutilizar proyecto existente; no asumir que configuración Android registra una app web.
-5. Antes de conexión real verificar IAM mínimo para Firestore/lookup, dominio autorizado Firebase, CORS, allowlist, revocación, latencia y limpieza de cuotas. Ejecutar pruebas con cuenta permitida y cuenta ajena; no subir registros privados.
-6. Tras aprobación de entorno de prueba: desplegar función dedicada y canal Firebase Hosting de vista previa con `firebase hosting:channel:deploy dashboard-review --config dashboard/firebase.json --project <proyecto-verificado>`. Configuración aislada evita cambiar hosting/reglas existentes. Confirmar sitio destino antes del comando. No se ejecutó este paso.
-7. Producción requiere autorización expresa y revisión del PR; nunca usar `firebase deploy` sin alcance. No hay workflow de despliegue automático.
+1. Asegurar que las dos identidades aprobadas puedan iniciar sesión Firebase y que `WOODMATCH_ADMIN_UIDS` y `DASHBOARD_ORIGINS` estén configurados en Supabase. La función `woodmatch-admin` debe rechazar sesiones no autorizadas.
+2. Preparar `dashboard/public/config.json` usando `dashboard/config.example.json`, con la **configuración pública** de la aplicación Firebase Web y la URL HTTPS de `woodmatch-admin`. La plantilla del repositorio fue corregida para evitar el endpoint antiguo.
+3. Revisar el [procedimiento de Hosting](../PUBLICAR_DASHBOARD_HOSTING.md). El ZIP compilado preparado por Work permite autenticarse con Firebase CLI y publicar **solo Hosting**, sin introducir credenciales privadas en el navegador.
+4. Verificar en el dominio real el ingreso de Cookiestech y del propietario, el rechazo de una tercera cuenta, consultas de casos existentes, cambios de estado con motivo y protección de la sesión. No crear métricas simuladas ni eliminar usuarios reales durante pruebas de producción.
+5. Completar el traspaso de permisos del endpoint comunitario y la distribución del APK actualizado **solo después** de validar la administración web real, para no interrumpir el soporte.
+
+**Estado:** la función Supabase está desplegada; la publicación real del frontend y la aceptación de ambas cuentas permanecen pendientes de evidencia. Las capturas de `docs/dashboard-desktop.png` y `docs/dashboard-mobile.png` son capturas **de pruebas**, no cifras productivas.
 
 ## Operación, recuperación y FAQ
 

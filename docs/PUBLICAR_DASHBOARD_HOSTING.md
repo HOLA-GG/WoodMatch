@@ -32,7 +32,7 @@ Después repite el comando deploy. La configuración del ZIP limita la publicaci
 
 ## Si trabajas desde el repositorio
 
-La ruta de configuración es dashboard/firebase.json y los archivos se construyen con npm --prefix dashboard run build. Primero debes preparar dashboard/public/config.json con la configuración pública de la app registrada y el endpoint woodmatch-admin, siguiendo config.example.json. No uses una cuenta de servicio en frontend.
+La ruta de configuración es dashboard/firebase.json y los archivos se construyen con npm --prefix dashboard run build. Primero debes preparar dashboard/public/config.json con la configuración pública de la app registrada y el endpoint woodmatch-admin, siguiendo config.example.json, que debe apuntar a `/functions/v1/woodmatch-admin` (no `woodmatch-dashboard`). No uses una cuenta de servicio en frontend.
 
 ## Validación antes de completar la migración
 
