@@ -31,6 +31,16 @@ android {
         // Only public endpoint configuration belongs in the APK.
         val endpoint = providers.gradleProperty("WOODMATCH_API_URL").orElse(providers.environmentVariable("WOODMATCH_API_URL")).getOrElse("")
         require(endpoint.isEmpty() || endpoint.matches(Regex("https://[a-z0-9-]+\\.supabase\\.co/functions/v1/woodmatch")))
+        val requireConnected = providers.gradleProperty("WOODMATCH_REQUIRE_CONNECTED")
+            .map { it.toBoolean() }.getOrElse(false)
+        if (requireConnected) {
+            require(file("google-services.json").isFile) {
+                "WoodMatch: falta app/google-services.json para conectar Firebase."
+            }
+            require(endpoint.isNotBlank()) {
+                "WoodMatch: define WOODMATCH_API_URL para conectar Supabase."
+            }
+        }
         buildConfigField("String", "WOODMATCH_API_URL", "\"$endpoint\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"\"")
         buildConfigField("String", "PLANTNET_API_KEY", "\"\"")

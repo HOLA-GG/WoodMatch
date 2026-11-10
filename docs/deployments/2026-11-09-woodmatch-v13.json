@@ -1,0 +1,50 @@
+{
+  "date_local": "2026-11-09",
+  "timezone": "America/Bogota",
+  "project_ref": "usdbewyttzuudundxyvk",
+  "function": "woodmatch",
+  "previous_version": 12,
+  "deployed_version": 13,
+  "verify_jwt": false,
+  "previous_bundle_sha256": "ac1bb7fe0bebade56695056a2f0d4f922b548fc0eefb52603d0ea1159234a68b",
+  "deployed_bundle_sha256": "e3b58fd5579f572410f21feb6d02d3b07990c6f340b7b5b822285e71e82e4d32",
+  "index_source_commit": "2674a8f131fc7431112fa254a10f870c2649cffe",
+  "changed_files": [
+    "woodmatch/index.ts"
+  ],
+  "change": "Add clientAccess allowlist/handler and reject web-only administrators; preserve all previous deployed dependencies.",
+  "repository_drift_preserved": [
+    "woodmatch/firestore.mjs",
+    "woodmatch/cleanup.mjs",
+    "woodmatch/support.mjs"
+  ],
+  "validation": {
+    "edge_tests": {
+      "passed": 10,
+      "failed": 0
+    },
+    "android_unit_tests": "passed",
+    "physical_device": "Z2450 / Android 14",
+    "clientAccess": {
+      "status": 200,
+      "timestamp_utc": "2026-11-10T02:48:23.403000Z"
+    }
+  },
+  "local_snapshots": {
+    "previous": "release-assets/deployments/woodmatch-v12.json",
+    "current": "release-assets/deployments/woodmatch-v13.json"
+  },
+  "apk": {
+    "path": "app/build/outputs/apk/debug/app-debug.apk",
+    "version_name": "2.3.0-pilot",
+    "version_code": 8,
+    "sha256": "9dbf6b64348dfbc65a4fac06e93fa304635e488b9fae592b121c450646e079aa",
+    "signing": "local Android debug certificate"
+  },
+  "pending": [
+    "Full photo/AI/withdrawal flows",
+    "GitHub Actions validation and configuration parity",
+    "Web dashboard integration validation",
+    "Reconcile preserved dependency drift before broad backend deployment"
+  ]
+}

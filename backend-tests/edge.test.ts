@@ -183,6 +183,34 @@ Deno.test("unauthenticated, forged, expired, wrong-project and anonymous tokens 
     );
   }
 });
+Deno.test("client access accepts a valid community account and rejects invalid sessions", async () => {
+  equal((await call("clientAccess")).status, 401);
+  const response = await call("clientAccess", {}, await token());
+  equal(response.status, 200);
+  equal((await response.json()).data.community, true);
+  try {
+    disabled = true;
+    equal((await call("clientAccess", {}, await token())).status, 401);
+    disabled = false;
+    revoked = true;
+    equal((await call("clientAccess", {}, await token())).status, 401);
+  } finally {
+    disabled = false;
+    revoked = false;
+  }
+});
+Deno.test("web-only administrators cannot enter the Android community", async () => {
+  const previous = Deno.env.get("WOODMATCH_ADMIN_UIDS");
+  Deno.env.set("WOODMATCH_ADMIN_UIDS", "fixture");
+  try {
+    const response = await call("clientAccess", {}, await token());
+    equal(response.status, 403);
+    equal((await response.json()).error.code, "web_only");
+  } finally {
+    if (previous === undefined) Deno.env.delete("WOODMATCH_ADMIN_UIDS");
+    else Deno.env.set("WOODMATCH_ADMIN_UIDS", previous);
+  }
+});
 Deno.test("disabled or revoked accounts cannot reach provider or data operations", async () => {
   disabled = true;
   equal(
