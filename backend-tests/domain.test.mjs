@@ -152,6 +152,70 @@ test("offer requires server role, real selected point and exact-location consent
     );
   }
 });
+test("50 concurrent publication retries produce one revision and one event", async () => {
+  const f = await fixture();
+  const payload = { ...f.entry, operationId: "burst_publish" };
+  const results = await Promise.all(Array.from({ length: 50 }, () =>
+    f.call("owner", "publishEntry", payload)));
+  assert.ok(results.every(row => row.id === "wood"));
+  assert.equal(f.db.docs.get("wood_wastes/wood").revision, 1);
+  assert.equal([...f.db.docs.keys()].filter(key =>
+    key.startsWith("wood_wastes/wood/events/")).length, 1);
+});
+
+test("50 concurrent request retries share one result; distinct attempts cannot duplicate a claim", async () => {
+  const f = await fixture();
+  await f.publish();
+  const payload = {
+    id: "burst_request", wasteId: "wood", intendedUse: "Construir un banco",
+    proposedDate: "2027-02-01", requestedQuantity: "2 unidades", message: "",
+    operationId: "burst_request",
+  };
+  const results = await Promise.all(Array.from({ length: 50 }, () =>
+    f.call("receiver", "createWithdrawal", payload)));
+  assert.ok(results.every(row => row.id === "burst_request"));
+  assert.equal([...f.db.docs.keys()].filter(key =>
+    /^withdrawal_requests\/[A-Za-z0-9_-]+$/.test(key)).length, 1);
+  const duplicates = await Promise.allSettled(Array.from({ length: 50 }, (_, i) =>
+    f.request("receiver", "duplicate_" + i)));
+  assert.ok(duplicates.every(row => row.status === "rejected" && row.reason.code === "duplicate"));
+});
+
+test("50 competing acceptance clicks create exactly one reservation", async () => {
+  const f = await fixture();
+  await f.publish();
+  await f.request();
+  await f.request("other", "request2");
+  const results = await Promise.allSettled(Array.from({ length: 50 }, (_, i) =>
+    f.call("owner", "transitionWithdrawal", {
+      requestId: i % 2 ? "request" : "request2", action: "accept",
+    })));
+  assert.equal(results.filter(row => row.status === "fulfilled").length, 1);
+  const accepted = ["request", "request2"].map(id =>
+    f.db.docs.get("withdrawal_requests/" + id)).filter(row => row.status === "ACEPTADA");
+  assert.equal(accepted.length, 1);
+  assert.equal(f.db.docs.get("wood_wastes/wood").reservedBy, accepted[0].requesterId);
+});
+
+test("invalid dates, identifiers and oversized input fail without creating requests", async () => {
+  const f = await fixture();
+  await f.publish();
+  const base = {
+    id: "invalid", wasteId: "wood", intendedUse: "Construir un banco",
+    proposedDate: "2027-02-01", requestedQuantity: "2 unidades", message: "",
+  };
+  for (const change of [
+    { proposedDate: "2027-02-30" }, { proposedDate: "1999-01-01" },
+    { proposedDate: "2027-13-01" }, { proposedDate: "mañana" },
+    { id: "../other" }, { intendedUse: " " }, { intendedUse: "x".repeat(501) },
+    { requestedQuantity: " " }, { message: "x".repeat(1001) },
+  ]) {
+    await assert.rejects(f.call("receiver", "createWithdrawal", { ...base, ...change }));
+  }
+  assert.equal([...f.db.docs.keys()].filter(key =>
+    key.startsWith("withdrawal_requests/")).length, 0);
+});
+
 test("publishing and editing are idempotent; changed payload with same op is rejected", async () => {
   const f = await fixture();
   const payload = { ...f.entry, operationId: "fixed" };

@@ -29,6 +29,8 @@ class AuthValidationTest {
         assertTrue(AuthRepository.validateEmail("user.name@domain.co"))
         assertFalse(AuthRepository.validateEmail("invalid-email"))
         assertFalse(AuthRepository.validateEmail(""))
+        assertFalse(AuthRepository.validateEmail("x".repeat(10000) + "@example.org"))
+        assertFalse(AuthRepository.validateEmail("user@example.org\n"))
     }
 
     @Test

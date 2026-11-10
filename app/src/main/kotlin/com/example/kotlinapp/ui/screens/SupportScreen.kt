@@ -20,6 +20,7 @@ import com.example.kotlinapp.data.repository.WoodWasteRepository
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SupportScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
@@ -35,7 +36,11 @@ fun SupportScreen(onBack: () -> Unit) {
         val response = PilotApi.call("mySupportCases").getJSONArray("cases")
         rows = (0 until response.length()).map { response.getJSONObject(it) }
     }
-    fun refresh() { scope.launch { busy = true; runCatching { load() }.onFailure { message = it.message }; busy = false } }
+    fun refresh() {
+        if (busy) return
+        busy = true
+        scope.launch { runCatching { load() }.onFailure { message = it.message }; busy = false }
+    }
     LaunchedEffect(Unit) { busy = true; runCatching { load() }.onFailure { message = it.message }; busy = false }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -55,11 +60,12 @@ fun SupportScreen(onBack: () -> Unit) {
             SupportChoice("Tipo", listOf("FEEDBACK","INCIDENCIA","OPINION","SATISFACCION"), type) { type = it }
             if (type == "SATISFACCION") {
                 Text("¿Cómo fue tu experiencia? 1: muy insatisfecho · 5: muy satisfecho")
-                Row { (1..5).forEach { n -> FilterChip(selected = rating == n, onClick = { rating = n }, label = { Text("$n ★") }); Spacer(Modifier.width(4.dp)) } }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) { (1..5).forEach { n -> FilterChip(selected = rating == n, onClick = { rating = n }, label = { Text("$n ★") }); Spacer(Modifier.width(4.dp)) } }
             }
             OutlinedTextField(subject, { subject = it.take(120) }, label = { Text("Asunto") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(detail, { detail = it.take(1500) }, label = { Text("¿Qué ocurrió o qué mejorarías?") }, supportingText = { Text("Incluye pasos y resultado esperado. Evita contraseñas y datos privados.") }, minLines = 3, modifier = Modifier.fillMaxWidth())
             Button(enabled = !busy && subject.isNotBlank() && detail.isNotBlank(), onClick = {
+                if (busy) return@Button
                 busy = true
                 scope.launch {
                     runCatching {
@@ -79,6 +85,7 @@ fun SupportScreen(onBack: () -> Unit) {
         rows.forEach { row ->
             key(row.getString("id"), row.optLong("updatedAt")) {
                 SupportCaseCard(row, busy) { operation, data ->
+                    if (busy) return@SupportCaseCard
                     busy = true
                     scope.launch {
                         runCatching { PilotApi.call(operation, data); WoodWasteRepository.refreshSession(); load() }

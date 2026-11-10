@@ -315,6 +315,8 @@ object WoodWasteRepository {
         message: String,
         op: String,
     ): Result<String> = runCatching {
+        val validationError = WithdrawalInput.error(intendedUse, proposedDate, quantity, message)
+        require(validationError == null) { validationError.orEmpty() }
         PilotApi.call(
                 "createWithdrawal",
                 mapOf(

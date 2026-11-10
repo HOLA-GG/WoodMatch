@@ -51,6 +51,7 @@ fun WithdrawalPassActions(request: WithdrawalRequest, isOwner: Boolean) {
                 OutlinedButton(
                     enabled = !busy,
                     onClick = {
+                        if (busy) return@OutlinedButton
                         busy = true
                         scope.launch {
                             WoodWasteRepository.issuePass(request.id)
@@ -71,7 +72,7 @@ fun WithdrawalPassActions(request: WithdrawalRequest, isOwner: Boolean) {
                 )
                 OutlinedTextField(
                     value = code,
-                    onValueChange = { code = it.filter(Char::isDigit).take(8) },
+                    onValueChange = { code = it.filter { digit -> digit in '0'..'9' }.take(8) },
                     label = { Text("Código de 8 dígitos") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -80,6 +81,7 @@ fun WithdrawalPassActions(request: WithdrawalRequest, isOwner: Boolean) {
                     OutlinedButton(
                         enabled = !busy && code.length == 8,
                         onClick = {
+                            if (busy) return@OutlinedButton
                             busy = true
                             validate("${request.id}:$code")
                         },
@@ -89,6 +91,7 @@ fun WithdrawalPassActions(request: WithdrawalRequest, isOwner: Boolean) {
                     OutlinedButton(
                         enabled = !busy,
                         onClick = {
+                            if (busy) return@OutlinedButton
                             busy = true
                             try {
                                 GmsBarcodeScanning.getClient(context)

@@ -191,6 +191,7 @@ fun PilotProfile(
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 onClick = {
+                    if (busy) return@OutlinedButton
                     busy = true
                     scope.launch {
                         try {
@@ -280,6 +281,7 @@ fun PilotProfile(
         },
         confirmButton = {
             TextButton(enabled = !busy, onClick = {
+                if (busy) return@TextButton
                 busy = true
                 scope.launch {
                     try {

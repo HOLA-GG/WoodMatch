@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clipToBounds
@@ -47,6 +48,7 @@ fun PilotHome(
     LaunchedEffect(latest?.id, latest?.imagePath) { heroImage = latest?.let { runCatching { WoodWasteRepository.photoUrl(it) }.getOrNull() } }
     val available = all.count { it.isAvailable }
     val found = all.count { it.entryType == "HALLAZGO" && it.status == "HALLAZGO" }
+    val contributionBadgeSize = 62.dp * LocalDensity.current.fontScale.coerceAtLeast(1f)
     val myContributions = all.count { it.authorId == user?.uid }
     val myCompleted = all.count { it.authorId == user?.uid && it.status == "APROVECHADO" }
     LazyColumn(
@@ -99,7 +101,7 @@ fun PilotHome(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
-                            modifier = Modifier.size(62.dp),
+                            modifier = Modifier.size(contributionBadgeSize),
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -547,6 +549,8 @@ private fun EntryDetail(
                         value = date,
                         onValueChange = { date = it.take(10) },
                         label = { Text("Fecha propuesta (AAAA-MM-DD)") },
+                        isError = date.isNotEmpty() && !WithdrawalInput.isCurrentDate(date),
+                        supportingText = { Text("Elige una fecha real, de hoy en adelante.") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
@@ -563,8 +567,9 @@ private fun EntryDetail(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Button(
-                        enabled = !busy,
+                        enabled = !busy && WithdrawalInput.error(use, date, quantity, note) == null,
                         onClick = {
+                            if (busy) return@Button
                             busy = true
                             scope.launch {
                                 WoodWasteRepository.request(item.id, use, date, quantity, note, op)
@@ -595,6 +600,7 @@ private fun EntryDetail(
                     }
                     OutlinedTextField(reportDetail, { reportDetail = it.take(1000) }, label = { Text("Información adicional (opcional)") }, modifier = Modifier.fillMaxWidth())
                     Button(enabled = !busy, onClick = {
+                        if (busy) return@Button
                         busy = true
                         scope.launch {
                             runCatching { PilotApi.call("createSupportCase", mapOf("id" to reportId, "type" to "MODERACION", "subject" to reportReason, "detail" to reportDetail.ifBlank { reportReason }, "publicationId" to item.id)) }

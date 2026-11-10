@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +54,9 @@ fun WoodMatchBottomNav(
         add(WoodMatchDestination("Actividad", "my_activity", Icons.Default.ReceiptLong))
         add(WoodMatchDestination("Perfil", "profile", Icons.Default.Person))
     }
+    val labelHeight = with(LocalDensity.current) {
+        MaterialTheme.typography.labelSmall.lineHeight.toDp() * 2
+    }
     Surface(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -70,36 +74,38 @@ fun WoodMatchBottomNav(
                     selected = selected,
                     onClick = { if (!selected) onNavigate(destination.route) },
                     icon = {
-                        if (destination.prominent) {
-                            Surface(
-                                modifier = Modifier.size(48.dp),
-                                shape = CircleShape,
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onPrimaryContainer,
-                                shadowElevation = if (selected) 4.dp else 1.dp,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                            ) {
-                                Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
-                                    Icon(destination.icon, null, Modifier.size(28.dp))
+                        Box(Modifier.size(48.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                            if (destination.prominent) {
+                                Surface(
+                                    modifier = Modifier.size(48.dp),
+                                    shape = CircleShape,
+                                    color = if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    shadowElevation = if (selected) 4.dp else 1.dp,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                ) {
+                                    Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                        Icon(destination.icon, null, Modifier.size(28.dp))
+                                    }
                                 }
+                            } else {
+                                Icon(destination.icon, null, Modifier.size(24.dp))
                             }
-                        } else {
-                            Icon(destination.icon, null, Modifier.size(24.dp))
                         }
                     },
                     label = {
                         Text(
                             destination.label,
-                            Modifier.fillMaxWidth(),
+                            Modifier.fillMaxWidth().heightIn(min = labelHeight),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 letterSpacing = 0.sp,
                                 fontWeight = if (selected || destination.prominent) FontWeight.SemiBold
                                     else FontWeight.Medium,
                             ),
                             textAlign = TextAlign.Center,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     },

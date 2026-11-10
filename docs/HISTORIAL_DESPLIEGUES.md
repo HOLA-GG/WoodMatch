@@ -40,3 +40,9 @@ El despliegue conservó las dependencias existentes del servidor. Se detectaron 
 Quedan pendientes la validación completa de fotografías, Gemini/Pl@ntNet, retiros, panel web y GitHub Actions. El inicio de sesión aprobado no demuestra esos otros flujos. Los commits de este trabajo son locales en `main`; publicar por push y validar CI corresponde al siguiente paso acordado.
 
 No se incluyen en Git `google-services.json`, configuración personal de Gradle, claves del servidor, contraseñas, tokens de sesión ni certificados privados.
+
+## 2026-11-09 · Revisión de interfaz y envíos repetidos
+
+Se corrigieron alineación y recortes de navegación/contadores, se añadieron validaciones locales de solicitud y guardas inmediatas contra pulsaciones repetidas. El backend permanece en la versión 13.
+
+Se aprobaron 43 pruebas locales de dominio/soporte/administración, incluidas ráfagas de 50 operaciones, y las pruebas unitarias Android. El APK final quedó instalado y revisado en el Z2450. El [informe de QA](QA_UI_Y_ENVIO_2026-11-09.md) registra alcance, límites, checksum y verificaciones físicas. Estas pruebas no sustituyen una prueba de carga real ni una auditoría de seguridad completa.

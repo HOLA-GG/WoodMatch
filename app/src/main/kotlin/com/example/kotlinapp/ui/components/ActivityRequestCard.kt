@@ -55,12 +55,18 @@ fun ActivityRequestCard(request: WithdrawalRequest, item: WoodWasteItem?, owner:
     val waiting = proposal?.get("state") == "PENDIENTE"
     val mustRespond = waiting && proposal?.get("requires") == (if (owner) "OWNER" else "REQUESTER")
     LaunchedEffect(item?.id, item?.imagePath) { image = item?.let { runCatching { WoodWasteRepository.photoUrl(it) }.getOrNull() } }
+    val scheduleOperation = rememberSaveable(request.id, proposedDate, reason, proposalAction) { PilotApi.operationId() }
     fun updateSchedule(action: String? = null) {
+        if (sending || busy) return
+        if (action == null && !WithdrawalInput.isCurrentDate(proposedDate)) {
+            notify("Elige una fecha de recolección vigente.")
+            return
+        }
         sending = true
         scope.launch {
             runCatching {
                 PilotApi.call(if (action == null) "proposeReschedule" else "respondReschedule",
-                    mapOf("requestId" to request.id, "operationId" to PilotApi.operationId(), "proposedDate" to proposedDate, "reason" to reason, "action" to action))
+                    mapOf("requestId" to request.id, "operationId" to scheduleOperation, "proposedDate" to proposedDate, "reason" to reason, "action" to action))
             }.onSuccess { notify("Cambio registrado. La otra persona recibirá el aviso."); proposing = false; proposalAction = null; reason = ""; WoodWasteRepository.refreshSession() }
                 .onFailure { notify(it.message ?: "No se pudo guardar el cambio.") }
             sending = false
@@ -102,7 +108,7 @@ fun ActivityRequestCard(request: WithdrawalRequest, item: WoodWasteItem?, owner:
                 if (proposing) {
                     OutlinedTextField(proposedDate, {}, readOnly = true, label = { Text("Nueva fecha de recolección") }, trailingIcon = { IconButton(onClick = { showDatePicker = true }) { Icon(Icons.Default.CalendarMonth, "Elegir fecha") } }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(reason, { reason = it.take(500) }, label = { Text("Motivo obligatorio") }, modifier = Modifier.fillMaxWidth())
-                    Button(enabled = !sending && canPropose && proposedDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && reason.isNotBlank(), onClick = { updateSchedule() }) { Text(if (sending) "Enviando…" else "Enviar propuesta") }
+                    Button(enabled = !busy && !sending && canPropose && WithdrawalInput.isCurrentDate(proposedDate) && reason.isNotBlank(), onClick = { updateSchedule() }) { Text(if (sending) "Enviando…" else "Enviar propuesta") }
                 }
             }
             key(request.id, request.proposedDate) { WithdrawalPassActions(request, owner) }

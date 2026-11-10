@@ -591,6 +591,7 @@ fun PublicationWizard(
             Button(
                 enabled = !busy,
                 onClick = {
+                    if (busy) return@Button
                     message = null
                     val amount = quantity.replace(',', '.').toDoubleOrNull()
                     if (step == 0 && (photo.isBlank() && existing?.imagePath == null))

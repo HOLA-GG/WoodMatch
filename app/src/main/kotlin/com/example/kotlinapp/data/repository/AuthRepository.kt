@@ -52,7 +52,7 @@ object AuthRepository {
 
     fun validateEmail(email: String): Boolean {
         val emailRegex = Regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
-        return email.isNotBlank() && emailRegex.matches(email)
+        return email.length in 3..254 && emailRegex.matches(email)
     }
 
     fun validatePhone(phone: String): Boolean {

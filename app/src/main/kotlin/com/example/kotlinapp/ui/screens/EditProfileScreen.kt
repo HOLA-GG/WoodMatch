@@ -101,6 +101,7 @@ fun EditProfileScreen(onBack: () -> Unit) {
             enabled = !busy && dirty,
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             onClick = {
+                if (busy) return@Button
                 busy = true
                 error = null
                 scope.launch {

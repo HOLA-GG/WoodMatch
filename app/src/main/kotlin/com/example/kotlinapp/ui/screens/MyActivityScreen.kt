@@ -74,6 +74,7 @@ fun MyActivityScreen(
     var showImport by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(user?.uid) { local = ReportRepository.getUserReports(user?.uid.orEmpty()) }
     fun transition(request: WithdrawalRequest, action: String) {
+        if (busy) return
         transitionReason = ""
         pending = request to action
     }
@@ -200,6 +201,7 @@ fun MyActivityScreen(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !busy,
                             onClick = {
+                                if (busy) return@TextButton
                                 busy = true
                                 scope.launch {
                                     WoodWasteRepository.updateWasteStatus(
@@ -341,6 +343,7 @@ fun MyActivityScreen(
                 Button(
                     enabled = !busy && (action !in listOf("cancel", "reject") || transitionReason.isNotBlank()),
                     onClick = {
+                        if (busy) return@Button
                         busy = true
                         scope.launch {
                             WoodWasteRepository.transition(request.id, action, reason = transitionReason)
@@ -406,7 +409,7 @@ private fun ActivityHero(publications: Int, active: Int, completed: Int) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActivityStat(publications, "Publicaciones", Modifier.weight(1f))
+                ActivityStat(publications, "Aportes", Modifier.weight(1f))
                 ActivityStat(active, "En proceso", Modifier.weight(1f))
                 ActivityStat(completed, "Entregas", Modifier.weight(1f))
             }
@@ -430,7 +433,8 @@ private fun ActivityStat(value: Int, label: String, modifier: Modifier = Modifie
                 value.toString(), style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Text(label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+            Text(label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center,
+                minLines = 2, maxLines = 2)
         }
     }
 }

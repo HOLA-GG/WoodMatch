@@ -281,6 +281,7 @@ fun SettingsScreen(
                 Button(
                     enabled = !isDeletingAccount,
                     onClick = {
+                        if (isDeletingAccount) return@Button
                         isDeletingAccount = true
                         coroutineScope.launch {
                             val res = AuthRepository.deleteCurrentAccount()
