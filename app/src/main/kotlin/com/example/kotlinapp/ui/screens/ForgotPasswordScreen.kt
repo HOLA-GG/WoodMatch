@@ -136,3 +136,9 @@ fun ForgotPasswordScreen(onNavigateBack: () -> Unit) {
         }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun ForgotPasswordScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { ForgotPasswordScreen({}) }
+}

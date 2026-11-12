@@ -26,7 +26,6 @@ WoodMatch conecta personas que **ofrecen** y **solicitan** madera o residuos le�
 | `supabase/functions/woodmatch/firestore.mjs` | Acceso servidor a Firestore vía API |
 | `supabase/functions/woodmatch/notifications.mjs` | Registro de dispositivos y entrega de avisos |
 | `.github/workflows/pilot.yml` | Flujo CI para pruebas, validaciones, lint y compilación |
-| `Kotlin_App/` | Prototipo histórico; **no** es la aplicación Android raíz vigente |
 
 Los modelos de datos y las pantallas evolucionan; ante cualquier diferencia entre documentación y código, validar la versión del APK instalada y las operaciones del backend antes de dar un flujo por aceptado.
 

@@ -101,3 +101,10 @@ fun SplashScreen(
         }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun SplashScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { SplashScreen({}, {}, {}) }
+}
+

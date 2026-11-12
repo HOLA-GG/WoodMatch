@@ -195,3 +195,9 @@ fun EntityDirectoryScreen(onBack: () -> Unit) {
         }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun EntityDirectoryScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { EntityDirectoryScreen({}) }
+}

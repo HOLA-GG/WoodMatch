@@ -42,16 +42,25 @@ import org.osmdroid.views.overlay.Marker
 @Composable
 fun OsmNativeMapView(
     wasteItems: List<WoodWasteItem>,
-    ecologicalZones: List<EcologicalZone> = emptyList(),
-    showReserves: Boolean = false,
     centerLat: Double,
     centerLng: Double,
     zoomLevel: Int,
     onWasteSelected: (WoodWasteItem) -> Unit,
-    onReserveSelected: (EcologicalZone) -> Unit = {},
     modifier: Modifier = Modifier,
     onPointSelected: ((Double, Double) -> Unit)? = null,
 ) {
+    if (androidx.compose.ui.platform.LocalInspectionMode.current) {
+        Surface(modifier = modifier, color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = MaterialTheme.shapes.large) {
+            Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center) {
+                Text("Mapa de Suba", style = MaterialTheme.typography.headlineSmall)
+                Text("Vista de diseño · el mapa real se muestra al ejecutar la app",
+                    style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        return
+    }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var loadingTiles by remember { mutableStateOf(true) }

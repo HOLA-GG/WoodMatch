@@ -24,8 +24,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun EditProfileScreen(onBack: () -> Unit) {
     val user by AuthRepository.currentUser.collectAsState()
-    val current = user
-    if (!AuthRepository.isAuthenticated || current == null) {
+    val inspecting = androidx.compose.ui.platform.LocalInspectionMode.current
+    val current = if (inspecting) com.example.kotlinapp.data.model.User(
+        uid = "preview", name = "Ana Martínez", email = "ana@example.com", phone = "+573001234567"
+    ) else user
+    if ((!inspecting && !AuthRepository.isAuthenticated) || current == null) {
         AccessMessage("Inicia sesión para editar tus datos.", onBack)
         return
     }
@@ -39,7 +42,7 @@ fun EditProfileScreen(onBack: () -> Unit) {
     BackHandler(enabled = busy) { /* Wait for the save to complete. */ }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -125,4 +128,10 @@ fun EditProfileScreen(onBack: () -> Unit) {
             Text(if (busy) "Guardando…" else "Guardar cambios")
         }
     }
+}
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun EditProfileScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { EditProfileScreen({}) }
 }

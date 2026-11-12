@@ -84,7 +84,7 @@ fun ChangePasswordScreen(
                     color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
-        if (!AuthRepository.isAuthenticated) {
+        if (!androidx.compose.ui.platform.LocalInspectionMode.current && !AuthRepository.isAuthenticated) {
             Text("Inicia sesión para cambiar tu contraseña.")
         } else if (!changed) {
             CredentialField("Contraseña actual", current, !loading, "current_password") {
@@ -203,4 +203,10 @@ private fun CredentialField(
         singleLine = true,
         modifier = Modifier.fillMaxWidth().testTag(tag),
     )
+}
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun ChangePasswordScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { ChangePasswordScreen({}) }
 }

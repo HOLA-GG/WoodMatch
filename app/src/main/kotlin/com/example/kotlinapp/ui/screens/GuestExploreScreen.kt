@@ -46,3 +46,10 @@ fun GuestExploreScreen(onRegister: () -> Unit, onLogin: () -> Unit, onMap: () ->
         OutlinedButton(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Ya tengo una cuenta") }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun GuestExploreScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { GuestExploreScreen({}, {}, {}) }
+}
+

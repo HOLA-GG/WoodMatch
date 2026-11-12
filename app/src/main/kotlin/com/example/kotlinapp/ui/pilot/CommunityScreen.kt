@@ -7,6 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -61,28 +65,15 @@ fun PilotHome(
                 Image(
                     painterResource(R.drawable.logo),
                     contentDescription = "WoodMatch",
-                    modifier = Modifier.size(72.dp),
+                    modifier = Modifier.size(56.dp),
                 )
                 Column(Modifier.padding(start = 12.dp)) {
                     Text(
                         "Hola, ${user?.name?.substringBefore(' ') ?: "explorador"}",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                     )
-                    Text("Suba · Comunidad circular", style = MaterialTheme.typography.labelMedium)
-                }
-            }
-        }
-        item {
-            Card(onClick = if (receiver || mixed) onCatalog else onEntities, shape = MaterialTheme.shapes.extraLarge) {
-                Box(Modifier.fillMaxWidth().height(210.dp).background(MaterialTheme.colorScheme.secondaryContainer)) {
-                    if ((receiver || mixed) && heroImage != null) AsyncImage(model = heroImage, contentDescription = latest?.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    else Icon(if (receiver || mixed) Icons.Default.Forest else Icons.Default.Business, null, Modifier.align(Alignment.Center).size(88.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                    Surface(Modifier.align(Alignment.BottomStart).padding(12.dp), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(if (receiver || mixed) "Lo último de la comunidad" else "Conecta con entidades de Suba", style = MaterialTheme.typography.labelLarge)
-                            Text(if (receiver || mixed) latest?.title ?: "Cada material abre una posibilidad" else "Madera, carpintería y nuevas oportunidades", style = MaterialTheme.typography.titleMedium)
-                        }
-                    }
+                    Text("Suba · Comunidad circular", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -127,14 +118,15 @@ fun PilotHome(
                         }
                     }
                     Text(
-                        "La madera merece\notra oportunidad.",
-                        style = MaterialTheme.typography.headlineLarge,
+                        "La madera merece otra oportunidad.",
+                        style = MaterialTheme.typography.headlineMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Text(
                         if (receiver) "Encuentra materiales en Suba, solicita lo que puedes aprovechar y coordina su recolección. No necesitas publicar para recibir."
                         else "Conecta hallazgos, materiales y personas. Desde una poda hasta una estiba o un mueble recuperable.",
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     SeasonalAction(
                         onClick = if (receiver) onCatalog else onCreate,
@@ -157,6 +149,20 @@ fun PilotHome(
                     if (receiver) {
                         TextButton(onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
                             Text("Reportar un hallazgo (opcional)")
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Card(onClick = if (receiver || mixed) onCatalog else onEntities, shape = MaterialTheme.shapes.extraLarge) {
+                Box(Modifier.fillMaxWidth().height(180.dp).background(MaterialTheme.colorScheme.secondaryContainer)) {
+                    if ((receiver || mixed) && heroImage != null) AsyncImage(model = heroImage, contentDescription = latest?.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    else Icon(if (receiver || mixed) Icons.Default.Forest else Icons.Default.Business, null, Modifier.align(Alignment.Center).size(88.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Surface(Modifier.align(Alignment.BottomStart).padding(12.dp), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(if (receiver || mixed) "Lo último de la comunidad" else "Conecta con entidades de Suba", style = MaterialTheme.typography.labelLarge)
+                            Text(if (receiver || mixed) latest?.title ?: "Cada material abre una posibilidad" else "Madera, carpintería y nuevas oportunidades", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
@@ -224,7 +230,8 @@ private fun ActionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
 ) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.large) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 modifier = Modifier.size(48.dp),
@@ -249,9 +256,8 @@ private fun ActionCard(
 @Composable
 private fun SeasonalAction(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
     Surface(onClick = onClick, modifier = modifier, shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
-        Row(Modifier.background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer)))
-            .padding(horizontal = 20.dp, vertical = 14.dp), horizontalArrangement = Arrangement.Center,
+        color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
+        Row(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically, content = content)
     }
 }
@@ -313,7 +319,7 @@ fun CommunityScreen(
             }
         }
         if (!showMap) {
-            OutlinedButton(onClick = onEntities, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            TextButton(onClick = onEntities, modifier = Modifier.heightIn(min = 48.dp)) {
                 Icon(Icons.Default.Business, null)
                 Spacer(Modifier.width(8.dp))
                 Text("Entidades de Suba")
@@ -325,6 +331,7 @@ fun CommunityScreen(
             placeholder = { Text("Buscar madera, muebles, estibas…") },
             leadingIcon = { Icon(Icons.Default.Search, null) },
             modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
             singleLine = true,
         )
         AnimatedVisibility(visible = filters) {
@@ -404,8 +411,10 @@ fun CommunityScreen(
                 style = MaterialTheme.typography.labelSmall,
             )
         } else
-            LazyColumn(
-                Modifier.weight(1f),
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(180.dp),
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 16.dp),
             ) {
@@ -442,20 +451,34 @@ fun CommunityScreen(
 
 @Composable
 fun EntryCard(item: WoodWasteItem, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.large) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                item.typedStatus.displayName,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(item.title, style = MaterialTheme.typography.titleLarge)
-            Text("${item.wasteType} · ${item.subaSector}")
-            Text(
-                if (item.entryType == "HALLAZGO") "Hallazgo comunitario · No reservable"
-                else item.formattedQuantity,
-                style = MaterialTheme.typography.bodySmall,
-            )
+    var photo by remember(item.id, item.imagePath) { mutableStateOf<String?>(null) }
+    LaunchedEffect(item.id, item.imagePath) {
+        photo = runCatching { WoodWasteRepository.photoUrl(item) }.getOrNull()
+    }
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+        Box(Modifier.fillMaxWidth().height(160.dp).background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Inventory2, null, Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            photo?.let { AsyncImage(model = it, contentDescription = null,
+                contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            Surface(Modifier.align(Alignment.TopStart).padding(12.dp), shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface) {
+                Text(item.typedStatus.displayName, Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(item.title, style = MaterialTheme.typography.titleMedium)
+            Text("${item.wasteType} · ${item.subaSector}", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(if (item.entryType == "HALLAZGO") "Hallazgo · No reservable" else item.formattedQuantity,
+                    modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                Icon(Icons.Default.ArrowOutward, null, Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+            }
         }
     }
 }
@@ -496,9 +519,9 @@ private fun EntryDetail(
             photoLoading = false
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    PhotoDetailSheet(title = item.title, image = image, onDismiss = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -506,7 +529,7 @@ private fun EntryDetail(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Text(item.title, style = MaterialTheme.typography.headlineMedium)
+            Text(item.title, style = MaterialTheme.typography.headlineMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
             if (photoLoading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
                 Text("Preparando fotografía…", style = MaterialTheme.typography.labelMedium)
@@ -515,21 +538,37 @@ private fun EntryDetail(
                 Text("No se pudo cargar la fotografía.", color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = { photoRetry++ }) { Text("Reintentar fotografía") }
             }
-            image?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = "Foto de ${item.title}",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(220.dp),
-                )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Card(Modifier.weight(1f), shape = MaterialTheme.shapes.extraLarge,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Forest, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(item.wasteType, style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text("Material", style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                }
+                Card(Modifier.weight(1f), shape = MaterialTheme.shapes.extraLarge,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Recycling, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                        Text(item.materialState, style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer)
+                        Text("Estado del material", style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    }
+                }
             }
-            Text("${item.wasteType} · ${item.materialState}")
-            Text(item.subaSector)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary)
+                Text(item.subaSector, Modifier.padding(start = 8.dp))
+            }
             if (item.entryType != "HALLAZGO") Text(item.formattedQuantity)
             if (item.description.isNotBlank()) Text(item.description)
             Text("Compartido por ${item.authorName}", style = MaterialTheme.typography.bodySmall)
             if (item.authorId == user?.uid && item.status in listOf("HALLAZGO", "DISPONIBLE"))
-                Button(onClick = { onEdit(item) }) { Text("Editar o convertir publicación") }
+                Button(onClick = { onEdit(item) }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = MaterialTheme.shapes.medium) { Text("Editar o convertir publicación") }
             if (
                 item.authorId != user?.uid &&
                     item.isAvailable &&
@@ -537,7 +576,7 @@ private fun EntryDetail(
                     user?.canRequest == true
             ) {
                 if (!requesting)
-                    Button(onClick = { requesting = true }) { Text("Solicitar recolección") }
+                    Button(onClick = { requesting = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = MaterialTheme.shapes.medium) { Text("Solicitar recolección") }
                 else {
                     OutlinedTextField(
                         value = use,
@@ -618,4 +657,39 @@ private fun EntryDetail(
     }
 }
 
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun CommunityScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { PilotHome({}, {}, {}, {}) }
+}
 
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@Composable
+private fun MaterialSearchDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { CommunityScreen(onCreate = {}, onEdit = {}) }
+}
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@Composable
+private fun CommunityMapDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { CommunityScreen(mapFirst = true, onCreate = {}, onEdit = {}) }
+}
+
+private fun previewMaterial() = WoodWasteItem(
+    id = "preview-material", title = "Tablas de pino recuperadas",
+    description = "Tablas en buen estado para un nuevo proyecto de carpintería.",
+    wasteType = "Tablas", quantityValue = 12.0, quantityUnit = "unidades",
+    subaSector = "Suba Centro", authorName = "Comunidad WoodMatch"
+)
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@Composable
+private fun MaterialCardDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { EntryCard(previewMaterial(), {}) }
+}
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@Composable
+private fun MaterialDetailDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { EntryDetail(previewMaterial(), {}, {}) }
+}

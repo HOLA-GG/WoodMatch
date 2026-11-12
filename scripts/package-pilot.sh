@@ -13,7 +13,7 @@ manifest={'version':'2.3.0-pilot','applicationId':'com.example.kotlinapp.pilot',
           'signing':'Android debug certificate; testing only','deviceTests':'Pending physical-device validation'}
 (root/'release-assets/build-info.json').write_text(json.dumps(manifest,indent=2)+'\n')
 with zipfile.ZipFile('release-assets/woodmatch-review-assets.zip','w',zipfile.ZIP_DEFLATED) as output:
-    for folder in ['app/src/main/res','stitch_woodmatch_seasonal_palette','docs']:
+    for folder in ['app/src/main/res','docs']:
         for file in (root/folder).rglob('*'):
             if file.is_file(): output.write(file,str(file))
     for folder in ['app/build/test-results/testDebugUnitTest','app/build/reports']:
