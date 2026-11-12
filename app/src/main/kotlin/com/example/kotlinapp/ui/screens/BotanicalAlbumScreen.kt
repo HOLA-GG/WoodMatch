@@ -192,3 +192,9 @@ private fun BotanicalRecordDetail(record: BotanicalRecord, uid: String, onDismis
         message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     } }, confirmButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Cerrar") } })
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun BotanicalAlbumScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { SpeciesScreen({}) }
+}

@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.kotlinapp.ui.theme.WoodMatchTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -142,5 +144,17 @@ private fun GuestNavigationBar(currentRoute: String, items: List<WoodMatchDestin
                 label = { Text(item.label, maxLines = 1) },
             ) }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun WoodMatchBottomNavPreview() {
+    WoodMatchTheme {
+        WoodMatchBottomNav(
+            currentRoute = "dashboard",
+            role = "GENERADOR",
+            onNavigate = {}
+        )
     }
 }

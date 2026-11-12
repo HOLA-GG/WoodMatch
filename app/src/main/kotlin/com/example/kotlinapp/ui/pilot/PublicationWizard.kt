@@ -65,7 +65,8 @@ fun PublicationWizard(
 ) {
     val context = LocalContext.current
     val user by AuthRepository.currentUser.collectAsState()
-    if (!AuthRepository.isAuthenticated) {
+    val inspecting = androidx.compose.ui.platform.LocalInspectionMode.current
+    if (!inspecting && !AuthRepository.isAuthenticated) {
         AccessMessage("Inicia sesión para publicar hallazgos y ofrecer material.", onBack)
         return
     }
@@ -195,7 +196,7 @@ fun PublicationWizard(
             .put("longitude", longitude)
             .put("selectedPoint", selectedPoint)
             .toString()
-    SideEffect { prefs.edit().putString(draftKey, draft).apply() }
+    if (!inspecting) SideEffect { prefs.edit().putString(draftKey, draft).apply() }
     val operation = rememberSaveable(draft, consent, authorized) { PilotApi.operationId() }
     BackHandler(enabled = !busy) { leave = true }
     fun locate() {
@@ -245,7 +246,7 @@ fun PublicationWizard(
             locate()
         }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -583,9 +584,9 @@ fun PublicationWizard(
                 )
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (step > 0) OutlinedButton(
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 enabled = !busy, onClick = { step-- },
             ) { Text("Anterior") }
             Button(
@@ -661,7 +662,7 @@ fun PublicationWizard(
                         }
                     }
                 },
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             ) {
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
@@ -758,3 +759,8 @@ fun StatusMessage(message: String) {
     }
 }
 
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun PublicationWizardDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { PublicationWizard(onDone = {}, onBack = {}) }
+}

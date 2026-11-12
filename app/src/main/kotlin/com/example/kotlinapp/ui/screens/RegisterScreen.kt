@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -128,6 +130,7 @@ fun RegisterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .verticalScroll(scrollState)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -431,7 +434,7 @@ fun RegisterScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp)
+                            .heightIn(min = 52.dp)
                             .testTag("register_submit_button")
                     ) {
                         if (isLoading) {
@@ -476,4 +479,11 @@ fun RegisterScreen(
         }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun RegisterScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { RegisterScreen({}, {}) }
+}
+
 

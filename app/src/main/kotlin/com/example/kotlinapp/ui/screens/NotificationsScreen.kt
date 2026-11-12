@@ -54,3 +54,10 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (String, String) -> Unit) {
         }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun NotificationsScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { NotificationsScreen({}, { _, _ -> }) }
+}
+

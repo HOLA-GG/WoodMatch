@@ -514,3 +514,10 @@ private fun ActivityEmptyCard(
     }
 }
 
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun MyActivityScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { MyActivityScreen({}) }
+}
+
+

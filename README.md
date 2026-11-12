@@ -2,7 +2,7 @@
 
 Comunidad de recuperación de madera en Suba, Bogotá: hallazgos, podas, estibas, tablas y muebles; publicaciones con foto y ubicación confirmada; retiros con QR/código y confirmación de ambas personas.
 
-Abre **esta carpeta raíz** en Android Studio. `Kotlin_App/` conserva el prototipo histórico.
+Abre **esta carpeta raíz** en Android Studio; el módulo de la aplicación es `app/`.
 
 - JDK 21, SDK Android 36 y Gradle Wrapper incluido.
 - `bash gradlew --max-workers=2 assembleDebug testDebugUnitTest lintDebug`

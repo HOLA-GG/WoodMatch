@@ -95,7 +95,7 @@ fun PilotProfile(
                 if (AuthRepository.isAuthenticated) {
                     Text(user?.email.orEmpty(), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    OutlinedButton(onClick = onEditProfile, enabled = !busy,
+                    FilledTonalButton(onClick = onEditProfile, enabled = !busy,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                         Icon(Icons.Outlined.Edit, null, Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
@@ -304,7 +304,7 @@ fun PilotProfile(
 private fun SettingsGroup(icon: ImageVector, title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
     OutlinedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Surface(color = MaterialTheme.colorScheme.secondaryContainer,
@@ -327,9 +327,9 @@ private fun SettingsGroup(icon: ImageVector, title: String, subtitle: String, co
 private fun SettingOption(title: String, detail: String, icon: ImageVector, selected: Boolean, onSelect: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp).heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -352,4 +352,10 @@ private fun ProfileDetail(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value.ifBlank { "Sin registrar" }, style = MaterialTheme.typography.bodyLarge)
     }
+}
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun PilotProfileDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { PilotProfile("SUMMER", "SYSTEM", 1f, {}, {}, {}, {}, {}, {}, onLogout = {}) }
 }

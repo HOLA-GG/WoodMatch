@@ -27,3 +27,10 @@ fun GuestMapScreen(onRegister: () -> Unit) {
         Button(onClick = onRegister, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Crear cuenta para ver materiales") }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun GuestMapScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { GuestMapScreen({}) }
+}
+

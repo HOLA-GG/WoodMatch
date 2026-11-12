@@ -42,7 +42,7 @@ fun SupportScreen(onBack: () -> Unit) {
         scope.launch { runCatching { load() }.onFailure { message = it.message }; busy = false }
     }
     LaunchedEffect(Unit) { busy = true; runCatching { load() }.onFailure { message = it.message }; busy = false }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
             Text("Ayuda y participación", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
@@ -134,3 +134,10 @@ private fun SupportCaseCard(row: JSONObject, busy: Boolean, action: (String, Map
         }
     }
 }
+
+@com.example.kotlinapp.ui.preview.WoodMatchPreviews
+@androidx.compose.runtime.Composable
+private fun SupportScreenDesignPreview() {
+    com.example.kotlinapp.ui.preview.PreviewFrame { SupportScreen({}) }
+}
+
